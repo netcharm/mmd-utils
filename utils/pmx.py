@@ -135,8 +135,9 @@ def loadTexture(tex_file):
     texture = Texture(tex_file)
     texture.load(pnm)
 
-  texture.generateRamMipmapImages()
-  texture.setMinfilter(Texture.FTNearestMipmapNearest)
+  texture.setFilename(tex_file)
+  # texture.generateRamMipmapImages()
+  # texture.setMinfilter(Texture.FTNearestMipmapNearest)
   # texture.setRenderToTexture(True)
   return(texture)
   pass
@@ -317,7 +318,8 @@ def pmx2p3d(pmx_model, alpha=True):
     material.setAmbient(VBase4(mat.ambient_color.r, mat.ambient_color.g, mat.ambient_color.b, mat.alpha)) #Make this material blue
     material.setDiffuse(VBase4(mat.diffuse_color.r, mat.diffuse_color.g, mat.diffuse_color.b, mat.alpha))
     material.setSpecular(VBase4(mat.specular_color.r, mat.specular_color.g, mat.specular_color.b, mat.alpha))
-    material.setShininess(5.0) #Make this material shiny
+    # material.setShininess(5.0) #Make this material shiny
+    material.setShininess(mat.specular_factor)
     material.setLocal(True)
     if   mat.flag & 0x00000001:
       # 两面描画
@@ -369,6 +371,14 @@ def pmx2p3d(pmx_model, alpha=True):
   #
   vIndex = 0
   model = ModelNode(pmx_model.name)
+  model.setTag('path', pmx_model.path)
+  model.setTag('version', str(pmx_model.version))
+  model.setTag('name', pmx_model.name)
+  model.setTag('english_name', pmx_model.english_name)
+  model.setTag('comment', pmx_model.comment)
+  model.setTag('english_comment', pmx_model.english_comment)
+
+  # glowShader = Shader.load('glowShader.sha')
   for mat in pmx_model.materials:
     prim = GeomTriangles(Geom.UHStatic)
     log(u'Loading Node :, %s' % mat.name.replace(u'\u30fb', u'·').strip())
@@ -395,8 +405,15 @@ def pmx2p3d(pmx_model, alpha=True):
       textures[mat.texture_index].setBorderColor(VBase4(mat.edge_color.r, mat.edge_color.g, mat.edge_color.b, mat.alpha))
       textures[mat.texture_index].setWrapU(Texture.WM_clamp)
       # textures[mat.texture_index].setWrapV(Texture.WM_clamp)
+
       nodePath.setTexture(textures[mat.texture_index], 1)
       nodePath.setTexScale(TextureStage.getDefault(), 1, -1, -1)
+
+      # ts_main = TextureStage(mat.name+'_main')
+      # ts_main.setMode(TextureStage.MReplace)
+      # ts_main.setPriority(1)
+      # nodePath.setTexture(ts_main, textures[mat.texture_index], 1)
+      # nodePath.setTexScale(ts_main, 1, -1, -1)
 
     # if mat.sphere_mode > 0 and textures[mat.sphere_texture_index]:
     if mat.sphere_mode > 0:
@@ -408,20 +425,25 @@ def pmx2p3d(pmx_model, alpha=True):
       elif mat.sphere_mode == 3:
         texMode = TextureStage.MReplace
       else:
-        texMode = TextureStage.MGloss
+        texMode = TextureStage.MGlow
+        # texMode = TextureStage.MReplace
 
       log(u'%s: mode[%d], texop[%d], sysop[modulate(%d), modulategloss(%d), add(%d), replace(%d), gloss(%d)]' % (mat.name.replace(u'\u30fb', u'·'), mat.sphere_mode, texMode, TextureStage.MModulate, TextureStage.MModulateGlow, TextureStage.MAdd, TextureStage.MReplace, TextureStage.MGloss))
       # texMode = TextureStage.MAdd
       ts_sphere = TextureStage(mat.name+'_sphere')
       ts_sphere.setMode(texMode)
+      ts_sphere.setSort(2)
+      ts_sphere.setPriority(2)
       if mat.sphere_texture_index < 0:
-        tex = Texture()
+        tex = Texture('NULL')
         ts_sphere.setColor(VBase4(0.9, 0.9, 0.9, 0.68))
       else:
         tex = textures[mat.sphere_texture_index]
       tex.setWrapU(Texture.WM_clamp)
       tex.setWrapV(Texture.WM_clamp)
-      nodePath.setTexGen(ts_sphere, TexGenAttrib.MEyeSphereMap)
+
+      # nodePath.setTexGen(ts_sphere, TexGenAttrib.MEyeCubeMap, 2)
+      nodePath.setTexGen(ts_sphere, TexGenAttrib.MPointSprite, 2)
       nodePath.setTexture(ts_sphere, tex, 1)
       nodePath.setTexScale(ts_sphere, 1, -1, -1)
 
@@ -433,22 +455,21 @@ def pmx2p3d(pmx_model, alpha=True):
       elif mat.sphere_mode == 3:
         texMode = TextureStage.MReplace
       else:
-        texMode = TextureStage.MGloss
+        texMode = TextureStage.MGlow
 
       texMode = TextureStage.MGlow
 
       ts_toon = TextureStage(mat.name+'_toon')
       ts_toon.setMode(texMode)
       textures[mat.toon_texture_index].setWrapU(Texture.WM_clamp)
-      # textures[mat.toon_texture_index].setWrapV(Texture.WM_clamp)
-      nodePath.setTexGen(ts_toon, TexGenAttrib.MEyeNormal)
+      nodePath.setTexGen(ts_toon, TexGenAttrib.MPointSprite) #MEyePosition)
       nodePath.setTexture(ts_toon, textures[mat.toon_texture_index], 1)
       nodePath.setTexScale(ts_toon, 1, -1, -1)
 
 
     nodePath.setColorOff()
-    # nodePath.setShaderAuto()
-
+    # nodePath.setShaderAuto(2)
+    # nodePath.setShaderAuto(BitMask32.bit(Shader.BitAutoShaderNormal) , 2)
     nodePath.setAntialias(AntialiasAttrib.MAuto)
 
     if alpha:
@@ -456,7 +477,8 @@ def pmx2p3d(pmx_model, alpha=True):
       # Here is not really to solve the tex alpha-transparency bug, only a other bug :(
       #
       if mat.flag & 0x00000001:
-        nodePath.setTransparency(True)
+        nodePath.setTransparency(True, 0)
+        nodePath.setTransparency(True, 1)
         # nodePath.setTransparency(TransparencyAttrib.MAlpha)
         # nodePath.setTransparency(TransparencyAttrib.MDual)
         # nodePath.setTransparency(TransparencyAttrib.MBinary)
@@ -719,7 +741,7 @@ def testPMD(pmd):
 if __name__ == '__main__':
   pmxFile = u'../models/meiko/meiko.pmx'
   pmxFile = u'../models/apimiku/Miku long hair.pmx'
-  pmxFile = u'../models/cupidmiku/Cupid Miku.pmx'
+  # pmxFile = u'../models/cupidmiku/Cupid Miku.pmx'
 
   pmdFile = u'../models/alice/alice.pmd'
 

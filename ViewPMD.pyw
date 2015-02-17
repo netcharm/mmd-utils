@@ -38,6 +38,8 @@ loadPrcFileData("", "window-title MMD PMX/PMX Model Viewer")
 loadPrcFileData("", "icon-filename viewpmx.ico")
 loadPrcFileData("", "win-size 800 800")
 loadPrcFileData("", "window-type none")
+loadPrcFileData('', 'text-encoding utf8')
+loadPrcFileData('', 'textures-power-2 none')
 
 from panda3d.core import ConfigVariableString
 from panda3d.core import Shader
@@ -62,10 +64,15 @@ SHOW_LIGHT_POS = True
 SHOW_LIGHT_POS = False
 
 SHOW_SHADOW = True
-# SHOW_SHADOW = False
+SHOW_SHADOW = False
+
+SHOW_AXIS = True
+# SHOW_AXIS = False
+
+lastModel = None
 
 def setCamera(x=0, y=0, z=0, h=0, p=0, r=0, oobe=False):
-  base.camLens.setNearFar(1.0, 250.0)
+  base.camLens.setNearFar(0.1, 550.0)
   base.camLens.setFov(45.0)
   base.camLens.setFocalLength(50)
 
@@ -79,12 +86,22 @@ def setCamera(x=0, y=0, z=0, h=0, p=0, r=0, oobe=False):
     base.oobeCull()
   pass
 
+def resetCamera():
+  if lastModel:
+    min_point = LPoint3f()
+    max_point = LPoint3f()
+    lastModel.calcTightBounds(min_point, max_point)
+
+    node_size = LPoint3f(max_point.x-min_point.x, max_point.y-min_point.y, max_point.z-min_point.z)
+    setCamera(x=0, y=1.6*node_size.z, z=0.5*node_size.z, p=10, oobe=False)
+  pass
+
 def setStudioLight(render):
   lights = []
 
   alight = AmbientLight('alight')
   # alight.setColor(VBase4(0.6, 0.6, 0.6, 1))
-  alight.setColor(VBase4(0.67, 0.67, 0.67, 0.33))
+  alight.setColor(VBase4(0.33, 0.33, 0.33, 0.33))
   alnp = render.attachNewNode(alight)
   lights.append(alnp)
 
@@ -93,8 +110,8 @@ def setStudioLight(render):
   dlnp_topback.setX(0)
   dlnp_topback.setZ(25)
   dlnp_topback.setY(+55)
-  # dlnp_topback.node().setAttenuation( Vec3( 0.001, 0.001, 0.001 ) )
-  dlnp_topback.node().setAttenuation( Vec3( 0.005, 0.005, 0.005 ) )
+  dlnp_topback.node().setAttenuation( Vec3( 0.001, 0.005, 0.001 ) )
+  # dlnp_topback.node().setAttenuation( Vec3( 0.005, 0.005, 0.005 ) )
   dlnp_topback.setHpr(0, -168, 0)
   if SHOW_LIGHT_POS:
     dlnp_topback.node().showFrustum()
@@ -123,8 +140,8 @@ def setStudioLight(render):
   dlens = dlnp_left.node().getLens()
   dlens.setFilmSize(41, 21)
   # dlens.setNearFar(50, 75)
-  # dlnp_left.node().setAttenuation( Vec3( 0.001, 0.001, 0.001 ) )
-  dlnp_left.node().setAttenuation( Vec3( 0.011, 0.011, 0.011 ) )
+  dlnp_left.node().setAttenuation( Vec3( 0.001, 0.002, 0.001 ) )
+  # dlnp_left.node().setAttenuation( Vec3( 0.011, 0.011, 0.011 ) )
   dlnp_left.setHpr(-130, -15, 0)
   if SHOW_LIGHT_POS:
     dlnp_left.node().showFrustum()
@@ -138,8 +155,8 @@ def setStudioLight(render):
   dlens = dlnp_right.node().getLens()
   dlens.setFilmSize(41, 21)
   # dlens.setNearFar(50, 75)
-  # dlnp_right.node().setAttenuation( Vec3( 0.001, 0.001, 0.001 ) )
-  dlnp_right.node().setAttenuation( Vec3( 0.011, 0.011, 0.011 ) )
+  dlnp_right.node().setAttenuation( Vec3( 0.001, 0.002, 0.001 ) )
+  # dlnp_right.node().setAttenuation( Vec3( 0.011, 0.011, 0.011 ) )
   dlnp_right.setHpr(130, -15, 0)
   if SHOW_LIGHT_POS:
     dlnp_right.node().showFrustum()
@@ -169,7 +186,7 @@ def lightAtNode(node, lights=None):
 
 
 def setAxis(render):
-  grid = ThreeAxisGrid(xy=True, yz=False, xz=False)
+  grid = ThreeAxisGrid(xy=True, yz=False, xz=False, z=False)
   gridnodepath = grid.create()
   gridnodepath.reparentTo(render)
   gridnodepath.setShaderAuto()
@@ -222,6 +239,13 @@ def setAppInfo(title, icon):
   pass
 
 def snapshot(snapfile='snap_00.png'):
+  # n = base.win.ModelPool[0].getName()
+  if lastModel:
+    path = lastModel.node().getTag('path')
+    fn = os.path.splitext(os.path.basename(path))
+    folder = os.path.dirname(path)
+    snapfile = os.path.join(folder, u'snap_%s.png' % (fn[0]))
+    # snapfile = u'snap_%s.png' % lastModel.getName()
   return(base.win.saveScreenshot(filename=snapfile))
   pass
 
@@ -231,10 +255,6 @@ if __name__ == '__main__':
   # setAppInfo(title, icon)
 
   base.openMainWindow(type = 'onscreen')
-
-  lights = setStudioLight(render)
-
-  setAxis(render)
 
   pmxFile = u'./models/apimiku/Miku long hair.pmx'
   pmxFile = u'./models/cupidmiku/Cupid Miku.pmx'
@@ -246,23 +266,24 @@ if __name__ == '__main__':
 
   pmxModel = pmxLoad(pmxFile)
   if pmxModel:
+    if SHOW_AXIS:
+      setAxis(render)
+
     p3dnode = pmx2p3d(pmxModel)
     p3dnode.reparentTo(render)
+    lastModel = p3dnode
 
+    lights = setStudioLight(render)
     lightAtNode(p3dnode, lights=lights)
-    min_point = LPoint3f()
-    max_point = LPoint3f()
-    p3dnode.calcTightBounds(min_point, max_point)
 
-    p3dnode_size = LPoint3f(max_point.x-min_point.x, max_point.y-min_point.y, max_point.z-min_point.z)
-    print('size: ', p3dnode_size)
-    setCamera(x=0, y=1.6*p3dnode_size.z, z=0.5*p3dnode_size.z, p=10, oobe=False)
-    print(p3dnode.getName())
-    snapfile = u'snap_%s.png' % p3dnode.getName()
+    resetCamera()
     # base.screenshot(namePrefix='snap_', defaultFilename=p3dnode.getName())
 
     # btnReset = DirectButton(pos=(480,480), text=u'RESET', text_pos=(10,10), frameSize=(460, 460, 80, 80))
-    btnSnapshot = DirectButton(text=u'SNAP', text_pos=(10,10), frameSize=(460, 460, 80, 80), command=snapshot)
+    btnSnapshot = DirectButton(text=u'截屏', scale=.05, pos=(-0.935, -10, 0.938), command=snapshot)
+    btnSnapshot = DirectButton(text=u'复位', scale=.05, pos=(-0.935, -10, 0.852), command=resetCamera)
+
+    # btnSnapshot = DirectButton(text=u'SNAP', text_pos=(10,10), frameSize=(460, 460, 80, 80), scale=5.05, command=snapshot)
 
 
 

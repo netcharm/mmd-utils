@@ -58,9 +58,16 @@ from pandac.PandaModules import *
 #   'parentNode' and 'parentNodePath' are used to contain
 #      the three LineSeg instance nodes and paths
 
+DEBUG = True
+DEBUG = False
+
 class ThreeAxisGrid:
-   def __init__(self, xsize = 50, ysize = 50, zsize = 50,
-      gridstep = 10, subdiv = 10, xy=True, xz=True, yz=True, board=True):
+   def __init__(self,
+      xsize = 50, ysize = 50, zsize = 50,
+      gridstep = 10, subdiv = 10,
+      xy=True, xz=True, yz=True,
+      x=True, y=True, z=True,
+      board=True):
 
       #Init passed variables
       self.XSize = xsize
@@ -86,6 +93,21 @@ class ThreeAxisGrid:
          self.YZPlaneShow = 1
       else:
          self.YZPlaneShow = 0
+
+      if x:
+         self.XAxisShow = 1
+      else:
+         self.XAxisShow = 0
+
+      if y:
+         self.YAxisShow = 1
+      else:
+         self.YAxisShow = 0
+
+      if z:
+         self.ZAxisShow = 1
+      else:
+         self.ZAxisShow = 0
 
       if board:
          self.endCapLinesShow = 1
@@ -134,19 +156,19 @@ class ThreeAxisGrid:
       self.gridLines.setThickness(self.gridThickness)
       self.subdivLines.setThickness(self.subdivThickness)
 
-      if(self.XSize != 0):
+      if(self.XSize != 0 and self.XAxisShow):
          #Draw X axis line
          self.axisLines.setColor(self.XAxisColor)
          self.axisLines.moveTo(-(self.XSize), 0, 0)
          self.axisLines.drawTo(self.XSize, 0, 0)
 
-      if(self.YSize != 0):
+      if(self.YSize != 0 and self.YAxisShow):
          #Draw Y axis line
          self.axisLines.setColor(self.YAxisColor)
          self.axisLines.moveTo(0, -(self.YSize), 0)
          self.axisLines.drawTo(0, self.YSize, 0)
 
-      if(self.ZSize != 0):
+      if(self.ZSize != 0 and self.ZAxisShow):
          #Draw Z axis line
          self.axisLines.setColor(self.ZAxisColor)
          self.axisLines.moveTo(0, 0, -(self.ZSize))
@@ -271,10 +293,11 @@ class ThreeAxisGrid:
 
          if(self.XSize != 0):
             adjustedstep = self.gridStep / self.subdiv
-            print(self.gridStep)
-            print(self.subdiv)
-            print(adjustedstep)
-            print(self.gridStep/self.subdiv)
+            if DEBUG:
+               print(self.gridStep)
+               print(self.subdiv)
+               print(adjustedstep)
+               print(self.gridStep/self.subdiv)
 
             if((self.YSize != 0) and (self.XYPlaneShow != 0)):
             #Draw y lines across x axis starting from center moving out
