@@ -135,6 +135,9 @@ def loadTexture(tex_file):
     texture = Texture(tex_file)
     texture.load(pnm)
 
+  texture.generateRamMipmapImages()
+  texture.setMinfilter(Texture.FTNearestMipmapNearest)
+  # texture.setRenderToTexture(True)
   return(texture)
   pass
 
@@ -399,6 +402,7 @@ def pmx2p3d(pmx_model, alpha=True):
     if mat.sphere_mode > 0:
       if mat.sphere_mode == 1:
         texMode = TextureStage.MModulateGloss
+        # texMode = TextureStage.MModulateGlow
       elif mat.sphere_mode == 2:
         texMode = TextureStage.MAdd
       elif mat.sphere_mode == 3:
@@ -417,6 +421,7 @@ def pmx2p3d(pmx_model, alpha=True):
         tex = textures[mat.sphere_texture_index]
       tex.setWrapU(Texture.WM_clamp)
       tex.setWrapV(Texture.WM_clamp)
+      nodePath.setTexGen(ts_sphere, TexGenAttrib.MEyeSphereMap)
       nodePath.setTexture(ts_sphere, tex, 1)
       nodePath.setTexScale(ts_sphere, 1, -1, -1)
 
@@ -436,6 +441,7 @@ def pmx2p3d(pmx_model, alpha=True):
       ts_toon.setMode(texMode)
       textures[mat.toon_texture_index].setWrapU(Texture.WM_clamp)
       # textures[mat.toon_texture_index].setWrapV(Texture.WM_clamp)
+      nodePath.setTexGen(ts_toon, TexGenAttrib.MEyeNormal)
       nodePath.setTexture(ts_toon, textures[mat.toon_texture_index], 1)
       nodePath.setTexScale(ts_toon, 1, -1, -1)
 
@@ -481,7 +487,7 @@ def pmdInfo(model, screen=False):
 
     lines.append(u'textures     : Total {1}.\n{0}'.format('-'*80, len(model.toon_textures)))
     idx = 0
-    for texture in model.textures:
+    for texture in model.toon_textures:
       lines.append('%4d : %s' % (idx, texture))
       idx += 1
     lines.append(u'='*80)
@@ -491,18 +497,13 @@ def pmdInfo(model, screen=False):
     for mat in model.materials:
       if idx != 0: lines.append('')
       idx += 1
-      lines.append(u'  name(jpn) : %s' % mat.name.replace(u'\u30fb', u'·').strip())
-      lines.append(u'  name(eng) : %s' % mat.english_name.strip())
       lines.append(u'  diffuse   : (%s, %s, %s)' % (mat.diffuse_color.r, mat.diffuse_color.g, mat.diffuse_color.b))
       lines.append(u'  alpha     : %.2f' % mat.alpha)
       lines.append(u'  specular  : (%s, %s, %s), %.2f' % (mat.specular_color.r, mat.specular_color.g, mat.specular_color.b, mat.specular_factor))
       lines.append(u'  ambient   : (%s, %s, %s)' %  (mat.ambient_color.r, mat.ambient_color.g, mat.ambient_color.b))
-      lines.append(u'  flag      : %s' % mat.flag)
-      lines.append(u'  edge      : (%s, %s, %s, %s), %.2f' % (mat.edge_color.r, mat.edge_color.g, mat.edge_color.b, mat.edge_color.a, mat.edge_size))
-      lines.append(u'  texture   : %4d' % mat.texture_index)
-      lines.append(u'  sphere    : %4d, %4d' % (mat.sphere_mode, mat.sphere_texture_index))
-      lines.append(u'  toon      : %4d, %4d' % (mat.toon_sharing_flag, mat.toon_texture_index))
-      lines.append(u'  comment   : %s' % mat.comment.strip())
+      lines.append(u'  edge_flag : %s' % mat.edge_flag)
+      lines.append(u'  texture   : %4d' % mat.texture_file)
+      lines.append(u'  toon      : %4d' % (mat.toon_index))
       lines.append(u'  vertexs   : %4d' % mat.vertex_count)
     lines.append(u'='*80)
 
@@ -513,21 +514,18 @@ def pmdInfo(model, screen=False):
       idx += 1
       lines.append(u'  name(jpn)    : %s' % bone.name.replace(u'\u30fb', u'·').strip())
       lines.append(u'  name(eng)    : %s' % bone.english_name.strip())
-      lines.append(u'  position     : %s' % str(bone.position.to_tuple()))
-      lines.append(u'  parent_index : %4d' % bone.parent_index)
-      lines.append(u'  layer        : %4d' % bone.layer)
-      lines.append(u'  flag         : %4d' % bone.flag)
-      lines.append(u'  tail         : %4d, %s' % (bone.tail_index, bone.tail_position.to_tuple()))
-      lines.append(u'  effect       : %4d, %.4f' % (bone.effect_index, bone.effect_factor))
-      lines.append(u'  fixed_axis   : %s' % str(bone.fixed_axis.to_tuple()))
-      lines.append(u'  local_vector : x%s, z%s' % (bone.local_x_vector.to_tuple(), bone.local_z_vector.to_tuple()))
-      lines.append(u'  external_key : %4d' % bone.external_key)
+      lines.append(u'  index        : %4d' % bone.index)
+      lines.append(u'  type         : %4d' % bone.type)
+      lines.append(u'  pos          : %s' % str(bone.pos.to_tuple()))
+      lines.append(u'  parent       : %4d, %s' % (bone.parent_index, bone.parent))
+      lines.append(u'  tail         : %4d, %s' % (bone.tail_index, bone.tail))
+      lines.append(u'  children     : %4d' % bone.children)
+      lines.append(u'  ik_index     : %4d' % bone.ik_index)
       if bone.ik:
-        ik_links = map(lambda link: (link.bone_index, link.limit_angle, link.limit_max.to_tuple(), link.limit_min.to_tuple()), bone.ik.link)
+        ik_links = map(lambda link: (link.index, link.target, link.iterations, link.weight, link.length, link.children), bone.ik)
         lines.append(u'  ik           : %.4f, %s, %4d, %4d' % (bone.ik.limit_radian, ik_links[:5], bone.ik.loop, bone.ik.target_index ))
       else:
         lines.append(u'  ik           : %s' % u'')
-      lines.append(u'  index        : %4d' % bone.index)
     lines.append(u'='*80)
 
     lines.append(u'ik_list      : Total {1}.\n{0}'.format('-'*80, len(model.ik_list)))
@@ -559,17 +557,18 @@ def pmdInfo(model, screen=False):
     for morph in model.morphs:
       if idx != 0: lines.append('')
       idx += 1
-      lines.append(u'  name(jpn)  : %s' % morph.name.replace(u'\u30fb', u'·').strip())
-      lines.append(u'  name(eng)  : %s' % morph.english_name.strip())
-      lines.append(u'  panel      : %4d' % morph.panel)
-      lines.append(u'  morph_type : %4d' % morph.morph_type)
-      ol = map(lambda offset: (offset.morph_index, offset.value) if isinstance(offset, pmx.GroupMorphData) else (offset.vertex_index, offset.position_offset.to_tuple()), morph.offsets)
-      lines.append(u'  offsets    : %4d, %s' % (len(morph.offsets), ol[:5]))
+      lines.append(u'  name(jpn)    : %s' % morph.name.replace(u'\u30fb', u'·').strip())
+      lines.append(u'  name(eng)    : %s' % morph.english_name.strip())
+      lines.append(u'  type         : %4d' % morph.type)
+      lines.append(u'  pos_list     : %4d' % str(morph.pos_list[:4]))
+      lines.append(u'  vertex_count : %4d' % morph.vertex_count)
+      ol = map(lambda offset: (offset.morph_index, offset.value) if isinstance(offset, pmx.GroupMorphData) else (offset.vertex_index, offset.position_offset.to_tuple()), morph.indices)
+      lines.append(u'  indices      : %4d, %s' % (len(morph.offsets), ol[:5]))
     lines.append(u'='*80)
 
     lines.append(u'morph_indices: Total {1}.\n{0}'.format('-'*80, len(model.morph_indices)))
     idx = 0
-    for morph in model.morphs:
+    for morph in model.morph_indices:
       if idx != 0: lines.append('')
       idx += 1
       lines.append(u'  name(jpn)  : %s' % morph.name.replace(u'\u30fb', u'·').strip())
@@ -582,24 +581,20 @@ def pmdInfo(model, screen=False):
 
     lines.append(u'bone_group_list : Total {1}.\n{0}'.format('-'*80, len(model.bone_group_list)))
     idx = 0
-    for slot in model.display_slots:
+    for slot in model.bone_group_list:
       if idx != 0: lines.append('')
       idx += 1
       lines.append(u'  name(jpn)    : %s' % slot.name.replace(u'\u30fb', u'·').strip())
       lines.append(u'  name(eng)    : %s' % slot.english_name.strip())
-      lines.append(u'  references   : %4d, %s' % (len(slot.references), str(slot.references)))
-      lines.append(u'  special_flag : %4d' % slot.special_flag)
     lines.append(u'='*80)
 
     lines.append(u'bone_display_list : Total {1}.\n{0}'.format('-'*80, len(model.bone_display_list)))
     idx = 0
-    for slot in model.display_slots:
+    for slot in model.bone_display_list:
       if idx != 0: lines.append('')
       idx += 1
       lines.append(u'  name(jpn)    : %s' % slot.name.replace(u'\u30fb', u'·').strip())
       lines.append(u'  name(eng)    : %s' % slot.english_name.strip())
-      lines.append(u'  references   : %4d, %s' % (len(slot.references), str(slot.references)))
-      lines.append(u'  special_flag : %4d' % slot.special_flag)
     lines.append(u'='*80)
 
     lines.append(u'rigidbodies  : Total {1}.\n{0}'.format('-'*80, len(model.rigidbodies)))
@@ -608,12 +603,11 @@ def pmdInfo(model, screen=False):
       if idx != 0: lines.append('')
       idx += 1
       lines.append(u'  name(jpn)          : %s' % rigidbody.name.replace(u'\u30fb', u'·').strip())
-      lines.append(u'  name(eng)          : %s' % rigidbody.english_name.strip())
       lines.append(u'  bone_index         : %4d' % rigidbody.bone_index)
       lines.append(u'  collision_group    : %4d' % rigidbody.collision_group)
       lines.append(u'  no_collision_group : %4d' % rigidbody.no_collision_group)
       lines.append(u'  shape              : %4d, %s, %s, %s' % (rigidbody.shape_type, rigidbody.shape_size.to_tuple(), rigidbody.shape_position.to_tuple(), rigidbody.shape_rotation.to_tuple()))
-      lines.append(u'  param              : %4d, %.4f, %.4f, %.4f, %.4f' % (rigidbody.param.mass, rigidbody.param.linear_damping, rigidbody.param.angular_damping, rigidbody.param.restitution, rigidbody.param.friction))
+      lines.append(u'  param              : %4d, %.4f, %.4f, %.4f, %.4f' % (rigidbody.mass, rigidbody.linear_damping, rigidbody.angular_damping, rigidbody.restitution, rigidbody.friction))
       lines.append(u'  mode               : %4d' % rigidbody.mode)
     lines.append(u'='*80)
 
@@ -623,8 +617,6 @@ def pmdInfo(model, screen=False):
       if idx != 0: lines.append('')
       idx += 1
       lines.append(u'  name(jpn)         : %s' % joint.name.replace(u'\u30fb', u'·').strip())
-      lines.append(u'  name(eng)         : %s' % joint.english_name.strip())
-      lines.append(u'  joint_type        : %4d' % joint.joint_type)
       lines.append(u'  rigidbody_index   : %4d, %4d' % (joint.rigidbody_index_a, joint.rigidbody_index_b))
       lines.append(u'  position          : %s' % str(joint.position.to_tuple()))
       lines.append(u'  rotation          : %s' % str(joint.rotation.to_tuple()))
@@ -640,8 +632,6 @@ def pmdInfo(model, screen=False):
       idx += 1
       lines.append(u'  name(jpn)    : %s' % slot.name.replace(u'\u30fb', u'·').strip())
       lines.append(u'  name(eng)    : %s' % slot.english_name.strip())
-      lines.append(u'  references   : %4d, %s' % (len(slot.references), str(slot.references)))
-      lines.append(u'  special_flag : %4d' % slot.special_flag)
     lines.append(u'='*80)
 
     lines.append(u'vertices     : Total {1}.\n{0}'.format('-'*80, len(model.vertices)))
@@ -705,7 +695,8 @@ def testPMX(pmx):
     displayPmxModelInfo(pmxModel)
 
     import direct.directbase.DirectStart
-    p3dnodes, p3dmodel = pmx2p3d(pmxModel)
+    p3dnode = pmx2p3d(pmxModel)
+    p3dnode.reparentTo(render)
 
     run()
     pass
@@ -714,6 +705,7 @@ def testPMX(pmx):
 def testPMD(pmd):
   pmdModel = pmdLoad(pmdFile)
   if pmdModel:
+    print(pmdModel.path)
     displayPmdModelInfo(pmdModel)
 
     # import direct.directbase.DirectStart
@@ -725,17 +717,21 @@ def testPMD(pmd):
 
 
 if __name__ == '__main__':
-  pmxFile = u'./meiko/meiko.pmx'
-  pmxFile = u'./apimiku/Miku long hair.pmx'
-  pmxFile = u'./cupidmiku/Cupid Miku.pmx'
+  pmxFile = u'../models/meiko/meiko.pmx'
+  pmxFile = u'../models/apimiku/Miku long hair.pmx'
+  pmxFile = u'../models/cupidmiku/Cupid Miku.pmx'
 
-  pmdFile = u'./alice/alice.pmd'
+  pmdFile = u'../models/alice/alice.pmd'
 
   if len(sys.argv) > 1:
     if len(sys.argv[1]) > 0:
       pmxFile = sys.argv[1]
 
-  testPMX(pmxFile)
+  ext = os.path.splitext(pmxFile)[1].lower()
+  if ext in ['.pmd']:
+    testPMD(pmxFile)
+  elif ext in ['.pmx']:
+    testPMX(pmxFile)
 
   # testPMD(pmdFile)
 
