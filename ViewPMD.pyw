@@ -97,7 +97,7 @@ def resetCamera():
   pass
 
 def setStudioLight(render):
-  lights = []
+  lights = NodePathCollection()
 
   alight = AmbientLight('alight')
   # alight.setColor(VBase4(0.6, 0.6, 0.6, 1))
@@ -186,16 +186,33 @@ def lightAtNode(node, lights=None):
 
 
 def setAxis(render):
-  grid = ThreeAxisGrid(xy=True, yz=False, xz=False, z=False)
-  gridnodepath = grid.create()
+  lightStage = u'./stages/axis_default.bam'
+  if os.path.isfile(lightStage):
+    gridnodepath = loader.loadModel(lightStage)
+  else:
+    grid = ThreeAxisGrid(xy=True, yz=False, xz=False, z=False)
+    gridnodepath = grid.create()
+    grid.showPlane(XY=True)
+    grid.showAxis(Z=False)
+    gridnodepath.writeBamFile(lightStage)
   gridnodepath.reparentTo(render)
-  gridnodepath.setShaderAuto()
   pass
 
-def setUI():
-  UI = []
+def setUI(render):
+  UI = NodePath('GUI')
+  # btnReset = DirectButton(pos=(480,480), text=u'RESET', text_pos=(10,10), frameSize=(460, 460, 80, 80))
+  btnSnapshot = DirectButton(text=u'截屏', scale=.05, pos=(-0.935, -10, 0.938), command=snapshot)
+  btnAxisReset = DirectButton(text=u'复位', scale=.05, pos=(-0.935, -10, 0.852), command=resetCamera)
+  print(btnAxisReset)
 
-  btnReset = DirectButton(pos=(480,480), text=u'RESET', text_pos=(10,10), frameSize=(460, 460, 80, 80))
+  btnSnapshot.setName('BtnSnapShot')
+  btnAxisReset.setName('BtnAxisReset')
+
+  btnSnapshot.reparentTo(UI)
+  btnAxisReset.reparentTo(UI)
+
+  UI.reparentTo(render)
+  return(UI)
   pass
 
 def setAppInfo(title, icon):
@@ -256,36 +273,44 @@ if __name__ == '__main__':
 
   base.openMainWindow(type = 'onscreen')
 
-  pmxFile = u'./models/apimiku/Miku long hair.pmx'
-  pmxFile = u'./models/cupidmiku/Cupid Miku.pmx'
-  pmxFile = u'./models/meiko/meiko.pmx'
+  mmdFile = u'./models/apimiku/Miku long hair.pmx'
+  mmdFile = u'./models/cupidmiku/Cupid Miku.pmx'
+  mmdFile = u'./models/meiko/meiko.pmx'
 
   if len(sys.argv) > 1:
     if len(sys.argv[1]) > 0:
-      pmxFile = sys.argv[1]
+      mmdFile = sys.argv[1]
 
-  pmxModel = pmxLoad(pmxFile)
-  if pmxModel:
-    if SHOW_AXIS:
-      setAxis(render)
+  if SHOW_AXIS:
+    setAxis(render)
 
-    p3dnode = pmx2p3d(pmxModel)
-    p3dnode.reparentTo(render)
-    lastModel = p3dnode
-
-    lights = setStudioLight(render)
-    lightAtNode(p3dnode, lights=lights)
-
-    resetCamera()
-    # base.screenshot(namePrefix='snap_', defaultFilename=p3dnode.getName())
-
-    # btnReset = DirectButton(pos=(480,480), text=u'RESET', text_pos=(10,10), frameSize=(460, 460, 80, 80))
-    btnSnapshot = DirectButton(text=u'截屏', scale=.05, pos=(-0.935, -10, 0.938), command=snapshot)
-    btnSnapshot = DirectButton(text=u'复位', scale=.05, pos=(-0.935, -10, 0.852), command=resetCamera)
-
-    # btnSnapshot = DirectButton(text=u'SNAP', text_pos=(10,10), frameSize=(460, 460, 80, 80), scale=5.05, command=snapshot)
+  ext = os.path.splitext(mmdFile)[1].lower()
+  if ext in ['.pmd']:
+    mmdModel = pmdLoad(mmdFile)
+    if mmdModel:
+      p3dnode = pmd2p3d(mmdModel)
+  elif ext in ['.pmx']:
+    mmdModel = pmxLoad(mmdFile)
+    if mmdModel:
+      p3dnode = pmx2p3d(mmdModel)
 
 
+  p3dnode.reparentTo(render)
+  lastModel = p3dnode
+
+  lights = setStudioLight(render)
+  lightAtNode(p3dnode, lights=lights)
+
+  resetCamera()
+  # base.screenshot(namePrefix='snap_', defaultFilename=p3dnode.getName())
+
+  setUI(render)
+
+  # btnReset = DirectButton(pos=(480,480), text=u'RESET', text_pos=(10,10), frameSize=(460, 460, 80, 80))
+  # btnSnapshot = DirectButton(text=u'截屏', scale=.05, pos=(-0.935, -10, 0.938), command=snapshot)
+  # btnSnapshot = DirectButton(text=u'复位', scale=.05, pos=(-0.935, -10, 0.852), command=resetCamera)
+
+  # btnSnapshot = DirectButton(text=u'SNAP', text_pos=(10,10), frameSize=(460, 460, 80, 80), scale=5.05, command=snapshot)
 
   # pmodel = loader.loadModel('panda')
   # print(type(pmodel))
