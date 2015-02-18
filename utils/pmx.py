@@ -406,7 +406,7 @@ def pmx2p3d(pmx_model, alpha=True):
     if mat.texture_index >= 0 and textures[mat.texture_index]:
       textures[mat.texture_index].setBorderColor(VBase4(mat.edge_color.r, mat.edge_color.g, mat.edge_color.b, mat.alpha))
       textures[mat.texture_index].setWrapU(Texture.WM_clamp)
-      textures[mat.texture_index].setWrapV(Texture.WM_clamp)
+      # textures[mat.texture_index].setWrapV(Texture.WM_clamp)
 
       nodePath.setTexture(textures[mat.texture_index], 1)
       nodePath.setTexScale(TextureStage.getDefault(), 1, -1, -1)
@@ -480,11 +480,12 @@ def pmx2p3d(pmx_model, alpha=True):
       # Here is not really to solve the tex alpha-transparency bug, only a other bug :(
       #
       if mat.flag & 0x00000001:
-        nodePath.setTransparency(True, 0)
-        nodePath.setTransparency(True, 1)
-        # nodePath.setTransparency(TransparencyAttrib.MAlpha)
-        # nodePath.setTransparency(TransparencyAttrib.MDual)
-        # nodePath.setTransparency(TransparencyAttrib.MBinary)
+        # nodePath.setTransparency(True, 0)
+        # nodePath.setTransparency(True, 1)
+        # nodePath.setTransparency(TransparencyAttrib.MAlpha, 0)
+        nodePath.setTransparency(TransparencyAttrib.MDual, 0)
+        # nodePath.setTransparency(TransparencyAttrib.MBinary, 0)
+        pass
 
     vIndex += mat.vertex_count
     model.addChild(node)
@@ -845,11 +846,11 @@ def pmd2p3d(pmd_model, alpha=True):
       #
       # Here is not really to solve the tex alpha-transparency bug, only a other bug :(
       #
-      nodePath.setTransparency(True, 0)
-      nodePath.setTransparency(True, 1)
-      # nodePath.setTransparency(TransparencyAttrib.MAlpha)
-      # nodePath.setTransparency(TransparencyAttrib.MDual)
-      # nodePath.setTransparency(TransparencyAttrib.MBinary)
+      # nodePath.setTransparency(True, 0)
+      # nodePath.setTransparency(True, 1)
+      # nodePath.setTransparency(TransparencyAttrib.MAlpha, 1)
+      nodePath.setTransparency(TransparencyAttrib.MDual, 1)
+      # nodePath.setTransparency(TransparencyAttrib.MBinary, 1)
       pass
 
     vIndex += mat.vertex_count

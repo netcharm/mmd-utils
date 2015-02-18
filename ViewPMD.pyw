@@ -198,23 +198,6 @@ def setAxis(render):
   gridnodepath.reparentTo(render)
   pass
 
-def setUI(render):
-  UI = NodePath('GUI')
-  # btnReset = DirectButton(pos=(480,480), text=u'RESET', text_pos=(10,10), frameSize=(460, 460, 80, 80))
-  btnSnapshot = DirectButton(text=u'截屏', scale=.05, pos=(-0.935, -10, 0.938), command=snapshot)
-  btnAxisReset = DirectButton(text=u'复位', scale=.05, pos=(-0.935, -10, 0.852), command=resetCamera)
-  print(btnAxisReset)
-
-  btnSnapshot.setName('BtnSnapShot')
-  btnAxisReset.setName('BtnAxisReset')
-
-  btnSnapshot.reparentTo(UI)
-  btnAxisReset.reparentTo(UI)
-
-  UI.reparentTo(render)
-  return(UI)
-  pass
-
 def setAppInfo(title, icon):
   # 'DtoolClassDict', 'DtoolGetSupperBase',
   # 'MAbsolute', 'MRelative', 'M_absolute', 'M_relative',
@@ -257,6 +240,7 @@ def setAppInfo(title, icon):
 
 def snapshot(snapfile='snap_00.png'):
   # n = base.win.ModelPool[0].getName()
+  print(render.find('**/GUI/btnSnapShot*'))
   if lastModel:
     path = lastModel.node().getTag('path')
     fn = os.path.splitext(os.path.basename(path))
@@ -264,6 +248,25 @@ def snapshot(snapfile='snap_00.png'):
     snapfile = os.path.join(folder, u'snap_%s.png' % (fn[0]))
     # snapfile = u'snap_%s.png' % lastModel.getName()
   return(base.win.saveScreenshot(filename=snapfile))
+  pass
+
+def setUI(render):
+  UI = NodePath('GUI')
+
+  # btnReset = DirectButton(pos=(480,480), text=u'RESET', text_pos=(10,10), frameSize=(460, 460, 80, 80))
+  btnSnapshot = DirectButton(text=u'截屏', scale=.05, pos=(-0.935, -10, 0.938), command=snapshot)
+  btnAxisReset = DirectButton(text=u'复位', scale=.05, pos=(-0.935, -10, 0.852), command=resetCamera)
+  print(btnAxisReset)
+
+  btnSnapshot.setName('btnSnapShot')
+  btnAxisReset.setName('btnAxisReset')
+
+
+  btnSnapshot.reparentTo(UI)
+  btnAxisReset.reparentTo(UI)
+
+  UI.reparentTo(aspect2d)
+  return(UI)
   pass
 
 if __name__ == '__main__':
@@ -283,6 +286,8 @@ if __name__ == '__main__':
 
   if SHOW_AXIS:
     setAxis(render)
+
+  setUI(render)
 
   ext = os.path.splitext(mmdFile)[1].lower()
   if ext in ['.pmd']:
@@ -304,7 +309,6 @@ if __name__ == '__main__':
   resetCamera()
   # base.screenshot(namePrefix='snap_', defaultFilename=p3dnode.getName())
 
-  setUI(render)
 
   # btnReset = DirectButton(pos=(480,480), text=u'RESET', text_pos=(10,10), frameSize=(460, 460, 80, 80))
   # btnSnapshot = DirectButton(text=u'截屏', scale=.05, pos=(-0.935, -10, 0.938), command=snapshot)
