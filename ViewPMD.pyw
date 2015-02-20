@@ -49,6 +49,7 @@ from panda3d.core import VBase4
 
 
 from direct.filter.CommonFilters import CommonFilters
+from direct.showbase.ShowBase import ShowBase
 
 import direct.directbase.DirectStart
 
@@ -97,78 +98,94 @@ def resetCamera():
   pass
 
 def setStudioLight(render):
-  lights = NodePathCollection()
+  lightsStage = u'./stages/default_lights.bam'
+  try:
+    lights = loader.loadModel(lightsStage)
+  except:
+    lights = NodePath(PandaNode('StageLights'))
 
-  alight = AmbientLight('alight')
-  # alight.setColor(VBase4(0.6, 0.6, 0.6, 1))
-  alight.setColor(VBase4(0.33, 0.33, 0.33, 0.33))
-  alnp = render.attachNewNode(alight)
-  lights.append(alnp)
+    alight = AmbientLight('alight')
+    alight.setColor(VBase4(0.67, 0.67, 0.67, .8))
+    # alight.setColor(VBase4(0.33, 0.33, 0.33, 0.67))
+    alnp = render.attachNewNode(alight)
+    alnp.reparentTo(lights)
 
-  dlight_topback = Spotlight('backtop dlight')
-  dlnp_topback = render.attachNewNode(dlight_topback)
-  dlnp_topback.setX(0)
-  dlnp_topback.setZ(25)
-  dlnp_topback.setY(+55)
-  dlnp_topback.node().setAttenuation( Vec3( 0.001, 0.005, 0.001 ) )
-  # dlnp_topback.node().setAttenuation( Vec3( 0.005, 0.005, 0.005 ) )
-  dlnp_topback.setHpr(0, -168, 0)
-  if SHOW_LIGHT_POS:
-    dlnp_topback.node().showFrustum()
-  lights.append(dlnp_topback)
+    dlight_top = PointLight('top dlight')
+    dlnp_top = render.attachNewNode(dlight_top)
+    dlnp_top.setX(-5)
+    dlnp_top.setZ(45)
+    dlnp_top.setY(0)
+    # dlnp_top.node().setAttenuation( Vec3( 0.001, 0.005, 0.001 ) )
+    dlnp_top.node().setAttenuation( Vec3( 0.005, 0.005, 0.005 ) )
+    dlnp_top.setHpr(0, -180, 0)
+    if SHOW_LIGHT_POS:
+      dlnp_top.node().showFrustum()
+    dlnp_top.reparentTo(lights)
 
-  dlight_front = PointLight('front dlight')
-  dlnp_front = render.attachNewNode(dlight_front)
-  dlnp_front.setX(0)
-  dlnp_front.setY(-36)
-  dlnp_front.setZ(15)
-  dlens = dlnp_front.node().getLens()
-  dlens.setFilmSize(41, 21)
-  # dlens.setNearFar(50, 75)
-  dlnp_front.node().setAttenuation( Vec3( 0.001, 0.005, 0.001 ) )
-  # dlnp_front.node().setAttenuation( Vec3( 0.005, 0.005, 0.005 ) )
-  dlnp_front.setHpr(0, -10, 0)
-  if SHOW_LIGHT_POS:
-    dlnp_front.node().showFrustum()
-  lights.append(dlnp_front)
+    dlight_back = PointLight('back dlight')
+    dlnp_back = render.attachNewNode(dlight_back)
+    dlnp_back.setX(0)
+    dlnp_back.setZ(25)
+    dlnp_back.setY(+55)
+    # dlnp_back.node().setAttenuation( Vec3( 0.001, 0.005, 0.001 ) )
+    dlnp_back.node().setAttenuation( Vec3( 0.001, 0.005, 0.001 ) )
+    dlnp_back.setHpr(0, -168, 0)
+    if SHOW_LIGHT_POS:
+      dlnp_back.node().showFrustum()
+    dlnp_back.reparentTo(lights)
 
-  dlight_left = Spotlight('left dlight')
-  dlnp_left = render.attachNewNode(dlight_left)
-  dlnp_left.setX(-46)
-  dlnp_left.setY(+36)
-  dlnp_left.setZ(27)
-  dlens = dlnp_left.node().getLens()
-  dlens.setFilmSize(41, 21)
-  # dlens.setNearFar(50, 75)
-  dlnp_left.node().setAttenuation( Vec3( 0.001, 0.002, 0.001 ) )
-  # dlnp_left.node().setAttenuation( Vec3( 0.011, 0.011, 0.011 ) )
-  dlnp_left.setHpr(-130, -15, 0)
-  if SHOW_LIGHT_POS:
-    dlnp_left.node().showFrustum()
-  lights.append(dlnp_left)
+    dlight_front = PointLight('front dlight')
+    dlnp_front = render.attachNewNode(dlight_front)
+    dlnp_front.setX(0)
+    dlnp_front.setY(-36)
+    dlnp_front.setZ(15)
+    dlens = dlnp_front.node().getLens()
+    dlens.setFilmSize(41, 21)
+    # dlens.setNearFar(50, 75)
+    dlnp_front.node().setAttenuation( Vec3( 0.001, 0.005, 0.001 ) )
+    # dlnp_front.node().setAttenuation( Vec3( 0.005, 0.005, 0.005 ) )
+    dlnp_front.setHpr(0, -10, 0)
+    if SHOW_LIGHT_POS:
+      dlnp_front.node().showFrustum()
+    dlnp_front.reparentTo(lights)
 
-  dlight_right = Spotlight('right dlight')
-  dlnp_right = render.attachNewNode(dlight_right)
-  dlnp_right.setX(+50)
-  dlnp_right.setY(+40)
-  dlnp_right.setZ(30)
-  dlens = dlnp_right.node().getLens()
-  dlens.setFilmSize(41, 21)
-  # dlens.setNearFar(50, 75)
-  dlnp_right.node().setAttenuation( Vec3( 0.001, 0.002, 0.001 ) )
-  # dlnp_right.node().setAttenuation( Vec3( 0.011, 0.011, 0.011 ) )
-  dlnp_right.setHpr(130, -15, 0)
-  if SHOW_LIGHT_POS:
-    dlnp_right.node().showFrustum()
-  lights.append(dlnp_right)
+    dlight_left = Spotlight('left dlight')
+    dlnp_left = render.attachNewNode(dlight_left)
+    dlnp_left.setX(-46)
+    dlnp_left.setY(+36)
+    dlnp_left.setZ(27)
+    dlens = dlnp_left.node().getLens()
+    dlens.setFilmSize(41, 21)
+    # dlens.setNearFar(50, 75)
+    dlnp_left.node().setAttenuation( Vec3( 0.001, 0.002, 0.001 ) )
+    # dlnp_left.node().setAttenuation( Vec3( 0.011, 0.011, 0.011 ) )
+    dlnp_left.setHpr(-130, -15, 0)
+    if SHOW_LIGHT_POS:
+      dlnp_left.node().showFrustum()
+    dlnp_left.reparentTo(lights)
 
-  if SHOW_SHADOW:
-    for light in lights:
-      try:
-        light.node().setShadowCaster(True, 512, 512)
-      except:
-        continue
+    dlight_right = Spotlight('right dlight')
+    dlnp_right = render.attachNewNode(dlight_right)
+    dlnp_right.setX(+50)
+    dlnp_right.setY(+40)
+    dlnp_right.setZ(30)
+    dlens = dlnp_right.node().getLens()
+    dlens.setFilmSize(41, 21)
+    # dlens.setNearFar(50, 75)
+    dlnp_right.node().setAttenuation( Vec3( 0.001, 0.002, 0.001 ) )
+    # dlnp_right.node().setAttenuation( Vec3( 0.011, 0.011, 0.011 ) )
+    dlnp_right.setHpr(130, -15, 0)
+    if SHOW_LIGHT_POS:
+      dlnp_right.node().showFrustum()
+    dlnp_right.reparentTo(lights)
 
+    if SHOW_SHADOW:
+      lights.setShaderAuto()
+      lights.setShadowCaster(True, 512, 512)
+
+    # lights.writeBamFile(lightsStage)
+
+  # lights.reparentTo(render)
   return(lights)
   pass
 
@@ -177,24 +194,26 @@ def lightAtNode(node, lights=None):
       return
   if isinstance(node, NodePathCollection):
     for np in node:
-      for light in lights:
+      for light in lights.getChildren():
         np.setLight(light)
   elif isinstance(node, NodePath):
-    for light in lights:
-      node.setLight(light)
+    for light in lights.getChildren():
+      try:
+        node.setLight(light)
+      except:
+        continue
   pass
 
-
 def setAxis(render):
-  lightStage = u'./stages/axis_default.bam'
-  if os.path.isfile(lightStage):
-    gridnodepath = loader.loadModel(lightStage)
-  else:
+  axisStage = u'./stages/default_axis.bam'
+  try:
+    gridnodepath = loader.loadModel(axisStage)
+  except:
     grid = ThreeAxisGrid(xy=True, yz=False, xz=False, z=False)
     gridnodepath = grid.create()
     grid.showPlane(XY=True)
     grid.showAxis(Z=False)
-    gridnodepath.writeBamFile(lightStage)
+    gridnodepath.writeBamFile(axisStage)
   gridnodepath.reparentTo(render)
   pass
 
@@ -239,34 +258,154 @@ def setAppInfo(title, icon):
   pass
 
 def snapshot(snapfile='snap_00.png'):
-  # n = base.win.ModelPool[0].getName()
-  print(render.find('**/GUI/btnSnapShot*'))
+  result = False
   if lastModel:
+    GUI = render2d.find('**/aspect2d/*')
+    GUI.hide()
     path = lastModel.node().getTag('path')
     fn = os.path.splitext(os.path.basename(path))
     folder = os.path.dirname(path)
     snapfile = os.path.join(folder, u'snap_%s.png' % (fn[0]))
-    # snapfile = u'snap_%s.png' % lastModel.getName()
-  return(base.win.saveScreenshot(filename=snapfile))
+    base.graphicsEngine.renderFrame()
+    result = base.screenshot(namePrefix=snapfile, defaultFilename=0, source=None, imageComment=fn[0])
+    GUI.show()
+  return(result)
   pass
+
+def menuItemSel(arg):
+  if arg in [u'X轴线', u'Y轴线', u'Z轴线', u'XY平面', u'YZ平面', u'XZ平面']:
+    if   arg == u'X轴线':
+      axis = render.find('**/AXISLINE/X*')
+    elif arg == u'Y轴线':
+      axis = render.find('**/AXISLINE/Y*')
+    elif arg == u'Z轴线':
+      axis = render.find('**/AXISLINE/Z*')
+    elif arg == u'XY平面':
+      axis = render.find('**/PLANEGRID/XY*')
+    elif arg == u'YZ平面':
+      axis = render.find('**/PLANEGRID/YZ*')
+    elif arg == u'XZ平面':
+      axis = render.find('**/PLANEGRID/XZ*')
+
+    if axis.isHidden():
+      axis.show()
+    else:
+      axis.hide()
+  else:
+    pass
+
+  # menuAxisSelect = render2d.find('**/menuAxisSelect*')
+  # if menuAxisSelect:
+  #   print(menuAxisSelect.ls())
+  #   menuAxisSelect.node().setup(u'坐标系  ')
+  pass
+
+def processVertexData(vdata_src, vdata_dst, morph=True, strength=1.0):
+  print('morph ------> ', morph)
+  vertex_src = GeomVertexWriter(vdata_src, 'vertex')
+
+  vertex_dst = GeomVertexReader(vdata_dst, 'vertex')
+  vindex_dst = GeomVertexReader(vdata_dst, 'vindex')
+  vmorph_dst = GeomVertexReader(vdata_dst, 'vmorph')
+
+  vertex_dst.setForce(True)
+  vindex_dst.setForce(True)
+  vmorph_dst.setForce(True)
+  while not vertex_dst.isAtEnd():
+    v_dst = vertex_dst.getData3f()
+    i_dst = vindex_dst.getData1i()
+    m_dst = vmorph_dst.getData3f()
+    vertex_src.setRow(i_dst)
+    if morph:
+      vertex_src.setData3f(v_dst.getX()+m_dst.getX(), v_dst.getY()+m_dst.getY(), v_dst.getZ()+m_dst.getZ())
+    else:
+      vertex_src.setData3f(v_dst.getX(), v_dst.getY(), v_dst.getZ())
+
+def processGeom(geom, vertices, morph=True, strength=1.0):
+  vdata_src = geom.modifyVertexData()
+  vdata_dst = vertices.getVertexData()
+  return(processVertexData(vdata_src, vdata_dst, morph))
+
+def processGeomNode(geomNode, morphNode, morph=True, strength=1.0):
+  morphgeom = morphNode.getGeom(0)
+  geom = geomNode.modifyGeom(0)
+  state = geomNode.getGeomState(0)
+  result = processGeom(geom, morphgeom, morph)
+
+def setVertex(nodepath, morphnodepath, morph=True, strength=1.0):
+  morphNode = morphnodepath.node()
+  geomNodeCollection = nodepath.findAllMatches('**/Body/+GeomNode')
+  for nodePath in geomNodeCollection:
+    print(u'%s' % nodePath.getName().replace(u'\u30fb', u'.'))
+    geomNode = nodePath.node()
+    processGeomNode(geomNode, morphNode, morph)
+  pass
+
+def setExpression(model, expression, morph=True, strength=1.0):
+  morph = model.find('**/Morphs*')
+  for item in morph.getChildren():
+    if item.getName() == expression:
+      print(u'===================\n%s\n===================' % expression)
+      lastExpression = model.getPythonTag('lastExpression')
+      if lastExpression:
+        setVertex(model, lastExpression, morph=False)
+      setVertex(model, item, morph=True, strength=1.0)
+      model.setPythonTag('lastExpression', item)
+      break
+    pass
+  pass
+
+def menuMorphSel(arg):
+  setExpression(lastModel, arg)
 
 def setUI(render):
   UI = NodePath('GUI')
 
   # btnReset = DirectButton(pos=(480,480), text=u'RESET', text_pos=(10,10), frameSize=(460, 460, 80, 80))
   btnSnapshot = DirectButton(text=u'截屏', scale=.05, pos=(-0.935, -10, 0.938), command=snapshot)
-  btnAxisReset = DirectButton(text=u'复位', scale=.05, pos=(-0.935, -10, 0.852), command=resetCamera)
-  print(btnAxisReset)
-
   btnSnapshot.setName('btnSnapShot')
-  btnAxisReset.setName('btnAxisReset')
-
-
   btnSnapshot.reparentTo(UI)
+
+  btnAxisReset = DirectButton(text=u'复位', scale=.05, pos=(-0.935, -10, 0.852), command=resetCamera)
+  btnAxisReset.setName('btnAxisReset')
   btnAxisReset.reparentTo(UI)
+
+  menuAxisSelect = DirectOptionMenu(text="网格", scale=0.05, pos=(-0.985, -10, -0.980),
+    items=[u'Z轴线', u'X轴线', u'Y轴线', u'XY平面', u'YZ平面', u'XZ平面'],
+    initialitem=0, highlightColor=(0.65,0.65,0.65,1), command=menuItemSel, textMayChange=0)
+  menuAxisSelect.setName('menuAxisSelect')
+  menuAxisSelect.reparentTo(UI)
+
+  morphItems = []
+  morph = render.find('**/Morphs*')
+  if morph:
+    for item in morph.getChildren():
+      morphItems.append(item.getName())
+  if len(morphItems)>0:
+    menuMorphs = DirectOptionMenu(text="表情", scale=0.05, pos=(0.850, -10, -0.980),
+      items=morphItems,
+      initialitem=0, highlightColor=(0.65,0.65,0.65,1), command=menuMorphSel)
+
+    menuMorphs.setName('menuMorphSelect')
+    menuMorphs.reparentTo(UI)
 
   UI.reparentTo(aspect2d)
   return(UI)
+  pass
+
+class Viewer(ShowBase):
+  def __init__(self, gw):
+    self.gw = gw
+    self.active_points = {}
+    self.touch_images = {}
+    self.touch_text = {}
+
+    ShowBase.__init__(self)
+    self.build()
+
+  def build(self):
+    pass
+
   pass
 
 if __name__ == '__main__':
@@ -287,7 +426,8 @@ if __name__ == '__main__':
   if SHOW_AXIS:
     setAxis(render)
 
-  setUI(render)
+  # pmodel = loader.loadModel('panda')
+  # print(type(pmodel))
 
   ext = os.path.splitext(mmdFile)[1].lower()
   if ext in ['.pmd']:
@@ -298,10 +438,18 @@ if __name__ == '__main__':
     mmdModel = pmxLoad(mmdFile)
     if mmdModel:
       p3dnode = pmx2p3d(mmdModel)
-
+      morphs = loadPmxMorph(mmdModel)
+      morphs.reparentTo(p3dnode)
 
   p3dnode.reparentTo(render)
   lastModel = p3dnode
+
+  if morphs:
+    morph = morphs.find('*')
+    print(u'%s' % morph.getName().replace(u'\u30fb', u'.'))
+
+  if DEBUG:
+    p3dnode.showTightBounds()
 
   lights = setStudioLight(render)
   lightAtNode(p3dnode, lights=lights)
@@ -309,25 +457,17 @@ if __name__ == '__main__':
   resetCamera()
   # base.screenshot(namePrefix='snap_', defaultFilename=p3dnode.getName())
 
-
-  # btnReset = DirectButton(pos=(480,480), text=u'RESET', text_pos=(10,10), frameSize=(460, 460, 80, 80))
-  # btnSnapshot = DirectButton(text=u'截屏', scale=.05, pos=(-0.935, -10, 0.938), command=snapshot)
-  # btnSnapshot = DirectButton(text=u'复位', scale=.05, pos=(-0.935, -10, 0.852), command=resetCamera)
-
-  # btnSnapshot = DirectButton(text=u'SNAP', text_pos=(10,10), frameSize=(460, 460, 80, 80), scale=5.05, command=snapshot)
-
-  # pmodel = loader.loadModel('panda')
-  # print(type(pmodel))
-
   # render.setAntialias(AntialiasAttrib.MMultisample, 8)
-  # render.setAntialias(AntialiasAttrib.MAuto)
+  render.setAntialias(AntialiasAttrib.MAuto)
+
+  # Shader.load(Shader.SLGLSL, './shader_v.sha', './shader_f.sha' )
+  # render.setShader(Shader.load("inkGen.sha"))
   # render.setShaderAuto()
 
-  mydir = os.path.abspath(sys.path[0])
+  # filters = CommonFilters(base.win, base.cam)
+  # filters.setBloom()
+  # filters.setCartoonInk()
 
-  # Convert that to panda's unix-style notation.
-  # 转换为 panda 使用的 unix 风格。
-  mydir = Filename.fromOsSpecific(mydir).getFullpath()
-  # print(mydir)
+  setUI(render)
 
   run()

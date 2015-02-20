@@ -51,6 +51,9 @@ from pymeshio.vmd import reader as vmdReader
 
 from pandac.PandaModules import *
 
+Shader.load(Shader.SLGLSL, './shader_v.sha', './shader_f.sha' )
+
+
 DEBUG = True
 DEBUG = False
 
@@ -314,7 +317,7 @@ def pmx2p3d(pmx_model, alpha=True):
   #
   materials = MaterialCollection()
   for mat in pmx_model.materials:
-    log(u'Loading Material :, %s' % mat.name.replace(u'\u30fb', u'·').strip())
+    log(u'Loading Material : %s' % mat.name.replace(u'\u30fb', u'·').strip())
     material = Material(mat.name)
     material.setAmbient(VBase4(mat.ambient_color.r, mat.ambient_color.g, mat.ambient_color.b, mat.alpha)) #Make this material blue
     material.setDiffuse(VBase4(mat.diffuse_color.r, mat.diffuse_color.g, mat.diffuse_color.b, mat.alpha))
@@ -339,7 +342,219 @@ def pmx2p3d(pmx_model, alpha=True):
       pass
 
     materials.addMaterial(material)
-    log(u'Loaded Material :, %s' % mat.name.replace(u'\u30fb', u'·').strip(), force=True)
+    log(u'Loaded Material : %s' % mat.name.replace(u'\u30fb', u'·').strip(), force=True)
+
+  #
+  # load vertices(vertex list)
+  #
+  formatArray = GeomVertexArrayFormat()
+  formatArray.addColumn(InternalName.make("edge_factor"), 1, Geom.NTFloat32, Geom.COther)
+  formatArray.addColumn(InternalName.make("drawFlag"), 1, Geom.NTUint8, Geom.COther)
+  formatArray.addColumn(InternalName.make("index"), 1, Geom.NTUint32, Geom.CIndex)
+  # formatArray.addColumn(InternalName.make("morph"), 1, Geom.NTFloat32, Geom.CMorphDelta)
+
+  format = GeomVertexFormat(GeomVertexFormat.getV3n3cpt2())
+  format.addArray(formatArray)
+  GeomVertexFormat.registerFormat(format)
+
+  vdata = GeomVertexData(pmx_model.name, format, Geom.UHStatic)
+
+  vdata.setNumRows(6)
+  vertex = GeomVertexWriter(vdata, 'vertex')
+  normal = GeomVertexWriter(vdata, 'normal')
+  color = GeomVertexWriter(vdata, 'color')
+  texcoord = GeomVertexWriter(vdata, 'texcoord')
+  edge = GeomVertexWriter(vdata, 'edge_factor')
+  index = GeomVertexWriter(vdata, 'index')
+
+  idx = 0
+  for v in pmx_model.vertices:
+    vertex.addData3f(v.position.x, v.position.z, v.position.y)
+    normal.addData3f(v.normal.x, v.normal.z, v.normal.y)
+    color.addData4f(.95, .95, .95, 1)
+    texcoord.addData2f(v.uv.x, v.uv.y)
+    edge.addData1f(v.edge_factor)
+    index.addData1i(idx)
+    idx += 1
+
+  #
+  # load polygons face
+  #
+  vIndex = 0
+  model = ModelNode(pmx_model.name)
+  model.setTag('path', pmx_model.path)
+  model.setTag('version', str(pmx_model.version))
+  model.setTag('name', pmx_model.name)
+  model.setTag('english_name', pmx_model.english_name)
+  model.setTag('comment', pmx_model.comment)
+  model.setTag('english_comment', pmx_model.english_comment)
+
+  modelBody = ModelNode('Body')
+  model.addChild(modelBody)
+
+  matIndex = 0
+  for mat in pmx_model.materials:
+    prim = GeomTriangles(Geom.UHStatic)
+    log(u'Loading Node : %s' % mat.name.replace(u'\u30fb', u'·').strip())
+    for idx in xrange(vIndex, vIndex+mat.vertex_count, 3):
+      # flip trig-face for inverted axis-y/axis-z
+      prim.addVertices(pmx_model.indices[idx+2], pmx_model.indices[idx+1], pmx_model.indices[idx+0])
+
+    geom = Geom(vdata)
+    geom.addPrimitive(prim)
+    node = GeomNode(mat.name)
+    node.addGeom(geom)
+    nodePath = NodePath(node)
+
+    #
+    # set polygon face material
+    #
+    nodePath.setMaterial(materials.findMaterial(mat.name), 1) #Apply the material to this nodePath
+
+    #
+    # set polygon face textures
+    #
+    if mat.texture_index >= 0 and textures[mat.texture_index]:
+      textures[mat.texture_index].setBorderColor(VBase4(mat.edge_color.r, mat.edge_color.g, mat.edge_color.b, mat.alpha))
+      # textures[mat.texture_index].setWrapU(Texture.WM_clamp)
+      # # textures[mat.texture_index].setWrapV(Texture.WM_clamp)
+
+      nodePath.setTexture(textures[mat.texture_index], matIndex)
+      nodePath.setTexScale(TextureStage.getDefault(), 1, -1, -1)
+
+    # if mat.sphere_mode > 0 and textures[mat.sphere_texture_index]:
+    if mat.sphere_mode > 0:
+      if mat.sphere_mode == 1:
+        texMode = TextureStage.MGloss
+        # texMode = TextureStage.MModulateGlow
+      elif mat.sphere_mode == 2:
+        texMode = TextureStage.MAdd
+      elif mat.sphere_mode == 3:
+        texMode = TextureStage.MReplace
+      else:
+        texMode = TextureStage.MGlow
+        # texMode = TextureStage.MReplace
+
+      log(u'%s: mode[%d], texop[%d], sysop[modulate(%d), modulategloss(%d), add(%d), replace(%d), gloss(%d)]' % (mat.name.replace(u'\u30fb', u'·'), mat.sphere_mode, texMode, TextureStage.MModulate, TextureStage.MModulateGlow, TextureStage.MAdd, TextureStage.MReplace, TextureStage.MGloss))
+      # texMode = TextureStage.MAdd
+      ts_sphere = TextureStage(mat.name+'_sphere')
+      ts_sphere.setMode(texMode)
+      ts_sphere.setSort(matIndex)
+      ts_sphere.setPriority(matIndex)
+      if (mat.sphere_texture_index < 0) or (not textures[mat.sphere_texture_index]):
+        tex = Texture('NULL')
+        ts_sphere.setColor(VBase4(0.9, 0.9, 0.9, 0.68))
+      else:
+        tex = textures[mat.sphere_texture_index]
+      tex.setWrapU(Texture.WM_clamp)
+      tex.setWrapV(Texture.WM_clamp)
+
+      # nodePath.setTexGen(ts_sphere, TexGenAttrib.MEyeCubeMap, matIndex)
+      nodePath.setTexGen(ts_sphere, TexGenAttrib.MPointSprite, matIndex)
+      nodePath.setTexture(ts_sphere, tex, matIndex)
+      nodePath.setTexScale(ts_sphere, 1, -1, -1)
+      # nodePath.setShaderAuto(matIndex)
+
+    if mat.toon_texture_index>=0 and textures[mat.toon_texture_index] and mat.toon_sharing_flag >= 0:
+      if mat.sphere_mode == 1:
+        texMode = TextureStage.MModulateGlow
+      elif mat.sphere_mode == 2:
+        texMode = TextureStage.MAdd
+      elif mat.sphere_mode == 3:
+        texMode = TextureStage.MReplace
+      else:
+        texMode = TextureStage.MGloss
+
+      texMode = TextureStage.MGloss
+
+      ts_toon = TextureStage(mat.name+'_toon')
+      ts_toon.setMode(texMode)
+      ts_toon.setSort(matIndex)
+      ts_toon.setPriority(matIndex)
+      textures[mat.toon_texture_index].setWrapU(Texture.WM_clamp)
+      # nodePath.setTexGen(ts_sphere, TexGenAttrib.MEyeCubeMap, matIndex)
+      # nodePath.setTexGen(ts_toon, TexGenAttrib.MEyePosition, matIndex)
+      nodePath.setTexGen(ts_toon, TexGenAttrib.MPointSprite, matIndex)
+      nodePath.setTexture(ts_toon, textures[mat.toon_texture_index], matIndex)
+      nodePath.setTexScale(ts_toon, 1, -1, -1)
+
+
+    # nodePath.setColorOff()
+    # nodePath.setShaderAuto(2)
+    # nodePath.setShaderAuto(BitMask32.bit(Shader.BitAutoShaderNormal) , 2)
+    nodePath.setAntialias(AntialiasAttrib.MAuto)
+
+    if alpha:
+      #
+      # Here is not really to solve the tex alpha-transparency bug, only a other bug :(
+      #
+      if mat.flag & 0x00000001:
+        # nodePath.setTransparency(True, 0)
+        # nodePath.setTransparency(True, 1)
+        # nodePath.setTransparency(TransparencyAttrib.MAlpha, 0)
+        nodePath.setTransparency(TransparencyAttrib.MDual, 0)
+        # nodePath.setTransparency(TransparencyAttrib.MBinary, 0)
+        pass
+
+    vIndex += mat.vertex_count
+    modelBody.addChild(node)
+    matIndex += 1
+    log(u'Loaded Node : %s' % mat.name.replace(u'\u30fb', u'·').strip(), force=True)
+
+  modelPath = NodePath(model)
+  # modelPath.setShaderAuto()
+  return(modelPath)
+  pass
+
+def loadPmxModel(pmx_model, alpha=True):
+  #
+  # load textures
+  #
+  textures = TextureCollection()
+  for tex in pmx_model.textures:
+    tex_path = os.path.normpath(os.path.join(os.path.dirname(pmx_model.path), tex))
+    tex_path = os.path.normcase(tex_path)
+    log(u'Loading Texture : %s' % tex_path)
+    texture = loadTexture(tex_path)
+    if texture:
+      textures.append(texture)
+      log(u'Loaded Texture : %s' % tex_path, force=True)
+      log(texture)
+    else:
+      textures.append(Texture('NULL'))
+      log('Texture Error: %s' % tex_path)
+
+  #
+  # load materials
+  #
+  materials = MaterialCollection()
+  for mat in pmx_model.materials:
+    log(u'Loading Material : %s' % mat.name.replace(u'\u30fb', u'·').strip())
+    material = Material(mat.name)
+    material.setAmbient(VBase4(mat.ambient_color.r, mat.ambient_color.g, mat.ambient_color.b, mat.alpha)) #Make this material blue
+    material.setDiffuse(VBase4(mat.diffuse_color.r, mat.diffuse_color.g, mat.diffuse_color.b, mat.alpha))
+    material.setSpecular(VBase4(mat.specular_color.r, mat.specular_color.g, mat.specular_color.b, mat.alpha))
+    # material.setShininess(5.0) #Make this material shiny
+    material.setShininess(mat.specular_factor)
+    material.setLocal(True)
+    if   mat.flag & 0x00000001:
+      # 两面描画
+      material.setTwoside(True)
+    elif mat.flag & 0x00000010:
+      # 地面影
+      pass
+    elif mat.flag & 0x00000100:
+      # セルフ影マツ
+      pass
+    elif mat.flag & 0x00001000:
+      # セルフ影
+      pass
+    elif mat.flag & 0x00010000:
+      # 輪郭有效
+      pass
+
+    materials.addMaterial(material)
+    log(u'Loaded Material : %s' % mat.name.replace(u'\u30fb', u'·').strip(), force=True)
 
   #
   # load vertices(vertex list)
@@ -360,8 +575,6 @@ def pmx2p3d(pmx_model, alpha=True):
   texcoord = GeomVertexWriter(vdata, 'texcoord')
 
   for v in pmx_model.vertices:
-    # vertex.addData3f(v.position.x, v.position.y, v.position.z)
-    # normal.addData3f(v.normal.x, v.normal.y, v.normal.z)
     vertex.addData3f(v.position.x, v.position.z, v.position.y)
     normal.addData3f(v.normal.x, v.normal.z, v.normal.y)
     color.addData4f(.95, .95, .95, 1)
@@ -379,11 +592,10 @@ def pmx2p3d(pmx_model, alpha=True):
   model.setTag('comment', pmx_model.comment)
   model.setTag('english_comment', pmx_model.english_comment)
 
-  # glowShader = Shader.load('glowShader.sha')
   matIndex = 0
   for mat in pmx_model.materials:
+    log(u'Loading Node : %s' % mat.name.replace(u'\u30fb', u'·').strip())
     prim = GeomTriangles(Geom.UHStatic)
-    log(u'Loading Node :, %s' % mat.name.replace(u'\u30fb', u'·').strip())
     for idx in xrange(vIndex, vIndex+mat.vertex_count, 3):
       # flip trig-face for inverted axis-y/axis-z
       prim.addVertices(pmx_model.indices[idx+2], pmx_model.indices[idx+1], pmx_model.indices[idx+0])
@@ -392,7 +604,6 @@ def pmx2p3d(pmx_model, alpha=True):
     geom.addPrimitive(prim)
     node = GeomNode(mat.name)
     node.addGeom(geom)
-    # nodePath = render.attachNewNode(node)
     nodePath = NodePath(node)
 
     #
@@ -405,23 +616,16 @@ def pmx2p3d(pmx_model, alpha=True):
     #
     if mat.texture_index >= 0 and textures[mat.texture_index]:
       textures[mat.texture_index].setBorderColor(VBase4(mat.edge_color.r, mat.edge_color.g, mat.edge_color.b, mat.alpha))
-      textures[mat.texture_index].setWrapU(Texture.WM_clamp)
-      # textures[mat.texture_index].setWrapV(Texture.WM_clamp)
+      # textures[mat.texture_index].setWrapU(Texture.WM_clamp)
+      # # textures[mat.texture_index].setWrapV(Texture.WM_clamp)
 
       nodePath.setTexture(textures[mat.texture_index], 1)
       nodePath.setTexScale(TextureStage.getDefault(), 1, -1, -1)
 
-      # ts_main = TextureStage(mat.name+'_main')
-      # ts_main.setMode(TextureStage.MReplace)
-      # ts_main.setSort(matIndex)
-      # ts_main.setPriority(matIndex)
-      # nodePath.setTexture(ts_main, textures[mat.texture_index], matIndex)
-      # nodePath.setTexScale(ts_main, 1, -1, -1)
-
     # if mat.sphere_mode > 0 and textures[mat.sphere_texture_index]:
     if mat.sphere_mode > 0:
       if mat.sphere_mode == 1:
-        texMode = TextureStage.MModulateGloss
+        texMode = TextureStage.MModulateGlow
         # texMode = TextureStage.MModulateGlow
       elif mat.sphere_mode == 2:
         texMode = TextureStage.MAdd
@@ -437,7 +641,7 @@ def pmx2p3d(pmx_model, alpha=True):
       ts_sphere.setMode(texMode)
       ts_sphere.setSort(2)
       ts_sphere.setPriority(2)
-      if mat.sphere_texture_index < 0:
+      if (mat.sphere_texture_index < 0) or (not textures[mat.sphere_texture_index]):
         tex = Texture('NULL')
         ts_sphere.setColor(VBase4(0.9, 0.9, 0.9, 0.68))
       else:
@@ -465,12 +669,14 @@ def pmx2p3d(pmx_model, alpha=True):
       ts_toon = TextureStage(mat.name+'_toon')
       ts_toon.setMode(texMode)
       textures[mat.toon_texture_index].setWrapU(Texture.WM_clamp)
-      nodePath.setTexGen(ts_toon, TexGenAttrib.MPointSprite) #MEyePosition)
+      # nodePath.setTexGen(ts_sphere, TexGenAttrib.MEyeCubeMap, 2)
+      # nodePath.setTexGen(ts_toon, TexGenAttrib.MEyePosition, 2)
+      nodePath.setTexGen(ts_toon, TexGenAttrib.MPointSprite, 2)
       nodePath.setTexture(ts_toon, textures[mat.toon_texture_index], 1)
       nodePath.setTexScale(ts_toon, 1, -1, -1)
 
 
-    nodePath.setColorOff()
+    # nodePath.setColorOff()
     # nodePath.setShaderAuto(2)
     # nodePath.setShaderAuto(BitMask32.bit(Shader.BitAutoShaderNormal) , 2)
     nodePath.setAntialias(AntialiasAttrib.MAuto)
@@ -490,9 +696,124 @@ def pmx2p3d(pmx_model, alpha=True):
     vIndex += mat.vertex_count
     model.addChild(node)
     matIndex += 1
-    log(u'Loaded Node :, %s' % mat.name.replace(u'\u30fb', u'·').strip(), force=True)
+    log(u'Loaded Node : %s' % mat.name.replace(u'\u30fb', u'·').strip(), force=True)
 
   return(NodePath(model))
+
+def loadPmxBone(pmx_model, alpha=True):
+  #
+  # Load IK data
+  #
+  iknode = ModelNode(pmx_model.name)
+  pass
+
+def loadPmxMorph(pmx_model, alpha=True):
+  #
+  # Load IK data
+  #
+  formatArray = GeomVertexArrayFormat()
+  formatArray.addColumn(InternalName.make("vindex"), 1, Geom.NTUint32, Geom.CIndex)
+  formatArray.addColumn(InternalName.make("vmorph"), 3, Geom.NTFloat32, Geom.CMorphDelta)
+  formatArray.addColumn(InternalName.make("transform_index"), 1, Geom.NTUint32, Geom.CIndex)
+  formatArray.addColumn(InternalName.make("transform_weight"), 3, Geom.NTUint32, Geom.COther)
+  formatArray.addColumn(InternalName.make("emotion.morph.strange"), 1, Geom.NTFloat32, Geom.COther)
+
+  format = GeomVertexFormat(GeomVertexFormat.getV3())
+  format.addArray(formatArray)
+  GeomVertexFormat.registerFormat(format)
+  # print(format)
+
+  morphNode = PandaNode('Morphs')
+  for morph in pmx_model.morphs:
+    log(u'Loading Morph : %s' % morph.name.replace(u'\u30fb', u'·').strip(), force=True)
+
+    #
+    # load vertices(vertex list)
+    #
+    vdata = GeomVertexData(morph.name+'_vdata', format, Geom.UHStatic)
+    vdata.setNumRows(6)
+    vertex = GeomVertexWriter(vdata, 'vertex')
+    vindex = GeomVertexWriter(vdata, 'vindex')
+    vmorph = GeomVertexWriter(vdata, 'vmorph')
+    transform_index = GeomVertexWriter(vdata, 'transform_index')
+    transform_weight = GeomVertexWriter(vdata, 'transform_weight')
+    column_morph_slider = GeomVertexWriter(vdata, 'emotion.morph.strange')
+
+
+    # print(vdata)
+    # print(vdata.getTransformTable())
+    for offset in morph.offsets:
+      v = pmx_model.vertices[offset.vertex_index]
+      vertex.addData3f(v.position.x, v.position.z, v.position.y)
+      vindex.addData1i(offset.vertex_index)
+      vmorph.addData3f(offset.position_offset.x, offset.position_offset.z, offset.position_offset.y)
+      transform_index.addData1i(offset.vertex_index)
+      transform_weight.addData3f(offset.position_offset.x, offset.position_offset.z, offset.position_offset.y)
+      column_morph_slider.addData1f(1.0)
+
+    # print(vdata)
+
+    prim = GeomPoints(Geom.UHStatic)
+    for idx in xrange(len(morph.offsets)):
+      prim.addVertex(idx)
+
+    geom = Geom(vdata)
+    geom.addPrimitive(prim)
+    node = GeomNode(morph.name)
+    node.addGeom(geom)
+
+    offsets = map(lambda offset: (offset.morph_index, offset.value) if isinstance(offset, pmx.GroupMorphData) else (offset.vertex_index, pmx_model.vertices[offset.vertex_index], offset.position_offset.to_tuple()), morph.offsets)
+    # node = PandaNode(morph.name)
+    node.setPythonTag('panel', morph.panel)
+    node.setPythonTag('morph_type', morph.morph_type)
+    node.setPythonTag('offsets', offsets)
+    morphNode.addChild(node)
+
+    # print(node)
+    # node = AnimBundleNode(morph.name, 0)
+  np = NodePath(morphNode)
+  np.hide()
+  return(np)
+  pass
+
+def loadPmxIK(pmx_model, alpha=True):
+  #
+  # Load IK data
+  #
+  iknode = ModelNode(pmx_model.name)
+  pass
+
+def loadPmxRigid(pmx_model, alpha=True):
+  #
+  # Load IK data
+  #
+  iknode = ModelNode(pmx_model.name)
+  pass
+
+def loadPmxJoint(pmx_model, alpha=True):
+  #
+  # Load IK data
+  #
+  iknode = ModelNode(pmx_model.name)
+  pass
+
+
+def loadPmxActor(pmx_model, alpha=True):
+  model = loadPmxModel(pmx_model, alpha)
+  pass
+
+def pmd2model(pmd):
+  pmdModel = pmdLoad(pmd)
+  p3dmodel = pmd2p3d(pmdModel)
+  return(p3dmodel)
+
+def displayPmxModelInfo(model):
+  # print(dir(model))
+  info = pmxInfo(model)
+  fn = os.path.splitext(os.path.basename(model.path))
+  log(os.path.join(CWD, fn[0]+'_info'+'.txt'))
+  with codecs.open(os.path.join(CWD, fn[0]+'_info'+'.txt'), 'w', encoding='utf8') as f:
+    f.writelines(os.linesep.join(info))
   pass
 
 def pmdLoad(f_pmd):
@@ -697,7 +1018,6 @@ def pmd2p3d(pmd_model, alpha=True):
     material.setAmbient(VBase4(mat.ambient_color.r, mat.ambient_color.g, mat.ambient_color.b, mat.alpha)) #Make this material blue
     material.setDiffuse(VBase4(mat.diffuse_color.r, mat.diffuse_color.g, mat.diffuse_color.b, mat.alpha))
     material.setSpecular(VBase4(mat.specular_color.r, mat.specular_color.g, mat.specular_color.b, mat.alpha))
-    # material.setShininess(5.0) #Make this material shiny
     material.setShininess(mat.specular_factor)
     material.setLocal(False)
     material.setTwoside(False)
@@ -787,15 +1107,6 @@ def pmd2p3d(pmd_model, alpha=True):
         texture = loadTexture(os.path.join(modelPath, texFileMain))
       if texture:
         # texture.setWrapU(Texture.WM_clamp)
-        # texture.setWrapV(Texture.WM_clamp)
-
-        # ts_main = TextureStage(matName+'_main')
-        # ts_main.setMode(TextureStage.MReplace)
-        # ts_main.setSort(matIndex)
-        # ts_main.setPriority(matIndex)
-        # nodePath.setTexture(ts_main, texture, matIndex)
-        # nodePath.setTexScale(ts_main, 1, -1, -1)
-
         nodePath.setTexture(texture, matIndex)
         nodePath.setTexScale(TextureStage.getDefault(), 1, -1, -1)
 
@@ -806,10 +1117,6 @@ def pmd2p3d(pmd_model, alpha=True):
           texMode = TextureStage.MAdd
         elif ext.lower() in ['.sph']:
           texMode = TextureStage.MModulateGlow
-        #
-        #texMode = TextureStage.MReplace
-        #texMode = TextureStage.MGlow
-        # texMode = TextureStage.MReplace
 
         texSphere = loadTexture(os.path.join(modelPath, texFileSphere))
         if texSphere:
@@ -850,7 +1157,6 @@ def pmd2p3d(pmd_model, alpha=True):
       # nodePath.setTransparency(True, 1)
       # nodePath.setTransparency(TransparencyAttrib.MAlpha, 1)
       nodePath.setTransparency(TransparencyAttrib.MDual, 1)
-      # nodePath.setTransparency(TransparencyAttrib.MBinary, 1)
       pass
 
     vIndex += mat.vertex_count
@@ -861,6 +1167,10 @@ def pmd2p3d(pmd_model, alpha=True):
   return(NodePath(model))
   pass
 
+def pmx2model(pmx):
+  pmxModel = pmxLoad(pmx)
+  p3dmodel = pmx2p3d(pmxModel)
+  return(p3dmodel)
 
 def displayPmdModelInfo(model):
   # print(dir(model))
@@ -872,20 +1182,6 @@ def displayPmdModelInfo(model):
     f.writelines(os.linesep.join(info))
   pass
 
-def displayPmxModelInfo(model):
-  # print(dir(model))
-  info = pmxInfo(model)
-  fn = os.path.splitext(os.path.basename(model.path))
-  log(os.path.join(CWD, fn[0]+'_info'+'.txt'))
-  with codecs.open(os.path.join(CWD, fn[0]+'_info'+'.txt'), 'w', encoding='utf8') as f:
-    f.writelines(os.linesep.join(info))
-  pass
-
-def pmx2model(pmx):
-  pmxModel = pmxLoad(pmx)
-  import direct.directbase.DirectStart
-  p3dnodes, p3dmodel = pmx2p3d(pmxModel)
-  return(p3dmodel)
 
 def testPMX(pmx):
   pmxModel = pmxLoad(pmx)

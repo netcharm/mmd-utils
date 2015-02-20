@@ -6,3 +6,5 @@ NekoMiku
 /*.txt
 /models
 *.pyc
+/*.sublime-project
+/*.sublime-workspace

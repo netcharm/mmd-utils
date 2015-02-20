@@ -57,6 +57,12 @@ from pandac.PandaModules import *
 #      respective component's lines
 #   'parentNode' and 'parentNodePath' are used to contain
 #      the three LineSeg instance nodes and paths
+#######################################################################
+#
+# Modified by netcharm, 2015
+#
+#######################################################################
+
 
 DEBUG = True
 DEBUG = False
@@ -145,17 +151,17 @@ class ThreeAxisGrid:
       self.subdivLinesNodePath = None
 
       #Create line objects
-      self.axisLinesX = LineSegs('AXISLINE_X')
-      self.axisLinesY = LineSegs('AXISLINE_Y')
-      self.axisLinesZ = LineSegs('AXISLINE_Z')
+      self.axisLinesX = LineSegs('X')
+      self.axisLinesY = LineSegs('Y')
+      self.axisLinesZ = LineSegs('Z')
 
-      self.gridLinesXY = LineSegs('PLANEGRID_XY')
-      self.gridLinesYZ = LineSegs('PLANEGRID_YZ')
-      self.gridLinesXZ = LineSegs('PLANEGRID_XZ')
+      self.gridLinesXY = LineSegs('XY')
+      self.gridLinesYZ = LineSegs('YZ')
+      self.gridLinesXZ = LineSegs('XZ')
 
-      self.subdivLinesXY = LineSegs('PLANEGRIDSUBDIV_XY')
-      self.subdivLinesYZ = LineSegs('PLANEGRIDSUBDIV_YZ')
-      self.subdivLinesXZ = LineSegs('PLANEGRIDSUBDIV_XZ')
+      self.subdivLinesXY = LineSegs('SUBDIV')
+      self.subdivLinesYZ = LineSegs('SUBDIV')
+      self.subdivLinesXZ = LineSegs('SUBDIV')
 
    def create(self):
 
@@ -412,22 +418,17 @@ class ThreeAxisGrid:
       self.gridLinesNodePathXZ = NodePath(self.gridLinesNodeXZ)
       self.gridLinesNodePathXZ.reparentTo(self.gridLinesNodePath)
 
-      #Create subdivision lines node and path then reparent
-      self.subdivLinesNode     = PandaNode('PLANEGRIDSUBDIV')
-      self.subdivLinesNodePath = NodePath(self.subdivLinesNode)
-      self.subdivLinesNodePath.reparentTo(self.parentNodePath)
-
       self.subdivLinesNodeXY     = self.subdivLinesXY.create()
       self.subdivLinesNodePathXY = NodePath(self.subdivLinesNodeXY)
-      self.subdivLinesNodePathXY.reparentTo(self.subdivLinesNodePath)
+      self.subdivLinesNodePathXY.reparentTo(self.gridLinesNodePathXY)
 
       self.subdivLinesNodeYZ     = self.subdivLinesYZ.create()
       self.subdivLinesNodePathYZ = NodePath(self.subdivLinesNodeYZ)
-      self.subdivLinesNodePathYZ.reparentTo(self.subdivLinesNodePath)
+      self.subdivLinesNodePathYZ.reparentTo(self.gridLinesNodePathYZ)
 
       self.subdivLinesNodeXZ     = self.subdivLinesXZ.create()
       self.subdivLinesNodePathXZ = NodePath(self.subdivLinesNodeXZ)
-      self.subdivLinesNodePathXZ.reparentTo(self.subdivLinesNodePath)
+      self.subdivLinesNodePathXZ.reparentTo(self.gridLinesNodePathXZ)
 
       self.parentNodePath.setShaderAuto(1)
 
@@ -456,7 +457,7 @@ class ThreeAxisGrid:
       else:
          # self.XYPlaneShow = 0
          self.gridLinesNodePathXY.hide()
-         self.subdivLinesNodePathXY.hide()
+         # self.subdivLinesNodePathXY.hide()
       pass
 
    def planeYZ(self, show=True, subdiv=True):
@@ -470,7 +471,7 @@ class ThreeAxisGrid:
       else:
          # self.YZPlaneShow = 0
          self.gridLinesNodePathYZ.hide()
-         self.subdivLinesNodePathYZ.hide()
+         # self.subdivLinesNodePathYZ.hide()
       pass
 
    def planeXZ(self, show=True, subdiv=True):
@@ -484,7 +485,7 @@ class ThreeAxisGrid:
       else:
          # self.XZPlaneShow = 0
          self.gridLinesNodePathXZ.hide()
-         self.subdivLinesNodePathXZ.hide()
+         # self.subdivLinesNodePathXZ.hide()
       pass
 
    def showPlane(self, XY=False, YZ=False, XZ=False, SUBDIV=True):
