@@ -337,8 +337,8 @@ def pmx2p3d(pmx_model, alpha=True):
     material.setAmbient(VBase4(mat.ambient_color.r, mat.ambient_color.g, mat.ambient_color.b, mat.alpha)) #Make this material blue
     material.setDiffuse(VBase4(mat.diffuse_color.r, mat.diffuse_color.g, mat.diffuse_color.b, mat.alpha))
     material.setSpecular(VBase4(mat.specular_color.r, mat.specular_color.g, mat.specular_color.b, mat.alpha))
-    # material.setShininess(5.0) #Make this material shiny
     material.setShininess(mat.specular_factor)
+    material.setEmission(VBase4(mat.edge_color.r, mat.edge_color.g, mat.edge_color.b, mat.alpha))
     material.setLocal(True)
     if   mat.flag & 0x00000001:
       # 两面描画
@@ -356,8 +356,6 @@ def pmx2p3d(pmx_model, alpha=True):
       # 輪郭有效
       pass
 
-    materials.setPythonTag('edge_color', mat.edge_color)
-    materials.setPythonTag('edge_size', mat.edge_size)
     materials.addMaterial(material)
     log(u'Loaded Material : %s' % mat.name.replace(u'\u30fb', u'·').strip(), force=True)
 
@@ -427,6 +425,8 @@ def pmx2p3d(pmx_model, alpha=True):
     # set polygon face material
     #
     nodePath.setMaterial(materials.findMaterial(mat.name), 1) #Apply the material to this nodePath
+    nodePath.setPythonTag('edge_color', mat.edge_color)
+    nodePath.setPythonTag('edge_size', mat.edge_size)
 
     #
     # set polygon face textures
@@ -816,19 +816,21 @@ def loadPmxMorph(pmx_model, alpha=True):
       elif isinstance(o, pmx.BoneMorphData):
         pass
       elif isinstance(o, pmx.MaterialMorphData):
+        np = NodePath(u'%s_%04d' % (morph.name, idx))
         material = Material(u'%s_%04d' % (morph.name, idx))
         material.setAmbient(VBase4(o.ambient.r, o.ambient.g, o.ambient.b, 1))
         material.setDiffuse(VBase4(o.diffuse.r, o.diffuse.g, o.diffuse.b, 1))
         material.setSpecular(VBase4(o.specula.r, o.specula.g, o.specula.b, 1))
         material.setShininess(o.specular_factor)
-        material.setPythonTag('materialIndex', o.material_index)
-        material.setPythonTag('calcMode', o.calc_mode)
-        material.setPythonTag('edge_color', o.edge_color)
-        material.setPythonTag('edge_size', o.edge_size)
-        material.setPythonTag('texture_factor', o.texture_factor)
-        material.setPythonTag('sphere_texture_factor', o.sphere_texture_factor)
-        material.setPythonTag('toon_texture_factor', o.toon_texture_factor)
-        morphData.append(material)
+        np.setMaterial(material)
+        np.setPythonTag('materialIndex', o.material_index)
+        np.setPythonTag('calcMode', o.calc_mode)
+        np.setPythonTag('edge_color', o.edge_color)
+        np.setPythonTag('edge_size', o.edge_size)
+        np.setPythonTag('texture_factor', o.texture_factor)
+        np.setPythonTag('sphere_texture_factor', o.sphere_texture_factor)
+        np.setPythonTag('toon_texture_factor', o.toon_texture_factor)
+        morphData.append(np)
       pass
     pass
 
