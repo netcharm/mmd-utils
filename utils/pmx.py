@@ -389,7 +389,7 @@ def pmx2p3d(pmx_model, alpha=True):
   model.setTag('comment', pmx_model.comment)
   model.setTag('english_comment', pmx_model.english_comment)
 
-  modelBody = ModelNode('Body')
+  modelBody = ModelRoot('Body')
   model.addChild(modelBody)
 
   matIndex = 0

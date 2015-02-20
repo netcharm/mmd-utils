@@ -272,7 +272,7 @@ def snapshot(snapfile='snap_00.png'):
   return(result)
   pass
 
-def menuItemSel(arg):
+def menuAxisSel(arg):
   if arg in [u'X轴线', u'Y轴线', u'Z轴线', u'XY平面', u'YZ平面', u'XZ平面']:
     if   arg == u'X轴线':
       axis = render.find('**/AXISLINE/X*')
@@ -300,10 +300,8 @@ def menuItemSel(arg):
   #   menuAxisSelect.node().setup(u'坐标系  ')
   pass
 
-def processVertexData(vdata_src, vdata_dst, morph=True, strength=1.0):
-  print('morph ------> ', morph)
+def processVertexData(vdata_src, vdata_dst, morphOn=True, strength=1.0):
   vertex_src = GeomVertexWriter(vdata_src, 'vertex')
-
   vertex_dst = GeomVertexReader(vdata_dst, 'vertex')
   vindex_dst = GeomVertexReader(vdata_dst, 'vindex')
   vmorph_dst = GeomVertexReader(vdata_dst, 'vmorph')
@@ -312,45 +310,58 @@ def processVertexData(vdata_src, vdata_dst, morph=True, strength=1.0):
   vindex_dst.setForce(True)
   vmorph_dst.setForce(True)
   while not vertex_dst.isAtEnd():
-    v_dst = vertex_dst.getData3f()
     i_dst = vindex_dst.getData1i()
+    v_dst = vertex_dst.getData3f()
     m_dst = vmorph_dst.getData3f()
     vertex_src.setRow(i_dst)
-    if morph:
-      vertex_src.setData3f(v_dst.getX()+m_dst.getX(), v_dst.getY()+m_dst.getY(), v_dst.getZ()+m_dst.getZ())
+    if morphOn:
+      vertex_src.setData3f(v_dst.getX()+m_dst.getX()*strength, v_dst.getY()+m_dst.getY()*strength, v_dst.getZ()+m_dst.getZ()*strength)
     else:
       vertex_src.setData3f(v_dst.getX(), v_dst.getY(), v_dst.getZ())
 
-def processGeom(geom, vertices, morph=True, strength=1.0):
-  vdata_src = geom.modifyVertexData()
-  vdata_dst = vertices.getVertexData()
-  return(processVertexData(vdata_src, vdata_dst, morph))
-
-def processGeomNode(geomNode, morphNode, morph=True, strength=1.0):
-  morphgeom = morphNode.getGeom(0)
+def processGeomNode(geomNode, morphNode, morphOn=True, strength=1.0):
   geom = geomNode.modifyGeom(0)
-  state = geomNode.getGeomState(0)
-  result = processGeom(geom, morphgeom, morph)
+  morphgeom = morphNode.getGeom(0)
+  state_geom = geomNode.getGeomState(0)
+  state_morph = morphNode.getGeomState(0)
+  vdata_src = geom.modifyVertexData()
+  vdata_dst = morphgeom.getVertexData()
+  result = processVertexData(vdata_src, vdata_dst, morphOn, strength)
+  return(result)
 
-def setVertex(nodepath, morphnodepath, morph=True, strength=1.0):
+  # result = processGeom(geom, morphgeom, morph)
+
+def setVertex(nodepath, morphnodepath, morphOn=True, strength=1.0):
   morphNode = morphnodepath.node()
+  node = nodepath.find('**/Body')
+  print(type(node))
+
   geomNodeCollection = nodepath.findAllMatches('**/Body/+GeomNode')
+  idx = 0
   for nodePath in geomNodeCollection:
-    print(u'%s' % nodePath.getName().replace(u'\u30fb', u'.'))
+    log(u'%s' % nodePath.getName().replace(u'\u30fb', u'.'))
     geomNode = nodePath.node()
-    processGeomNode(geomNode, morphNode, morph)
+    # if idx != 36:
+    processGeomNode(geomNode, morphNode, morphOn, strength)
+    # idx += 1
   pass
 
-def setExpression(model, expression, morph=True, strength=1.0):
+def setExpression(model, expression, morphOn=True, strength=1.0):
+  if strength < 0: strength = 0.0;
+  if strength > 1: strength = 1.0;
+  strength = 0.8
   morph = model.find('**/Morphs*')
   for item in morph.getChildren():
     if item.getName() == expression:
-      print(u'===================\n%s\n===================' % expression)
+      log(u'===================\n%s\n===================' % expression, force=True)
       lastExpression = model.getPythonTag('lastExpression')
-      if lastExpression:
-        setVertex(model, lastExpression, morph=False)
-      setVertex(model, item, morph=True, strength=1.0)
-      model.setPythonTag('lastExpression', item)
+      if item.getPythonTag('morph_type') == 1:
+        if lastExpression:
+          setVertex(model, lastExpression, morphOn=False, strength=strength)
+        setVertex(model, item, morphOn=morphOn, strength=strength)
+        model.setPythonTag('lastExpression', item)
+      else:
+        log('not vertex expression', force=True)
       break
     pass
   pass
@@ -372,7 +383,7 @@ def setUI(render):
 
   menuAxisSelect = DirectOptionMenu(text="网格", scale=0.05, pos=(-0.985, -10, -0.980),
     items=[u'Z轴线', u'X轴线', u'Y轴线', u'XY平面', u'YZ平面', u'XZ平面'],
-    initialitem=0, highlightColor=(0.65,0.65,0.65,1), command=menuItemSel, textMayChange=0)
+    initialitem=0, highlightColor=(0.65,0.65,0.65,1), command=menuAxisSel)
   menuAxisSelect.setName('menuAxisSelect')
   menuAxisSelect.reparentTo(UI)
 
@@ -382,7 +393,7 @@ def setUI(render):
     for item in morph.getChildren():
       morphItems.append(item.getName())
   if len(morphItems)>0:
-    menuMorphs = DirectOptionMenu(text="表情", scale=0.05, pos=(0.850, -10, -0.980),
+    menuMorphs = DirectOptionMenu(text="表情", scale=0.05, pos=(0.800, -10, -0.980),
       items=morphItems,
       initialitem=0, highlightColor=(0.65,0.65,0.65,1), command=menuMorphSel)
 
@@ -409,10 +420,6 @@ class Viewer(ShowBase):
   pass
 
 if __name__ == '__main__':
-  # title = 'PMX/PMX file Viewer'
-  # icon = 'viewpmx.ico'
-  # setAppInfo(title, icon)
-
   base.openMainWindow(type = 'onscreen')
 
   mmdFile = u'./models/apimiku/Miku long hair.pmx'
@@ -443,10 +450,6 @@ if __name__ == '__main__':
 
   p3dnode.reparentTo(render)
   lastModel = p3dnode
-
-  if morphs:
-    morph = morphs.find('*')
-    print(u'%s' % morph.getName().replace(u'\u30fb', u'.'))
 
   if DEBUG:
     p3dnode.showTightBounds()
