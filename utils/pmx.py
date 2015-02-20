@@ -356,6 +356,8 @@ def pmx2p3d(pmx_model, alpha=True):
       # 輪郭有效
       pass
 
+    materials.setPythonTag('edge_color', mat.edge_color)
+    materials.setPythonTag('edge_size', mat.edge_size)
     materials.addMaterial(material)
     log(u'Loaded Material : %s' % mat.name.replace(u'\u30fb', u'·').strip(), force=True)
 
@@ -739,6 +741,7 @@ def loadPmxMorph(pmx_model, alpha=True):
   # print(format)
 
   morphNode = PandaNode('Morphs')
+  morphIndex = 0
   for morph in pmx_model.morphs:
     log(u'Loading Morph : %s' % morph.name.replace(u'\u30fb', u'·').strip(), force=True)
 
@@ -789,23 +792,45 @@ def loadPmxMorph(pmx_model, alpha=True):
         pass
 
     prim = GeomPoints(Geom.UHStatic)
-    offsets = None
-    for idx in xrange(len(morph.offsets)):
-      if   isinstance(morph.offsets[idx], pmx.VertexMorphOffset):
-        prim.addVertex(idx)
-      elif isinstance(morph.offsets[idx], pmx.GroupMorphData):
-        offsets = None
-        pass
-      elif isinstance(morph.offsets[idx], pmx.MaterialMorphData):
-        pass
-      elif isinstance(morph.offsets[idx], pmx.BoneMorphData):
-        pass
-      else:
-        offsets = None
-        pass
+    morphData = None
+    if   morph.morph_type == 1: # vertex morph
+      morphData = []
+      pass
+    elif morph.morph_type == 2: # group morph
+      morphData = []
+      pass
+    elif morph.morph_type == 4: # bone morph
+      morphData = []
+      pass
+    elif morph.morph_type == 8: # material morph
+      morphData = []
+      pass
 
-    if not offsets:
-      offsets = map(lambda offset: (offset.morph_index, offset.value) if isinstance(offset, pmx.GroupMorphData) else (offset.vertex_index, pmx_model.vertices[offset.vertex_index], offset.position_offset.to_tuple()), morph.offsets)
+    for idx in xrange(len(morph.offsets)):
+      o = morph.offsets[idx]
+      if   isinstance(o, pmx.VertexMorphOffset):
+        prim.addVertex(idx)
+      elif isinstance(o, pmx.GroupMorphData):
+        morphData.append(o.morph_index, o.value)
+        pass
+      elif isinstance(o, pmx.BoneMorphData):
+        pass
+      elif isinstance(o, pmx.MaterialMorphData):
+        material = Material(u'%s_%04d' % (morph.name, idx))
+        material.setAmbient(VBase4(o.ambient.r, o.ambient.g, o.ambient.b, 1))
+        material.setDiffuse(VBase4(o.diffuse.r, o.diffuse.g, o.diffuse.b, 1))
+        material.setSpecular(VBase4(o.specula.r, o.specula.g, o.specula.b, 1))
+        material.setShininess(o.specular_factor)
+        material.setPythonTag('materialIndex', o.material_index)
+        material.setPythonTag('calcMode', o.calc_mode)
+        material.setPythonTag('edge_color', o.edge_color)
+        material.setPythonTag('edge_size', o.edge_size)
+        material.setPythonTag('texture_factor', o.texture_factor)
+        material.setPythonTag('sphere_texture_factor', o.sphere_texture_factor)
+        material.setPythonTag('toon_texture_factor', o.toon_texture_factor)
+        morphData.append(material)
+      pass
+    pass
 
     geom = Geom(vdata)
     geom.addPrimitive(prim)
@@ -814,11 +839,12 @@ def loadPmxMorph(pmx_model, alpha=True):
 
     node.setPythonTag('panel', morph.panel)
     node.setPythonTag('morph_type', morph.morph_type)
-    node.setPythonTag('offsets', offsets)
+    node.setPythonTag('morph_data', morphData)
+    node.setPythonTag('morph_index', morphIndex)
     morphNode.addChild(node)
 
-    # print(node)
-    # node = AnimBundleNode(morph.name, 0)
+    morphIndex += 1
+
   np = NodePath(morphNode)
   np.hide()
   return(np)
