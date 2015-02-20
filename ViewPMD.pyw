@@ -33,10 +33,12 @@ import StringIO
 
 from pandac.PandaModules import *
 
+WIN_SIZE = (800, 800)
+
 # need to be before the Direct Start Import
 loadPrcFileData("", "window-title MMD PMX/PMX Model Viewer")
 loadPrcFileData("", "icon-filename viewpmx.ico")
-loadPrcFileData("", "win-size 800 800")
+loadPrcFileData("", "win-size %d %d" % WIN_SIZE)
 loadPrcFileData("", "window-type none")
 loadPrcFileData('', 'text-encoding utf8')
 loadPrcFileData('', 'textures-power-2 none')
@@ -47,7 +49,8 @@ from panda3d.core import Filename
 from panda3d.core import Material
 from panda3d.core import VBase4
 
-
+from direct.actor.Actor import Actor
+from direct.interval.IntervalGlobal import *
 from direct.filter.CommonFilters import CommonFilters
 from direct.showbase.ShowBase import ShowBase
 
@@ -93,8 +96,20 @@ def resetCamera():
     max_point = LPoint3f()
     lastModel.calcTightBounds(min_point, max_point)
 
+    x = base.win.getXSize()
+    y = base.win.getYSize()
+    min_o_size= min(WIN_SIZE[0], WIN_SIZE[1])
+    min_n_size= min(x, y)
+    scale_min = min_n_size/min_o_size
+    max_o_size= max(WIN_SIZE[0], WIN_SIZE[1])
+    max_n_size= max(x, y)
+    scale_max = max_n_size/max_o_size
+
     node_size = LPoint3f(max_point.x-min_point.x, max_point.y-min_point.y, max_point.z-min_point.z)
-    setCamera(x=0, y=1.6*node_size.z, z=0.5*node_size.z, p=10, oobe=False)
+    camPosX = 0
+    camPosY = 1.6*node_size.z*scale_max
+    camPosZ = 0.5*node_size.z*scale_min
+    setCamera(x=camPosX, y=camPosY, z=camPosZ, p=10, oobe=False)
   pass
 
 def setStudioLight(render):
@@ -333,9 +348,6 @@ def processGeomNode(geomNode, morphNode, morphOn=True, strength=1.0):
 
 def setVertex(nodepath, morphnodepath, morphOn=True, strength=1.0):
   morphNode = morphnodepath.node()
-  node = nodepath.find('**/Body')
-  print(type(node))
-
   geomNodeCollection = nodepath.findAllMatches('**/Body/+GeomNode')
   idx = 0
   for nodePath in geomNodeCollection:
@@ -346,24 +358,51 @@ def setVertex(nodepath, morphnodepath, morphOn=True, strength=1.0):
     # idx += 1
   pass
 
-def setExpression(model, expression, morphOn=True, strength=1.0):
+def setExpression(model, expression, morphOn=True, strength=1.0, default=True):
   if strength < 0: strength = 0.0;
   if strength > 1: strength = 1.0;
   strength = 0.8
   morph = model.find('**/Morphs*')
-  for item in morph.getChildren():
-    if item.getName() == expression:
-      log(u'===================\n%s\n===================' % expression, force=True)
-      lastExpression = model.getPythonTag('lastExpression')
-      if item.getPythonTag('morph_type') == 1:
-        if lastExpression:
-          setVertex(model, lastExpression, morphOn=False, strength=strength)
-        setVertex(model, item, morphOn=morphOn, strength=strength)
-        model.setPythonTag('lastExpression', item)
-      else:
-        log('not vertex expression', force=True)
-      break
+  if len(expression)==0 or expression.lower()=='default':
+    for item in morph.getChildren():
+      setVertex(model, item, morphOn=False, strength=strength)
+  else:
+    for item in morph.getChildren():
+      if len(expression)==0 or expression.lower()=='default':
+        setVertex(model, item, morphOn=False, strength=strength)
+      if item.getName() == expression:
+        log(u'===================\n%s\n===================' % expression, force=True)
+        lastExpression = model.getPythonTag('lastExpression')
+        print('Morph Type : ', item.getPythonTag('morph_type'))
+        print('Morph Panel : ', item.getPythonTag('panel'))
+        if item.getPythonTag('morph_type') == 1:
+          if lastExpression and default:
+            setVertex(model, lastExpression, morphOn=False, strength=strength)
+            item.setPythonTag('show', False)
+          setVertex(model, item, morphOn=morphOn, strength=strength)
+          item.setPythonTag('show', True)
+          model.setPythonTag('lastExpression', item)
+          print(expression, morphOn)
+        else:
+          log('not vertex expression', force=True)
+        break
+      pass
     pass
+  pass
+
+expressing_list = dict({
+  '默认': ['default'],
+  '眨眼': [u'ウィンク', u'ウィンク右'],
+  '眨眼2': [u'ウィンク２', u'ｳｨﾝｸ２右'],
+})
+def setExpressingAction(model, action, morphOn=True, defaultFirst=True):
+  if action in expressing_list:
+    if defaultFirst:
+      setExpression(model, 'default', morphOn=False)
+    for v in expressing_list[action]:
+      setExpression(model, v, morphOn=morphOn, default=False)
+
+
   pass
 
 def menuMorphSel(arg):
@@ -393,7 +432,7 @@ def setUI(render):
     for item in morph.getChildren():
       morphItems.append(item.getName())
   if len(morphItems)>0:
-    menuMorphs = DirectOptionMenu(text="表情", scale=0.05, pos=(0.800, -10, -0.980),
+    menuMorphs = DirectOptionMenu(text="表情", scale=0.035, pos=(-0.770, -10, -0.980),
       items=morphItems,
       initialitem=0, highlightColor=(0.65,0.65,0.65,1), command=menuMorphSel)
 
@@ -404,20 +443,6 @@ def setUI(render):
   return(UI)
   pass
 
-class Viewer(ShowBase):
-  def __init__(self, gw):
-    self.gw = gw
-    self.active_points = {}
-    self.touch_images = {}
-    self.touch_text = {}
-
-    ShowBase.__init__(self)
-    self.build()
-
-  def build(self):
-    pass
-
-  pass
 
 if __name__ == '__main__':
   base.openMainWindow(type = 'onscreen')
@@ -458,7 +483,27 @@ if __name__ == '__main__':
   lightAtNode(p3dnode, lights=lights)
 
   resetCamera()
-  # base.screenshot(namePrefix='snap_', defaultFilename=p3dnode.getName())
+
+  # wink_on = LerpFunc(setExpressionAction, '眨眼', extraArgs=['眨眼'])
+  # wink_off = LerpFunc(setExpressionAction, '眨眼', morphOn=False, extraArgs=['眨眼'])
+  wink_on = Func(setExpressingAction, p3dnode, u'眨眼', morphOn=True, defaultFirst=True)
+  wink_off = Func(setExpressingAction, p3dnode, u'眨眼', morphOn=False, defaultFirst=False)
+
+  wink = Sequence(wink_on, Wait(0.3), wink_off, Wait(5.0), name='wink')
+  # wink = Parallel(wink_on, Wait(0.3), wink_off, Wait(5.0), name='wink')
+  wink.loop()
+
+    # Parallel(
+    #     Func(setExpressionAction, '眨眼', 1),
+    #     Func(self.lights2.setTexture, self.lightOffTex, 1)),
+    #   Wait(1), #Then we will wait 1 second
+    #   #Then we will switch the textures at the same time
+    #   Parallel(
+    #     Func(self.lights1.setTexture, self.lightOffTex, 1),
+    #     Func(self.lights2.setTexture, self.lightOnTex, 1)),
+    #   Wait(1)  #Then we will wait another second
+    # )
+
 
   # render.setAntialias(AntialiasAttrib.MMultisample, 8)
   render.setAntialias(AntialiasAttrib.MAuto)

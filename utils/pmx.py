@@ -60,8 +60,23 @@ DEBUG = False
 # Get the location of the 'py' file I'm running:
 CWD = os.path.abspath(sys.path[0])
 
+JIS2GBK = dict({
+  u'\uff77\uff9e': u'ギ',
+  u'\u33fb': u'·',
+  u'\uff77': u'キ',
+  u'\u33fb': u'·',
+  u'\u33fb': u'·',
+  u'\uff6d': u'ユ',#ュ
+  u'\uff6f': u'シ',
+  u'\uff98': u'リ',
+  u'\uff9e': u'リ',
+})
+
 def log(info, force=False):
   if DEBUG or force:
+    # print(repr(info))
+    for k in JIS2GBK:
+      info = info.replace(k, JIS2GBK[k])
     print(info)
 
 _i16, _i32 = BmpImagePlugin.i16, BmpImagePlugin.i32
@@ -739,31 +754,64 @@ def loadPmxMorph(pmx_model, alpha=True):
     transform_weight = GeomVertexWriter(vdata, 'transform_weight')
     column_morph_slider = GeomVertexWriter(vdata, 'emotion.morph.strange')
 
-
-    # print(vdata)
-    # print(vdata.getTransformTable())
+    # print(len(morph.offsets))
     for offset in morph.offsets:
-      v = pmx_model.vertices[offset.vertex_index]
-      vertex.addData3f(v.position.x, v.position.z, v.position.y)
-      vindex.addData1i(offset.vertex_index)
-      vmorph.addData3f(offset.position_offset.x, offset.position_offset.z, offset.position_offset.y)
-      transform_index.addData1i(offset.vertex_index)
-      transform_weight.addData3f(offset.position_offset.x, offset.position_offset.z, offset.position_offset.y)
-      column_morph_slider.addData1f(1.0)
+      if isinstance(offset, pmx.VertexMorphOffset):
+        v = pmx_model.vertices[offset.vertex_index]
+        o = offset.position_offset
+        i = offset.vertex_index
+        vertex.addData3f(v.position.x, v.position.z, v.position.y)
+        vindex.addData1i(i)
+        vmorph.addData3f(o.x, o.z, o.y)
+        transform_index.addData1i(i)
+        transform_weight.addData3f(o.x, o.z, o.y)
+        column_morph_slider.addData1f(1.0)
+      elif isinstance(offset, pmx.GroupMorphData):
+        # print(offset.morph_index, offset.value)
+        item_morph = pmx_model.morphs[offset.morph_index]
+        item_morph_offsets = item_morph.offsets
+        for item_morph_offset in item_morph_offsets:
+          v = pmx_model.vertices[item_morph_offset.vertex_index]
+          o = item_morph_offset.position_offset
+          i = item_morph_offset.vertex_index
+          vertex.addData3f(v.position.x, v.position.z, v.position.y)
+          vindex.addData1i(i)
+          vmorph.addData3f(o.x, o.z, o.y)
+          transform_index.addData1i(i)
+          transform_weight.addData3f(o.x, o.z, o.y)
+          column_morph_slider.addData1f(offset.value)
+        pass
+      elif isinstance(offset, pmx.MaterialMorphData):
 
-    # print(vdata)
+        pass
+      else:
+        print(type(offset))
+        pass
 
     prim = GeomPoints(Geom.UHStatic)
+    offsets = None
     for idx in xrange(len(morph.offsets)):
-      prim.addVertex(idx)
+      if   isinstance(morph.offsets[idx], pmx.VertexMorphOffset):
+        prim.addVertex(idx)
+      elif isinstance(morph.offsets[idx], pmx.GroupMorphData):
+        offsets = None
+        pass
+      elif isinstance(morph.offsets[idx], pmx.MaterialMorphData):
+        pass
+      elif isinstance(morph.offsets[idx], pmx.BoneMorphData):
+        pass
+      else:
+        offsets = None
+        pass
+
+    if not offsets:
+      offsets = map(lambda offset: (offset.morph_index, offset.value) if isinstance(offset, pmx.GroupMorphData) else (offset.vertex_index, pmx_model.vertices[offset.vertex_index], offset.position_offset.to_tuple()), morph.offsets)
 
     geom = Geom(vdata)
     geom.addPrimitive(prim)
     node = GeomNode(morph.name)
     node.addGeom(geom)
 
-    offsets = map(lambda offset: (offset.morph_index, offset.value) if isinstance(offset, pmx.GroupMorphData) else (offset.vertex_index, pmx_model.vertices[offset.vertex_index], offset.position_offset.to_tuple()), morph.offsets)
-    # node = PandaNode(morph.name)
     node.setPythonTag('panel', morph.panel)
     node.setPythonTag('morph_type', morph.morph_type)
     node.setPythonTag('offsets', offsets)
