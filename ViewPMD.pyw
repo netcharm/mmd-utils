@@ -323,11 +323,10 @@ def processVertexData(vdata_src, vdata_dst, morphOn=True, strength=1.0):
   vertex_src = GeomVertexWriter(vdata_src, 'vertex')
   vertex_dst = GeomVertexReader(vdata_dst, 'vertex')
   vindex_dst = GeomVertexReader(vdata_dst, 'vindex')
+  # vmorph_dst = GeomVertexReader(vdata_dst, 'v.morph')
   vmorph_dst = GeomVertexReader(vdata_dst, 'vmorph')
 
-  # vertex_dst.setForce(True)
-  # vindex_dst.setForce(True)
-  # vmorph_dst.setForce(True)
+  # vertex_src.setColumn('vertex')
   while not vertex_dst.isAtEnd():
     i_dst = vindex_dst.getData1i()
     v_dst = vertex_dst.getData3f()
@@ -337,6 +336,7 @@ def processVertexData(vdata_src, vdata_dst, morphOn=True, strength=1.0):
       vertex_src.setData3f(v_dst.getX()+m_dst.getX()*strength, v_dst.getY()+m_dst.getY()*strength, v_dst.getZ()+m_dst.getZ()*strength)
     else:
       vertex_src.setData3f(v_dst.getX(), v_dst.getY(), v_dst.getZ())
+    # print(vertex_src.getWriteRow())
 
 def processGeomNode(geomNode, morphNode, morphOn=True, strength=1.0):
   geom = geomNode.modifyGeom(0)
@@ -358,6 +358,7 @@ def morphVertex(nodepath, morphnodepath, morphOn=True, strength=1.0):
     log(u'%s' % nodePath.getName().replace(u'\u30fb', u'.'))
     geomNode = nodePath.node()
     # if idx != 36:
+    # if geomNode.getName() in[u'肌', u'肌（エッジ無し）', u'瞳', u'白目', u'眉毛\u30fbまつ毛', u'唇', u'歯']:
     processGeomNode(geomNode, morphNode, morphOn, strength)
     # idx += 1
   pass
@@ -366,14 +367,16 @@ def morphMaterial(nodepath, morphnodepath, morphOn=True, strength=1.0):
 
   pass
 
-def setExpression(model, expression, morphOn=True, strength=1.0, default=True):
+def setExpression(model, expression, morphOn=True, strength=1.0, default=False):
   if strength < 0: strength = 0.0;
   if strength > 1: strength = 1.0;
-  strength = 0.8
+  strength = 0.95
   morph = model.find('**/Morphs*')
   if len(expression)==0 or expression.lower()=='default':
     for item in morph.getChildren():
-      morphVertex(model, item, morphOn=False, strength=strength)
+      if item.getPythonTag('show'):
+        morphVertex(model, item, morphOn=False, strength=strength)
+        item.setPythonTag('show', False)
   else:
     for item in morph.getChildren():
       if len(expression)==0 or expression.lower()=='default':
@@ -384,12 +387,16 @@ def setExpression(model, expression, morphOn=True, strength=1.0, default=True):
         # print('Morph Type : ', item.getPythonTag('morph_type'))
         # print('Morph Panel : ', item.getPythonTag('panel'))
         if item.getPythonTag('morph_type') == 1:
-          if lastExpression and default:
-            morphVertex(model, lastExpression, morphOn=False, strength=strength)
+          if item.getPythonTag('show'):
+            morphVertex(model, item, morphOn=False, strength=strength)
             item.setPythonTag('show', False)
-          morphVertex(model, item, morphOn=morphOn, strength=strength)
-          item.setPythonTag('show', True)
-          model.setPythonTag('lastExpression', item)
+          else:
+            if lastExpression and default:
+              morphVertex(model, lastExpression, morphOn=False, strength=strength)
+              lastExpression.setPythonTag('show', False)
+            morphVertex(model, item, morphOn=morphOn, strength=strength)
+            item.setPythonTag('show', True)
+            model.setPythonTag('lastExpression', item)
           # print(expression, morphOn)
         else:
           log('not vertex expression', force=True)
@@ -453,14 +460,10 @@ def setUI(render):
 
 def myWink(value, model, delay):
   if value >= delay:
-    setExpression(model, u'ウィンク',  morphOn=True)
-    setExpression(model, u'ウィンク右',  morphOn=True, default=False)
-    # setExpressingAction(model, u'眨眼', morphOn=True, defaultFirst=False)
+    setExpression(model, u'まばたき',  morphOn=True)
     base.graphicsEngine.renderFrame()
     time.sleep(.5)
-    setExpression(model, u'ウィンク',  morphOn=False)
-    setExpression(model, u'ウィンク右',  morphOn=False)
-    # setExpressingAction(model, u'眨眼', morphOn=False, defaultFirst=False)
+    setExpression(model, u'びっくり',  morphOn=False)
     base.graphicsEngine.renderFrame()
   # Wait(delay)
   return(True)
@@ -505,28 +508,6 @@ if __name__ == '__main__':
 
   resetCamera()
 
-  # # wink_on = LerpFunc(setExpressionAction, '眨眼', extraArgs=['眨眼'])
-  # # wink_off = LerpFunc(setExpressionAction, '眨眼', morphOn=False, extraArgs=['眨眼'])
-  # wink_on = Func(setExpressingAction, p3dnode, u'眨眼', morphOn=True, defaultFirst=True)
-  # wink_off = Func(setExpressingAction, p3dnode, u'眨眼', morphOn=False, defaultFirst=False)
-
-  # wink = Sequence(wink_on, Wait(0.3), wink_off, Wait(5.0), name='wink')
-  # # wink = Parallel(wink_on, Wait(0.3), wink_off, Wait(5.0), name='wink')
-  # wink.loop()
-
-  # myTask = taskMgr.doMethodLater(2, winkTask, 'winkTask')
-
-    # Parallel(
-    #     Func(setExpressionAction, '眨眼', 1),
-    #     Func(self.lights2.setTexture, self.lightOffTex, 1)),
-    #   Wait(1), #Then we will wait 1 second
-    #   #Then we will switch the textures at the same time
-    #   Parallel(
-    #     Func(self.lights1.setTexture, self.lightOffTex, 1),
-    #     Func(self.lights2.setTexture, self.lightOnTex, 1)),
-    #   Wait(1)  #Then we will wait another second
-    # )
-
   delay = random.randrange(50, 100, 1) / 10.0
   movie = LerpFunc(myWink,  #function to call
                    duration = delay,
@@ -534,7 +515,7 @@ if __name__ == '__main__':
                    toData = delay,
                    extraArgs=[p3dnode, delay]
           )
-  movie.loop()
+  # movie.loop()
 
   # render.setAntialias(AntialiasAttrib.MMultisample, 8)
   render.setAntialias(AntialiasAttrib.MAuto)
