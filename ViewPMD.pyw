@@ -46,6 +46,7 @@ loadPrcFileData("", "window-type none")
 loadPrcFileData('', 'text-encoding utf8')
 loadPrcFileData('', 'textures-power-2 none')
 loadPrcFileData('', 'geom-cache-size 10')
+# loadPrcFileData('', 'want-pstats 1')
 
 from panda3d.core import ConfigVariableString
 from panda3d.core import Shader
@@ -364,8 +365,25 @@ def morphVertex(nodepath, morphnodepath, morphOn=True, strength=1.0):
   del morphNode, geomNodeCollection
   pass
 
-def morphMaterial(nodepath, morphnodepath, morphOn=True, strength=1.0):
+def morphMaterial(nodepath, morphData, morphOn=True, strength=1.0):
+  idx = 0
+  print(len(morphData))
+  for data in morphData:
+    material_index        = data.getPythonTag('materialIndex')
+    calc_mode             = data.getPythonTag('calcMode')
+    edge_color            = data.getPythonTag('edge_color')
+    edge_size             = data.getPythonTag('edge_size')
+    texture_factor        = data.getPythonTag('texture_factor')
+    sphere_texture_factor = data.getPythonTag('sphere_texture_factor')
+    toon_texture_factor   = data.getPythonTag('toon_texture_factor')
 
+    mat = data.getMaterial()
+    print(mat)
+    target = nodepath.getChild(material_index)
+    print(target)
+    tex_name = u'%s_morph_%04d' % (target.getName(), idx)
+
+    idx += 1
   pass
 
 def setExpression(model, expression, morphOn=True, strength=1.0, default=True):
@@ -385,9 +403,12 @@ def setExpression(model, expression, morphOn=True, strength=1.0, default=True):
       if item.getName() == expression:
         log(u'===================\n%s\n===================' % expression, force=True)
         lastExpression = model.getPythonTag('lastExpression')
-        # print('Morph Type : ', item.getPythonTag('morph_type'))
-        # print('Morph Panel : ', item.getPythonTag('panel'))
-        if item.getPythonTag('morph_type') == 1:
+
+        morphType = item.getPythonTag('morph_type')
+        morphPanel = item.getPythonTag('panel')
+        print('Morph Type  : ', morphType)
+        # print('Morph Panel : ', morphPanel)
+        if morphType == 1:
           if lastExpression and default:
             morphVertex(model, lastExpression, morphOn=False, strength=strength)
             lastExpression.setPythonTag('show', False)
@@ -398,8 +419,13 @@ def setExpression(model, expression, morphOn=True, strength=1.0, default=True):
 
           model.setPythonTag('lastExpression', item)
           # print(expression, morphOn)
+        elif morphType == 8:
+          state = False if item.getPythonTag('show') else True
+          morphData = item.getPythonTag('morph_data')
+          morphMaterial(model, morphData, morphOn=state, strength=strength)
+          item.setPythonTag('show', state)
         else:
-          log('not vertex expression', force=True)
+          log('not vertex/material expression', force=True)
         break
       pass
     pass
@@ -462,7 +488,7 @@ def myWink(value, model, delay):
   if value >= delay:
     setExpression(model, u'まばたき',  morphOn=True)
     base.graphicsEngine.renderFrame()
-    time.sleep(.5)
+    Wait(.5)
     setExpression(model, u'びっくり',  morphOn=True)
     base.graphicsEngine.renderFrame()
   # Wait(delay)
@@ -504,6 +530,9 @@ if __name__ == '__main__':
     p3dnode.showTightBounds()
 
   p3dnode.premungeScene()
+  # make more vertices are unreferenced solve after thie op
+  # print('--> after premunge <--')
+  # render.analyze()
 
   lights = setStudioLight(render)
   lightAtNode(p3dnode, lights=lights)
@@ -514,22 +543,30 @@ if __name__ == '__main__':
   movie = LerpFunc(myWink,  #function to call
                    duration = delay,
                    fromData = 0,
-                   toData = delay,
+                   toData = 1,
                    extraArgs=[p3dnode, delay]
           )
-  movie.loop()
-
-  # render.setAntialias(AntialiasAttrib.MMultisample, 8)
-  render.setAntialias(AntialiasAttrib.MAuto)
+  # movie.loop()
 
   # Shader.load(Shader.SLGLSL, './shader_v.sha', './shader_f.sha' )
   # render.setShader(Shader.load("inkGen.sha"))
   # render.setShaderAuto()
 
-  # filters = CommonFilters(base.win, base.cam)
+  filters = CommonFilters(base.win, base.cam)
+  # v1.8.1 supported
+  # filters.setAmbientOcclusion()
   # filters.setBloom()
+  # filters.setBlurSharpen(2.1)
   # filters.setCartoonInk()
+  # filters.setHalfPixelShift()
+  # filters.setInverted()
+  # filters.setViewGlow()
+  # filters.setVolumetricLighting()
+
 
   setUI(render)
+
+  # render.setAntialias(AntialiasAttrib.MMultisample, 8)
+  render.setAntialias(AntialiasAttrib.MAuto)
 
   run()

@@ -523,6 +523,7 @@ def pmx2p3d(pmx_model, alpha=True):
     log(u'Loaded Node : %s' % mat.name, force=True)
 
   modelPath = NodePath(model)
+  modelPath.flattenStrong()
   # modelPath.setShaderAuto()
   return(modelPath)
   pass
@@ -763,9 +764,51 @@ def loadPmxMorph(pmx_model, alpha=True):
     transform_weight = GeomVertexWriter(vdata, 'transform_weight')
     column_morph_slider = GeomVertexWriter(vdata, 'emotion.morph.strange')
 
+    node = GeomNode(morph.name)
+
     # print(len(morph.offsets))
-    for offset in morph.offsets:
-      if isinstance(offset, pmx.VertexMorphOffset):
+    # for offset in morph.offsets:
+    #   if isinstance(offset, pmx.VertexMorphOffset):
+    #     v = pmx_model.vertices[offset.vertex_index]
+    #     o = offset.position_offset
+    #     i = offset.vertex_index
+    #     vertex.addData3f(v.position.x, v.position.z, v.position.y)
+    #     vindex.addData1i(i)
+    #     vmorph.addData3f(o.x, o.z, o.y)
+    #     transform_index.addData1i(i)
+    #     transform_weight.addData3f(o.x, o.z, o.y)
+    #     column_morph_slider.addData1f(1.0)
+    #   elif isinstance(offset, pmx.GroupMorphData):
+    #     # print(offset.morph_index, offset.value)
+    #     item_morph = pmx_model.morphs[offset.morph_index]
+    #     item_morph_offsets = item_morph.offsets
+    #     for item_morph_offset in item_morph_offsets:
+    #       v = pmx_model.vertices[item_morph_offset.vertex_index]
+    #       o = item_morph_offset.position_offset
+    #       i = item_morph_offset.vertex_index
+    #       vertex.addData3f(v.position.x, v.position.z, v.position.y)
+    #       vindex.addData1i(i)
+    #       vmorph.addData3f(o.x, o.z, o.y)
+    #       transform_index.addData1i(i)
+    #       transform_weight.addData3f(o.x, o.z, o.y)
+    #       column_morph_slider.addData1f(offset.value)
+    #     pass
+    #   elif isinstance(offset, pmx.MaterialMorphData):
+
+    #     pass
+    #   else:
+    #     print(type(offset))
+    #     pass
+
+    morphData = None
+    if   morph.morph_type == 0: # group morph
+      morphData = []
+      morphData.append((o.morph_index, o.value))
+      pass
+    elif morph.morph_type == 1: # vertex morph
+      prim = GeomPoints(Geom.UHDynamic)
+      for idx in xrange(len(morph.offsets)):
+        offset = morph.offsets[idx]
         v = pmx_model.vertices[offset.vertex_index]
         o = offset.position_offset
         i = offset.vertex_index
@@ -775,56 +818,36 @@ def loadPmxMorph(pmx_model, alpha=True):
         transform_index.addData1i(i)
         transform_weight.addData3f(o.x, o.z, o.y)
         column_morph_slider.addData1f(1.0)
-      elif isinstance(offset, pmx.GroupMorphData):
-        # print(offset.morph_index, offset.value)
-        item_morph = pmx_model.morphs[offset.morph_index]
-        item_morph_offsets = item_morph.offsets
-        for item_morph_offset in item_morph_offsets:
-          v = pmx_model.vertices[item_morph_offset.vertex_index]
-          o = item_morph_offset.position_offset
-          i = item_morph_offset.vertex_index
-          vertex.addData3f(v.position.x, v.position.z, v.position.y)
-          vindex.addData1i(i)
-          vmorph.addData3f(o.x, o.z, o.y)
-          transform_index.addData1i(i)
-          transform_weight.addData3f(o.x, o.z, o.y)
-          column_morph_slider.addData1f(offset.value)
-        pass
-      elif isinstance(offset, pmx.MaterialMorphData):
 
-        pass
-      else:
-        print(type(offset))
-        pass
+        prim.addVertex(idx)
 
-    prim = GeomPoints(Geom.UHDynamic)
-    morphData = None
-    if   morph.morph_type == 0: # group morph
+      geom = Geom(vdata)
+      geom.addPrimitive(prim)
+      node.addGeom(geom)
+      pass
+    elif morph.morph_type == 2: # bone morph
       morphData = []
       pass
-    elif morph.morph_type == 1: # vertex morph
+    elif morph.morph_type == 3: # UvMorph morph
       morphData = []
       pass
-    # elif morph.morph_type == 2: # group morph
-    #   morphData = []
-    #   pass
-    # elif morph.morph_type == 4: # bone morph
-    #   morphData = []
-    #   pass
+    elif morph.morph_type == 4: # UvMorph1 morph
+      morphData = []
+      pass
+    elif morph.morph_type == 5: # UvMorph2 morph
+      morphData = []
+      pass
+    elif morph.morph_type == 6: # UvMorph3 morph
+      morphData = []
+      pass
+    elif morph.morph_type == 7: # UvMorph4 morph
+      morphData = []
+      pass
     elif morph.morph_type == 8: # material morph
       morphData = []
-      pass
-
-    for idx in xrange(len(morph.offsets)):
-      o = morph.offsets[idx]
-      if   isinstance(o, pmx.VertexMorphOffset):
-        prim.addVertex(idx)
-      elif isinstance(o, pmx.GroupMorphData):
-        morphData.append((o.morph_index, o.value))
-        pass
-      elif isinstance(o, pmx.BoneMorphData):
-        pass
-      elif isinstance(o, pmx.MaterialMorphData):
+      print(dir(morph))
+      print(len(morph.offsets))
+      for idx in xrange(len(morph.offsets)):
         np = NodePath(u'%s_%04d' % (morph.name, idx))
         material = Material(u'%s_%04d' % (morph.name, idx))
         material.setAmbient(VBase4(o.ambient.r, o.ambient.g, o.ambient.b, 1))
@@ -840,13 +863,14 @@ def loadPmxMorph(pmx_model, alpha=True):
         np.setPythonTag('sphere_texture_factor', o.sphere_texture_factor)
         np.setPythonTag('toon_texture_factor', o.toon_texture_factor)
         morphData.append(np)
-      pass
+        print(np)
+        print(material)
     pass
 
-    geom = Geom(vdata)
-    geom.addPrimitive(prim)
-    node = GeomNode(morph.name)
-    node.addGeom(geom)
+    # geom = Geom(vdata)
+    # geom.addPrimitive(prim)
+    # # node = GeomNode(morph.name)
+    # node.addGeom(geom)
 
     node.setPythonTag('panel', morph.panel)
     node.setPythonTag('morph_type', morph.morph_type)
@@ -857,6 +881,7 @@ def loadPmxMorph(pmx_model, alpha=True):
     morphIndex += 1
 
   np = NodePath(morphNode)
+  np.flattenStrong()
   np.hide()
   return(np)
   pass
