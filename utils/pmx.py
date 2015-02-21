@@ -375,7 +375,7 @@ def pmx2p3d(pmx_model, alpha=True):
   format.addArray(formatArray)
   GeomVertexFormat.registerFormat(format)
 
-  vdata = GeomVertexData(pmx_model.name, format, Geom.UHStatic)
+  vdata = GeomVertexData(pmx_model.name, format, Geom.UHDynamic)
 
   vdata.setNumRows(6)
   vertex = GeomVertexWriter(vdata, 'vertex')
@@ -412,7 +412,7 @@ def pmx2p3d(pmx_model, alpha=True):
 
   matIndex = 0
   for mat in pmx_model.materials:
-    prim = GeomTriangles(Geom.UHStatic)
+    prim = GeomTriangles(Geom.UHDynamic)
     log(u'Loading Node : %s' % mat.name)
     for idx in xrange(vIndex, vIndex+mat.vertex_count, 3):
       # flip trig-face for inverted axis-y/axis-z
@@ -753,7 +753,7 @@ def loadPmxMorph(pmx_model, alpha=True):
     #
     # load vertices(vertex list)
     #
-    vdata = GeomVertexData(morph.name+'_vdata', format, Geom.UHStatic)
+    vdata = GeomVertexData(morph.name+'_vdata', format, Geom.UHDynamic)
     vdata.setNumRows(6)
     vertex = GeomVertexWriter(vdata, 'vertex')
     vindex = GeomVertexWriter(vdata, 'vindex')
@@ -797,7 +797,7 @@ def loadPmxMorph(pmx_model, alpha=True):
         print(type(offset))
         pass
 
-    prim = GeomPoints(Geom.UHStatic)
+    prim = GeomPoints(Geom.UHDynamic)
     morphData = None
     if   morph.morph_type == 0: # group morph
       morphData = []

@@ -45,6 +45,7 @@ loadPrcFileData("", "win-size %d %d" % WIN_SIZE)
 loadPrcFileData("", "window-type none")
 loadPrcFileData('', 'text-encoding utf8')
 loadPrcFileData('', 'textures-power-2 none')
+loadPrcFileData('', 'geom-cache-size 10')
 
 from panda3d.core import ConfigVariableString
 from panda3d.core import Shader
@@ -337,18 +338,16 @@ def processVertexData(vdata_src, vdata_dst, morphOn=True, strength=1.0):
     else:
       vertex_src.setData3f(v_dst.getX(), v_dst.getY(), v_dst.getZ())
     # print(vertex_src.getWriteRow())
+  del vertex_src, vertex_dst, vindex_dst, vmorph_dst
 
 def processGeomNode(geomNode, morphNode, morphOn=True, strength=1.0):
   geom = geomNode.modifyGeom(0)
   morphgeom = morphNode.getGeom(0)
-  state_geom = geomNode.getGeomState(0)
-  state_morph = morphNode.getGeomState(0)
   vdata_src = geom.modifyVertexData()
   vdata_dst = morphgeom.getVertexData()
   result = processVertexData(vdata_src, vdata_dst, morphOn, strength)
-  return(result)
-
-  # result = processGeom(geom, morphgeom, morph)
+  del vdata_src, vdata_dst, geom, morphgeom
+  # return(result)
 
 def morphVertex(nodepath, morphnodepath, morphOn=True, strength=1.0):
   morphNode = morphnodepath.node()
@@ -361,13 +360,15 @@ def morphVertex(nodepath, morphnodepath, morphOn=True, strength=1.0):
     # if geomNode.getName() in[u'肌', u'肌（エッジ無し）', u'瞳', u'白目', u'眉毛\u30fbまつ毛', u'唇', u'歯']:
     processGeomNode(geomNode, morphNode, morphOn, strength)
     # idx += 1
+    del geomNode
+  del morphNode, geomNodeCollection
   pass
 
 def morphMaterial(nodepath, morphnodepath, morphOn=True, strength=1.0):
 
   pass
 
-def setExpression(model, expression, morphOn=True, strength=1.0, default=False):
+def setExpression(model, expression, morphOn=True, strength=1.0, default=True):
   if strength < 0: strength = 0.0;
   if strength > 1: strength = 1.0;
   strength = 0.95
@@ -387,16 +388,15 @@ def setExpression(model, expression, morphOn=True, strength=1.0, default=False):
         # print('Morph Type : ', item.getPythonTag('morph_type'))
         # print('Morph Panel : ', item.getPythonTag('panel'))
         if item.getPythonTag('morph_type') == 1:
-          if item.getPythonTag('show'):
-            morphVertex(model, item, morphOn=False, strength=strength)
-            item.setPythonTag('show', False)
-          else:
-            if lastExpression and default:
-              morphVertex(model, lastExpression, morphOn=False, strength=strength)
-              lastExpression.setPythonTag('show', False)
-            morphVertex(model, item, morphOn=morphOn, strength=strength)
-            item.setPythonTag('show', True)
-            model.setPythonTag('lastExpression', item)
+          if lastExpression and default:
+            morphVertex(model, lastExpression, morphOn=False, strength=strength)
+            lastExpression.setPythonTag('show', False)
+
+          state = False if item.getPythonTag('show') else True
+          morphVertex(model, item, morphOn=state, strength=strength)
+          item.setPythonTag('show', state)
+
+          model.setPythonTag('lastExpression', item)
           # print(expression, morphOn)
         else:
           log('not vertex expression', force=True)
@@ -463,7 +463,7 @@ def myWink(value, model, delay):
     setExpression(model, u'まばたき',  morphOn=True)
     base.graphicsEngine.renderFrame()
     time.sleep(.5)
-    setExpression(model, u'びっくり',  morphOn=False)
+    setExpression(model, u'びっくり',  morphOn=True)
     base.graphicsEngine.renderFrame()
   # Wait(delay)
   return(True)
@@ -503,6 +503,8 @@ if __name__ == '__main__':
   if DEBUG:
     p3dnode.showTightBounds()
 
+  p3dnode.premungeScene()
+
   lights = setStudioLight(render)
   lightAtNode(p3dnode, lights=lights)
 
@@ -515,7 +517,7 @@ if __name__ == '__main__':
                    toData = delay,
                    extraArgs=[p3dnode, delay]
           )
-  # movie.loop()
+  movie.loop()
 
   # render.setAntialias(AntialiasAttrib.MMultisample, 8)
   render.setAntialias(AntialiasAttrib.MAuto)
