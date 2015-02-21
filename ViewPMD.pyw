@@ -348,7 +348,7 @@ def processGeomNode(geomNode, morphNode, morphOn=True, strength=1.0):
   vdata_dst = morphgeom.getVertexData()
   result = processVertexData(vdata_src, vdata_dst, morphOn, strength)
   del vdata_src, vdata_dst, geom, morphgeom
-  # return(result)
+  return(result)
 
 def morphVertex(nodepath, morphnodepath, morphOn=True, strength=1.0):
   morphNode = morphnodepath.node()
@@ -367,7 +367,7 @@ def morphVertex(nodepath, morphnodepath, morphOn=True, strength=1.0):
 
 def morphMaterial(nodepath, morphData, morphOn=True, strength=1.0):
   idx = 0
-  print(len(morphData))
+  print(u'-> Morph Material Count : %d' % len(morphData))
   for data in morphData:
     material_index        = data.getPythonTag('materialIndex')
     calc_mode             = data.getPythonTag('calcMode')
@@ -378,10 +378,111 @@ def morphMaterial(nodepath, morphData, morphOn=True, strength=1.0):
     toon_texture_factor   = data.getPythonTag('toon_texture_factor')
 
     mat = data.getMaterial()
-    print(mat)
-    target = nodepath.getChild(material_index)
-    print(target)
-    tex_name = u'%s_morph_%04d' % (target.getName(), idx)
+    print(u'--> Target Material Count : %d' % len(morphData))
+    print(u'--> Target Material Index : %d' % material_index)
+
+    nps = nodepath.findAllMatches('**/Body/*')
+    for np in nps:
+      log(u'---> %s, %d, %s' % (np.getName(), np.getPythonTag('material_index'), str(morphOn)), force=True)
+      matIndex = np.getPythonTag('material_index')
+      if material_index < 0:
+        pass
+      elif matIndex != material_index:
+        continue
+
+      tex_name = u'%s_morph_%04d' % (np.getName(), idx)
+      ts_morph = TextureStage(tex_name)
+
+      tsSphereName = u'%s_sphere' % np.getName()
+      tsSphere = np.findTextureStage(tsSphereName)
+      tsToonName = u'%s_toon' % np.getName()
+      tsToon = np.findTextureStage(tsToonName)
+      if morphOn:
+        np.setMaterial(mat, 1)
+        if   calc_mode == 0: # *
+          np.setColorScale(texture_factor.r, texture_factor.g, texture_factor.b, texture_factor.a, matIndex)
+        elif calc_mode == 1: # +
+          np.setColorScale(texture_factor.r, texture_factor.g, texture_factor.b, texture_factor.a, matIndex)
+      else:
+        np.setColorScaleOff(matIndex)
+        np.clearMaterial()
+        np.setMaterial(np.getPythonTag('material'), 1)
+
+      if tsSphere:
+        if morphOn:
+          np.setPythonTag('sphere_combine_mode', (
+            tsSphere.getCombineRgbMode(),
+            tsSphere.getCombineRgbSource0(),
+            tsSphere.getCombineRgbOperand0(),
+            tsSphere.getCombineRgbSource1(),
+            tsSphere.getCombineRgbOperand1(),
+            tsSphere.getCombineRgbSource2(),
+            tsSphere.getCombineRgbOperand2(),
+            tsSphere.getCombineAlphaMode(),
+            tsSphere.getCombineAlphaSource0(),
+            tsSphere.getCombineAlphaOperand0(),
+            tsSphere.getCombineAlphaSource1(),
+            tsSphere.getCombineAlphaOperand1(),
+            tsSphere.getCombineAlphaSource2(),
+            tsSphere.getCombineAlphaOperand2(),
+            tsSphere.getMode()
+            ))
+          if calc_mode == 0: # *
+            color = VBase4(sphere_texture_factor.r*strength/10, sphere_texture_factor.g*strength/10, sphere_texture_factor.b*strength/10, sphere_texture_factor.a*strength/10)
+            tsSphere.setColor(color)
+            tsSphere.setCombineRgb(TextureStage.CMModulate, TextureStage.CSPrevious, TextureStage.COSrcColor, TextureStage.CSTexture, TextureStage.COSrcColor)
+            tsSphere.setCombineAlpha(TextureStage.CMModulate, TextureStage.CSPrevious, TextureStage.COSrcAlpha, TextureStage.CSTexture, TextureStage.COSrcAlpha)
+          elif calc_mode == 1: # +
+            color = VBase4(-sphere_texture_factor.r*strength, -sphere_texture_factor.g*strength, -sphere_texture_factor.b*strength, -sphere_texture_factor.a*strength)
+            tsSphere.setColor(color)
+            tsSphere.setCombineRgb(TextureStage.CMSubtract, TextureStage.CSTexture, TextureStage.COSrcColor, TextureStage.CSConstant, TextureStage.COSrcColor)
+            tsSphere.setCombineAlpha(TextureStage.CMSubtract, TextureStage.CSTexture, TextureStage.COSrcAlpha, TextureStage.CSConstant, TextureStage.COSrcAlpha)
+        else:
+          cMode = np.getPythonTag('sphere_combine_mode')
+          # tsSphere.setCombineRgb(cMode[0], cMode[1], cMode[2], cMode[3], cMode[4], cMode[5], cMode[6])
+          # tsSphere.setCombineAlpha(cMode[7], cMode[8], cMode[9], cMode[10], cMode[11], cMode[12], cMode[13])
+          tsSphere.setMode(cMode[14])
+        pass
+      pass
+
+      if tsToon:
+        if morphOn:
+          np.setPythonTag('toon_combine_mode', (
+            tsToon.getCombineRgbMode(),
+            tsToon.getCombineRgbSource0(),
+            tsToon.getCombineRgbOperand0(),
+            tsToon.getCombineRgbSource1(),
+            tsToon.getCombineRgbOperand1(),
+            tsToon.getCombineRgbSource2(),
+            tsToon.getCombineRgbOperand2(),
+            tsToon.getCombineAlphaMode(),
+            tsToon.getCombineAlphaSource0(),
+            tsToon.getCombineAlphaOperand0(),
+            tsToon.getCombineAlphaSource1(),
+            tsToon.getCombineAlphaOperand1(),
+            tsToon.getCombineAlphaSource2(),
+            tsToon.getCombineAlphaOperand2(),
+            tsToon.getMode()
+            ))
+          if calc_mode == 0: # *
+            color = VBase4(toon_texture_factor.r*strength/5, toon_texture_factor.g*strength/5, toon_texture_factor.b*strength/5, toon_texture_factor.a*strength/5)
+            tsToon.setColor(color)
+            tsToon.setCombineRgb(TextureStage.CMModulate, TextureStage.CSTexture, TextureStage.COSrcColor, TextureStage.CSPrevious, TextureStage.COSrcColor)
+            tsToon.setCombineAlpha(TextureStage.CMModulate, TextureStage.CSTexture, TextureStage.COSrcAlpha, TextureStage.CSPrevious, TextureStage.COSrcAlpha)
+          elif calc_mode == 1: # +
+            color = VBase4(toon_texture_factor.r*strength/5, toon_texture_factor.g*strength/5, toon_texture_factor.b*strength/5, toon_texture_factor.a*strength/5)
+            tsToon.setColor(color)
+            print(color)
+            tsToon.setCombineRgb(TextureStage.CMSubtract, TextureStage.CSPrevious, TextureStage.COSrcColor, TextureStage.CSConstant, TextureStage.COSrcColor)
+            tsToon.setCombineAlpha(TextureStage.CMSubtract, TextureStage.CSPrevious, TextureStage.COSrcAlpha, TextureStage.CSConstant, TextureStage.COSrcAlpha)
+        else:
+          cMode = np.getPythonTag('toon_combine_mode')
+          print(cMode)
+          # tsToon.setCombineRgb(cMode[0], cMode[1], cMode[2], cMode[3], cMode[4], cMode[5], cMode[6])
+          # tsToon.setCombineAlpha(cMode[7], cMode[8], cMode[9], cMode[10], cMode[11], cMode[12], cMode[13])
+          tsToon.setMode(cMode[14])
+        pass
+      pass
 
     idx += 1
   pass
@@ -400,6 +501,8 @@ def setExpression(model, expression, morphOn=True, strength=1.0, default=True):
     for item in morph.getChildren():
       if len(expression)==0 or expression.lower()=='default':
         morphVertex(model, item, morphOn=False, strength=strength)
+        item.setPythonTag('show', False)
+        continue
       if item.getName() == expression:
         log(u'===================\n%s\n===================' % expression, force=True)
         lastExpression = model.getPythonTag('lastExpression')
@@ -422,7 +525,7 @@ def setExpression(model, expression, morphOn=True, strength=1.0, default=True):
         elif morphType == 8:
           state = False if item.getPythonTag('show') else True
           morphData = item.getPythonTag('morph_data')
-          morphMaterial(model, morphData, morphOn=state, strength=strength)
+          # morphMaterial(model, morphData, morphOn=state, strength=strength)
           item.setPythonTag('show', state)
         else:
           log('not vertex/material expression', force=True)
@@ -447,7 +550,7 @@ def setExpressingAction(model, action, morphOn=True, defaultFirst=True):
   pass
 
 def menuMorphSel(arg):
-  setExpression(lastModel, arg)
+  setExpression(lastModel, arg, default=False)
 
 def setUI(render):
   UI = NodePath('GUI')
