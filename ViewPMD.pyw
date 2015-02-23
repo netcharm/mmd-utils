@@ -34,10 +34,9 @@ import random
 
 import StringIO
 
-from pandac.PandaModules import *
-
 WIN_SIZE = (800, 800)
 
+from panda3d.core import loadPrcFileData
 # need to be before the Direct Start Import
 loadPrcFileData("", "window-title MMD PMX/PMX Model Viewer")
 loadPrcFileData("", "icon-filename viewpmx.ico")
@@ -63,6 +62,8 @@ from direct.showbase.ShowBase import ShowBase
 import direct.directbase.DirectStart
 
 from direct.gui.DirectGui import *
+
+from pandac.PandaModules import *
 
 from utils.DrawPlane import *
 from utils.pmx import *
@@ -122,6 +123,7 @@ def setStudioLight(render):
   lightsStage = u'./stages/default_lights.bam'
   try:
     lights = loader.loadModel(lightsStage)
+    lights = lights.getChild(0)
   except:
     lights = NodePath(PandaNode('StageLights'))
 
@@ -204,7 +206,7 @@ def setStudioLight(render):
       lights.setShaderAuto()
       lights.setShadowCaster(True, 512, 512)
 
-    # lights.writeBamFile(lightsStage)
+    lights.writeBamFile(lightsStage)
 
   # lights.reparentTo(render)
   return(lights)
@@ -229,6 +231,7 @@ def setAxis(render):
   axisStage = u'./stages/default_axis.bam'
   try:
     gridnodepath = loader.loadModel(axisStage)
+    gridnodepath = gridnodepath.getChild(0)
   except:
     grid = ThreeAxisGrid(xy=True, yz=False, xz=False, z=False)
     gridnodepath = grid.create()
@@ -659,7 +662,7 @@ if __name__ == '__main__':
   # v1.8.1 supported
   # filters.setAmbientOcclusion()
   # filters.setBloom()
-  # filters.setBlurSharpen(2.1)
+  # filters.setBlurSharpen(0.3)
   # filters.setCartoonInk()
   # filters.setHalfPixelShift()
   # filters.setInverted()

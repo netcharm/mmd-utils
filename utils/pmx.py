@@ -366,9 +366,9 @@ def pmx2p3d(pmx_model, alpha=True):
   # load vertices(vertex list)
   #
   formatArray = GeomVertexArrayFormat()
-  formatArray.addColumn(InternalName.make("edge_factor"), 1, Geom.NTFloat32, Geom.COther)
-  formatArray.addColumn(InternalName.make("drawFlag"), 1, Geom.NTUint8, Geom.COther)
-  formatArray.addColumn(InternalName.make("index"), 1, Geom.NTUint32, Geom.CIndex)
+  formatArray.addColumn(InternalName.make(str("edge_factor")), 1, Geom.NTFloat32, Geom.COther)
+  formatArray.addColumn(InternalName.make(str("drawFlag")), 1, Geom.NTUint8, Geom.COther)
+  formatArray.addColumn(InternalName.make(str("index")), 1, Geom.NTUint32, Geom.CIndex)
   # formatArray.addColumn(InternalName.make("morph"), 1, Geom.NTFloat32, Geom.CMorphDelta)
 
   format = GeomVertexFormat(GeomVertexFormat.getV3n3cpt2())
@@ -546,12 +546,12 @@ def loadPmxMorph(pmx_model, alpha=True):
   # Load IK data
   #
   formatArray = GeomVertexArrayFormat()
-  formatArray.addColumn(InternalName.make("vindex"), 1, Geom.NTUint32, Geom.CIndex)
-  # formatArray.addColumn(InternalName.make("v.morph"), 3, Geom.NTFloat32, Geom.CMorphDelta)
-  formatArray.addColumn(InternalName.make("vmorph"), 3, Geom.NTFloat32, Geom.COther)
-  formatArray.addColumn(InternalName.make("transform_index"), 1, Geom.NTUint32, Geom.CIndex)
-  formatArray.addColumn(InternalName.make("transform_weight"), 3, Geom.NTUint32, Geom.COther)
-  formatArray.addColumn(InternalName.make("emotion.morph.strange"), 1, Geom.NTFloat32, Geom.COther)
+  formatArray.addColumn(InternalName.make(str("vindex")), 1, Geom.NTUint32, Geom.CIndex)
+  # formatArray.addColumn(InternalName.make(str("v.morph")), 3, Geom.NTFloat32, Geom.CMorphDelta)
+  formatArray.addColumn(InternalName.make(str("vmorph")), 3, Geom.NTFloat32, Geom.COther)
+  formatArray.addColumn(InternalName.make(str("transform_index")), 1, Geom.NTUint32, Geom.CIndex)
+  formatArray.addColumn(InternalName.make(str("transform_weight")), 3, Geom.NTUint32, Geom.COther)
+  formatArray.addColumn(InternalName.make(str("emotion.morph.strange")), 1, Geom.NTFloat32, Geom.COther)
 
   format = GeomVertexFormat(GeomVertexFormat.getV3())
   format.addArray(formatArray)
