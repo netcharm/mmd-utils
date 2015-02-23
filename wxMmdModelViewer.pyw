@@ -40,8 +40,12 @@ rcdomain = 'wxViewMMD'
 localedir = os.path.realpath('i18n')
 os.environ['LANG'] = locale.getdefaultlocale()[0]
 
+import gettext
+_ = gettext.gettext
+
 import wx
 import wx.aui
+import wx.lib.platebtn as platebtn
 
 # if wx.GetApp().GetComCtl32Version() >= 600 and wx.DisplayDepth() >= 32:
 #   # Use the 32-bit images
@@ -299,6 +303,13 @@ class STAGE(object):
       x = base.win.getXSize()
       y = base.win.getYSize()
       minsize = min(x, y)
+      print(x, y)
+
+      lens = base.camLens
+      print(lens)
+      aspect = lens.getAspectRatio()
+      print(aspect)
+      # base.camLens.setFov(LVecBase2f(x, y))
 
       min_point = LPoint3f()
       max_point = LPoint3f()
@@ -345,7 +356,7 @@ class MmdViewerApp(ShowBase):
   wp = None
 
   def __init__(self):
-    ShowBase.__init__(self, fStartDirect=False, windowType=None)
+    self.base = ShowBase.__init__(self, fStartDirect=False, windowType=None)
     self.startWx()
     self.wxApp.Bind(wx.EVT_CLOSE, self.quit)
     self.wxApp.Bind(wx.EVT_SIZE, self.resize)
@@ -390,14 +401,58 @@ class MmdViewerApp(ShowBase):
     self.dt = MyFileDropTarget(win)
     win.SetDropTarget(self.dt)
 
+    menu = wx.Menu()
+    for id in xrange(self.frame.menuView.GetMenuItemCount()):
+      item = self.frame.menuView.FindItemByPosition(id)
+      text = item.GetText()
+      help = item.GetHelp()
+      if text=='':
+        menu.AppendSeparator()
+      else:
+        mItem = menu.AppendCheckItem(wx.NewId(), text, help)
+        if item.IsCheckable():
+          mItem.Check(item.IsChecked())
+        win.Bind(wx.EVT_MENU, self.OnPlanePopup, id=mItem.GetId())
+        win.Bind(wx.EVT_MENU, self.OnPlanePopup, id=item.GetId())
+
+    btn = self.frame.toolbar.FindById(ID_GRIDPLANE)
+    self.frame.toolbar.SetDropdownMenu(ID_GRIDPLANE, menu)
+
+    # droparrow = platebtn.PB_STYLE_DROPARROW + platebtn.PB_STYLE_SQUARE + platebtn.PB_STYLE_NOBG
+    # icon = wx.Bitmap( u"icons/layers.png", wx.BITMAP_TYPE_ANY )
+    # self.btnPlane = platebtn.PlateButton(self.frame.toolbar, wx.ID_ANY, "", icon, style=droparrow)
+    # self.frame.toolbar.AddControl(self.btnPlane, _(u'Plane'))
+    # self.frame.toolbar.Realize()
+
+
+    # # make a menu
+    # menu = wx.Menu()
+    # # Show how to put an icon in the menu
+    # item = wx.MenuItem(menu, self.popupID1,"One")
+    # bmp = images.Smiles.GetBitmap()
+    # item.SetBitmap(bmp)
+    # menu.AppendItem(item)
+    # # add some other items
+    # menu.Append(self.popupID2, "Two")
+    # menu.Append(self.popupID3, "Three")
+    # menu.Append(self.popupID4, "Four")
+    # menu.Append(self.popupID5, "Five")
+    # menu.Append(self.popupID6, "Six")
+
     win.Bind(wx.EVT_TOOL, self.OnOpen, id=ID_OPEN)
     win.Bind(wx.EVT_MENU, self.OnOpen, id=win.menuOpen.GetId())
     win.Bind(wx.EVT_TOOL, self.OnSnapshot, id=ID_SNAPSHOT)
     win.Bind(wx.EVT_MENU, self.OnSnapshot, id=win.menuSnapshot.GetId())
 
+    win.Bind(wx.EVT_MENU, self.OnPlanePopup, id=ID_GRIDPLANE)
+
     pass
 
   def setupGL(self, render):
+    base.camLens.setNearFar(0.1, 550.0)
+    base.camLens.setFov(45.0)
+    base.camLens.setFocalLength(50)
+
     STAGE.setAxis(render)
 
     self.lights = STAGE.setStudioLight(render)
@@ -423,6 +478,11 @@ class MmdViewerApp(ShowBase):
     print(result)
     pass
 
+  def OnPlanePopup(self, event):
+    # btn = self.frame.toolbar.GetToolClientData(ID_GRIDPLANE)
+    print(event)
+    # pop =
+    # self.frame.PopupMenu(self.frame.menuView)
   pass
 
 if __name__ == '__main__':
