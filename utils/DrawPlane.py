@@ -2,12 +2,6 @@
 # -*- coding: utf-8 -*-
 from __future__ import unicode_literals
 from __future__ import division
-
-import sys
-import os
-
-from pandac.PandaModules import *
-
 # Three Axis Coordinate Plane Grid Class (ThreeAxisGrid)
 # Mathew Lloyd AKA 'Forklift', August 2008
 # 'matthewadamlloyd@gmail.com'
@@ -63,13 +57,18 @@ from pandac.PandaModules import *
 #
 #######################################################################
 
+import sys
+import os
+
+from pandac.PandaModules import *
+
 
 DEBUG = True
 DEBUG = False
 
 class ThreeAxisGrid:
    def __init__(self,
-      xsize = 50, ysize = 50, zsize = 50,
+      xsize = 100, ysize = 100, zsize = 100,
       gridstep = 10, subdiv = 10,
       xy=True, xz=True, yz=True,
       x=True, y=True, z=True,

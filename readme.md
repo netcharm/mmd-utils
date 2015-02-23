@@ -11,11 +11,13 @@ requirement
 ===========
 1. python 2.7.x
 2. pyqt 4.8.x
-3. latest fbx-python from autodesk
+3. latest fbx-python from autodesk inc.
 4. chardet
 5. latest PIL/Pillow
 6. panda3d 1.8.x+
 7. pymeshio
+8. wxPython 3.0.2
+
 
 usage
 =====

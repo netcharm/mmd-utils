@@ -31,20 +31,13 @@ class MainForm ( wx.Frame ):
 		
 		self.menuMain = wx.MenuBar( 0 )
 		self.menuFile = wx.Menu()
-		self.m_menuItem1 = wx.MenuItem( self.menuFile, wx.ID_ANY, _(u"MyMenuItem"), wx.EmptyString, wx.ITEM_NORMAL )
-		self.menuFile.AppendItem( self.m_menuItem1 )
+		self.menuOpen = wx.MenuItem( self.menuFile, wx.ID_ANY, _(u"Open"), wx.EmptyString, wx.ITEM_NORMAL )
+		self.menuFile.AppendItem( self.menuOpen )
 		
-		self.m_menuItem2 = wx.MenuItem( self.menuFile, wx.ID_ANY, _(u"MyMenuItem"), wx.EmptyString, wx.ITEM_NORMAL )
-		self.menuFile.AppendItem( self.m_menuItem2 )
+		self.menuFile.AppendSeparator()
 		
-		self.m_menuItem3 = wx.MenuItem( self.menuFile, wx.ID_ANY, _(u"MyMenuItem"), wx.EmptyString, wx.ITEM_NORMAL )
-		self.menuFile.AppendItem( self.m_menuItem3 )
-		
-		self.m_menuItem4 = wx.MenuItem( self.menuFile, wx.ID_ANY, _(u"MyMenuItem"), wx.EmptyString, wx.ITEM_NORMAL )
-		self.menuFile.AppendItem( self.m_menuItem4 )
-		
-		self.m_menuItem5 = wx.MenuItem( self.menuFile, wx.ID_ANY, _(u"MyMenuItem"), wx.EmptyString, wx.ITEM_NORMAL )
-		self.menuFile.AppendItem( self.m_menuItem5 )
+		self.menuExit = wx.MenuItem( self.menuFile, wx.ID_ANY, _(u"Exit"), wx.EmptyString, wx.ITEM_NORMAL )
+		self.menuFile.AppendItem( self.menuExit )
 		
 		self.menuMain.Append( self.menuFile, _(u"File") ) 
 		
@@ -55,6 +48,11 @@ class MainForm ( wx.Frame ):
 		self.menuResetCamera = wx.MenuItem( self.menuTool, wx.ID_ANY, _(u"Reset Camera"), wx.EmptyString, wx.ITEM_NORMAL )
 		self.menuTool.AppendItem( self.menuResetCamera )
 		
+		self.menuTool.AppendSeparator()
+		
+		self.menuOptions = wx.MenuItem( self.menuTool, wx.ID_ANY, _(u"Options"), wx.EmptyString, wx.ITEM_NORMAL )
+		self.menuTool.AppendItem( self.menuOptions )
+		
 		self.menuMain.Append( self.menuTool, _(u"Tools") ) 
 		
 		self.menuAbout = wx.Menu()
@@ -64,15 +62,15 @@ class MainForm ( wx.Frame ):
 		
 		self.toolbar = self.CreateToolBar( wx.TB_FLAT|wx.TB_HORIZONTAL, wx.ID_ANY )
 		self.toolbar.SetToolBitmapSize( wx.Size( 24,24 ) )
-		self.m_tool14 = self.toolbar.AddLabelTool( ID_OPEN, _(u"tool"), wx.Bitmap( u"icons/import_mesh.png", wx.BITMAP_TYPE_ANY ), wx.NullBitmap, wx.ITEM_NORMAL, wx.EmptyString, wx.EmptyString, None ) 
+		self.btnOpen = self.toolbar.AddLabelTool( ID_OPEN, _(u"Open"), wx.Bitmap( u"icons/import_mesh.png", wx.BITMAP_TYPE_ANY ), wx.NullBitmap, wx.ITEM_NORMAL, wx.EmptyString, wx.EmptyString, None ) 
 		
-		self.m_tool15 = self.toolbar.AddLabelTool( ID_SAVE, _(u"tool"), wx.Bitmap( u"icons/save.png", wx.BITMAP_TYPE_ANY ), wx.NullBitmap, wx.ITEM_NORMAL, wx.EmptyString, wx.EmptyString, None ) 
+		self.btnSave = self.toolbar.AddLabelTool( ID_SAVE, _(u"Save"), wx.Bitmap( u"icons/save.png", wx.BITMAP_TYPE_ANY ), wx.NullBitmap, wx.ITEM_NORMAL, wx.EmptyString, wx.EmptyString, None ) 
 		
 		self.toolbar.AddSeparator()
 		
 		self.btnResetCamera = self.toolbar.AddLabelTool( ID_GRIDPLANE, _(u"Reset Camera"), wx.Bitmap( u"icons/layers.png", wx.BITMAP_TYPE_ANY ), wx.NullBitmap, wx.ITEM_NORMAL, wx.EmptyString, wx.EmptyString, None ) 
 		
-		self.btnSnapshot = self.toolbar.AddLabelTool( ID_SNAPSHOT, _(u"Snapshot"), wx.Bitmap( u"icons/snapshot.png", wx.BITMAP_TYPE_ANY ), wx.NullBitmap, wx.ITEM_NORMAL, wx.EmptyString, wx.EmptyString, None ) 
+		self.btnSnapshot = self.toolbar.AddLabelTool( ID_SNAPSHOT, _(u"Snapshot"), wx.Bitmap( u"icons/snapshot.png", wx.BITMAP_TYPE_ANY ), wx.NullBitmap, wx.ITEM_NORMAL, _(u"Screen Snapshot"), wx.EmptyString, None ) 
 		
 		self.toolbar.Realize() 
 		

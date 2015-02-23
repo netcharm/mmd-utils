@@ -3,7 +3,7 @@
 ###############################################################################
 # The MIT License (MIT)
 #
-# Copyright (c) <year> <copyright holders>
+# Copyright (c) 2015 NetCharm <netcharm@gmail.com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -51,7 +51,9 @@ from pymeshio.vmd import reader as vmdReader
 
 from pandac.PandaModules import *
 
-Shader.load(Shader.SLGLSL, './shader_v.sha', './shader_f.sha' )
+# Shader.load(Shader.SLGLSL, './shaders/shader_v.sha', './shaders/shader_f.sha' )
+Shader.load(Shader.SLGLSL, './shaders/phong.vert', './shaders/phong.frag' )
+
 
 
 DEBUG = True
@@ -137,6 +139,7 @@ class BmpAlphaImageFile(ImageFile.ImageFile):
 
 def loadTexture(tex_file):
   texture = None #Texture('NULL')
+  tex_file = os.path.relpath(tex_file)
   if tex_file and os.path.isfile(tex_file):
     tex_ext = os.path.splitext(tex_file)[1]
     if tex_ext.lower() in ['.spa', '.sph', '.bmp']:
@@ -149,10 +152,12 @@ def loadTexture(tex_file):
         pnm.read(StringStream(buf.getvalue()))
         buf.close()
       except:
+        # pnm = PNMImage(Filename.toOsSpecific(tex_file))
         pnm = PNMImage(tex_file)
       texture = Texture(tex_file)
       texture.load(pnm)
     else:
+      # pnm = PNMImage(Filename.toOsSpecific(tex_file))
       pnm = PNMImage(tex_file)
       texture = Texture(tex_file)
       texture.load(pnm)
@@ -1090,6 +1095,21 @@ def testPMD(pmd):
     pass
   pass
 
+def loadMMDModel(modelfile):
+  p3dnode = None
+  mmdFile = os.path.relpath(modelfile)
+  ext = os.path.splitext(mmdFile)[1].lower()
+  if ext in ['.pmd']:
+    mmdModel = pmdLoad(mmdFile)
+    if mmdModel:
+      p3dnode = pmd2p3d(mmdModel)
+  elif ext in ['.pmx']:
+    mmdModel = pmxLoad(mmdFile)
+    if mmdModel:
+      p3dnode = pmx2p3d(mmdModel)
+      morphs = loadPmxMorph(mmdModel)
+      morphs.reparentTo(p3dnode)
+  return(p3dnode)
 
 if __name__ == '__main__':
   pmxFile = u'../models/meiko/meiko.pmx'

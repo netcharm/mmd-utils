@@ -73,8 +73,8 @@ from panda3d.core import VBase4
 from direct.showbase.ShowBase import ShowBase
 from direct.showbase.ShowBase import WindowControls
 from direct.showbase.DirectObject import DirectObject
-from direct.directtools.DirectGrid import DirectGrid
-from direct.directtools.DirectGlobals import *
+# from direct.directtools.DirectGrid import DirectGrid
+# from direct.directtools.DirectGlobals import *
 
 from direct.gui.DirectGui import *
 
@@ -82,9 +82,8 @@ from direct.actor.Actor import Actor
 from direct.filter.CommonFilters import CommonFilters
 from direct.interval.IntervalGlobal import *
 from direct.task import Task
-# from direct.wxwidgets import WxAppShell
+
 from direct.wxwidgets.ViewPort import *
-from direct.wxwidgets.WxPandaWindow import *
 
 from utils.DrawPlane import *
 from utils.pmx import *
@@ -111,7 +110,9 @@ class TestFrame(wx.Frame):
 
     self.auiManager = wx.aui.AuiManager(self)
 
-    self.panda = Viewport.makeFront(self)
+    # self.panda = Viewport.makeFront(self)
+    # self.panda = Viewport.makePerspective(self)
+    self.panda = Viewport.make(self, vpType=CREATENEW)
 
     pandaInfo = wx.aui.AuiPaneInfo().Name("panda3d")
     pandaInfo.Center().CloseButton(False).MaximizeButton(True).CaptionVisible(False)
@@ -122,6 +123,9 @@ class TestFrame(wx.Frame):
   def onQuit(self, evt):
     self.auiManager.UnInit()
     self.Close()
+
+  pass
+
 
 class Frame(MainForm):
   def __init__(self, *args, **kwargs):
@@ -129,12 +133,9 @@ class Frame(MainForm):
 
     self.auiManager = wx.aui.AuiManager(self)
 
-    self.panda = Viewport.makeFront(self)
-    # self.panda.SetSizeHintsSz(wx.DefaultSize, wx.DefaultSize )
-    # self.panda.SetSize(self.glvp.GetSize())
-    # self.panda.AutoLayout = True
-
-    # self.auiManager = wx.aui.AuiManager(self.glvp)
+    # self.panda = Viewport.makeFront(self)
+    # self.panda = Viewport.makePerspective(self)
+    self.panda = Viewport('panda3dviewport', self)
 
     pandaInfo = wx.aui.AuiPaneInfo().Name("panda3d")
     pandaInfo.Center().CloseButton(False).MaximizeButton(True).CaptionVisible(False)
@@ -145,6 +146,200 @@ class Frame(MainForm):
   def onQuit(self, evt):
     self.auiManager.UnInit()
     self.Close()
+
+  pass
+
+class STAGE(object):
+  lights = None
+  @staticmethod
+  def setAxis(render):
+    axisStage = u'./stages/default_axis.bam'
+    try:
+      gridnodepath = loader.loadModel(axisStage)
+      gridnodepath = gridnodepath.getChild(0)
+    except:
+      grid = ThreeAxisGrid(xy=True, yz=False, xz=False, z=False)
+      gridnodepath = grid.create()
+      grid.showPlane(XY=True)
+      grid.showAxis(Z=False)
+      gridnodepath.writeBamFile(axisStage)
+    gridnodepath.reparentTo(render)
+    pass
+
+  @staticmethod
+  def setStudioLight(render):
+    lightsStage = u'./stages/default_lights.bam'
+    try:
+      lights = loader.loadModel(lightsStage)
+      lights = lights.getChild(0)
+    except:
+      lights = NodePath(PandaNode('StageLights'))
+
+      alight = AmbientLight('alight')
+      alight.setColor(VBase4(0.67, 0.67, 0.67, .8))
+      # alight.setColor(VBase4(0.33, 0.33, 0.33, 0.67))
+      alnp = render.attachNewNode(alight)
+      alnp.reparentTo(lights)
+
+      dlight_top = PointLight('top dlight')
+      dlnp_top = render.attachNewNode(dlight_top)
+      dlnp_top.setX(-5)
+      dlnp_top.setZ(45)
+      dlnp_top.setY(0)
+      # dlnp_top.node().setAttenuation( Vec3( 0.001, 0.005, 0.001 ) )
+      dlnp_top.node().setAttenuation( Vec3( 0.005, 0.005, 0.005 ) )
+      dlnp_top.setHpr(0, -180, 0)
+      if SHOW_LIGHT_POS:
+        dlnp_top.node().showFrustum()
+      dlnp_top.reparentTo(lights)
+
+      dlight_back = PointLight('back dlight')
+      dlnp_back = render.attachNewNode(dlight_back)
+      dlnp_back.setX(0)
+      dlnp_back.setZ(25)
+      dlnp_back.setY(+55)
+      # dlnp_back.node().setAttenuation( Vec3( 0.001, 0.005, 0.001 ) )
+      dlnp_back.node().setAttenuation( Vec3( 0.001, 0.005, 0.001 ) )
+      dlnp_back.setHpr(0, -168, 0)
+      if SHOW_LIGHT_POS:
+        dlnp_back.node().showFrustum()
+      dlnp_back.reparentTo(lights)
+
+      dlight_front = PointLight('front dlight')
+      dlnp_front = render.attachNewNode(dlight_front)
+      dlnp_front.setX(0)
+      dlnp_front.setY(-36)
+      dlnp_front.setZ(15)
+      dlens = dlnp_front.node().getLens()
+      dlens.setFilmSize(41, 21)
+      # dlens.setNearFar(50, 75)
+      dlnp_front.node().setAttenuation( Vec3( 0.001, 0.005, 0.001 ) )
+      # dlnp_front.node().setAttenuation( Vec3( 0.005, 0.005, 0.005 ) )
+      dlnp_front.setHpr(0, -10, 0)
+      if SHOW_LIGHT_POS:
+        dlnp_front.node().showFrustum()
+      dlnp_front.reparentTo(lights)
+
+      dlight_left = Spotlight('left dlight')
+      dlnp_left = render.attachNewNode(dlight_left)
+      dlnp_left.setX(-46)
+      dlnp_left.setY(+36)
+      dlnp_left.setZ(27)
+      dlens = dlnp_left.node().getLens()
+      dlens.setFilmSize(41, 21)
+      # dlens.setNearFar(50, 75)
+      dlnp_left.node().setAttenuation( Vec3( 0.001, 0.002, 0.001 ) )
+      # dlnp_left.node().setAttenuation( Vec3( 0.011, 0.011, 0.011 ) )
+      dlnp_left.setHpr(-130, -15, 0)
+      if SHOW_LIGHT_POS:
+        dlnp_left.node().showFrustum()
+      dlnp_left.reparentTo(lights)
+
+      dlight_right = Spotlight('right dlight')
+      dlnp_right = render.attachNewNode(dlight_right)
+      dlnp_right.setX(+50)
+      dlnp_right.setY(+40)
+      dlnp_right.setZ(30)
+      dlens = dlnp_right.node().getLens()
+      dlens.setFilmSize(41, 21)
+      # dlens.setNearFar(50, 75)
+      dlnp_right.node().setAttenuation( Vec3( 0.001, 0.002, 0.001 ) )
+      # dlnp_right.node().setAttenuation( Vec3( 0.011, 0.011, 0.011 ) )
+      dlnp_right.setHpr(130, -15, 0)
+      if SHOW_LIGHT_POS:
+        dlnp_right.node().showFrustum()
+      dlnp_right.reparentTo(lights)
+
+      if SHOW_SHADOW:
+        lights.setShaderAuto()
+        lights.setShadowCaster(True, 512, 512)
+
+      lights.writeBamFile(lightsStage)
+
+    # lights.reparentTo(render)
+    STAGE.lights = lights
+    return(lights)
+    pass
+
+  @staticmethod
+  def lightAtNode(node, lights=None):
+    if not lights:
+        return
+    if isinstance(node, NodePathCollection):
+      for np in node:
+        for light in lights.getChildren():
+          np.setLight(light)
+    elif isinstance(node, NodePath):
+      for light in lights.getChildren():
+        try:
+          node.setLight(light)
+        except:
+          continue
+    pass
+
+  @staticmethod
+  def setCamera(x=0, y=0, z=0, h=0, p=0, r=0, oobe=False):
+    base.camLens.setNearFar(0.1, 550.0)
+    base.camLens.setFov(45.0)
+    base.camLens.setFocalLength(50)
+
+    # base.trackball.node().setPos(0, 20, -20)
+    base.trackball.node().setHpr(h, p, r)
+    base.trackball.node().setPos(x, y, -z)
+
+    # base.useDrive()
+    if oobe:
+      # base.oobe()
+      base.oobeCull()
+    pass
+
+  @staticmethod
+  def resetCamera(model=None):
+    if model:
+      x = base.win.getXSize()
+      y = base.win.getYSize()
+      minsize = min(x, y)
+
+      min_point = LPoint3f()
+      max_point = LPoint3f()
+      model.calcTightBounds(min_point, max_point)
+      node_size = LPoint3f(max_point.x-min_point.x, max_point.y-min_point.y, max_point.z-min_point.z)
+
+      scale = 1.60
+
+      camPosX = 0
+      camPosY = 2.67*node_size.z
+      camPosZ = 0.53*node_size.z
+    else:
+      camPosX = 0
+      camPosY = 100
+      camPosZ = 20
+    STAGE.setCamera(x=camPosX, y=camPosY, z=camPosZ, p=10, oobe=False)
+    pass
+
+  pass
+
+
+class MyFileDropTarget(wx.FileDropTarget):
+  def __init__(self, window):
+    wx.FileDropTarget.__init__(self)
+    self.window = window
+
+  def OnDropFiles(self, x, y, filenames):
+    info = "%d file(s) dropped at (%d,%d):\n" % (len(filenames), x, y)
+    print(info)
+    for file in filenames:
+      mmdFile = file
+      break
+
+    p3dnode = loadMMDModel(mmdFile)
+    p3dnode.reparentTo(render)
+    STAGE.lightAtNode(p3dnode, STAGE.lights)
+    STAGE.resetCamera(model=p3dnode)
+    render.setPythonTag('lastModel', p3dnode)
+
+  pass
+
 
 class MmdViewerApp(ShowBase):
   wp = None
@@ -164,13 +359,13 @@ class MmdViewerApp(ShowBase):
     self.wp.setParentWindow(self.frame.panda.GetHandle())
     base.openMainWindow(type='onscreen', props=self.wp)
 
-
-    # loader.loadModel('panda')
-
     self.setupUI(self.frame)
+
+    self.setupGL(render)
 
     icon = wx.Icon('viewpmx.ico', wx.BITMAP_TYPE_ICO)
     self.frame.SetIcon(icon)
+    # self.frame.SetTopWindow(self.frame)
     self.frame.Show(True)
     pass
 
@@ -183,27 +378,43 @@ class MmdViewerApp(ShowBase):
       pass
 
   def quit(self, event=None):
-      self.onDestroy(event)
-      try:
-          base
-      except NameError:
-          sys.exit()
-      base.userExit()
-      pass
+    self.onDestroy(event)
+    try:
+      base
+    except NameError:
+      sys.exit()
+    base.userExit()
+    pass
 
   def setupUI(self, win):
+    self.dt = MyFileDropTarget(win)
+    win.SetDropTarget(self.dt)
+
     win.Bind(wx.EVT_TOOL, self.OnOpen, id=ID_OPEN)
+    win.Bind(wx.EVT_MENU, self.OnOpen, id=win.menuOpen.GetId())
     win.Bind(wx.EVT_TOOL, self.OnSnapshot, id=ID_SNAPSHOT)
     win.Bind(wx.EVT_MENU, self.OnSnapshot, id=win.menuSnapshot.GetId())
 
     pass
 
+  def setupGL(self, render):
+    STAGE.setAxis(render)
+
+    self.lights = STAGE.setStudioLight(render)
+
+    STAGE.resetCamera()
+
+    render.setAntialias(AntialiasAttrib.MAuto)
+    pass
+
   def OnOpen(self, event):
-    loader.loadModel('panda').reparentTo(render)
+    p3dnode = loader.loadModel('panda')
+    p3dnode.reparentTo(render)
+    STAGE.lightAtNode(p3dnode, lights=STAGE.lights)
+    STAGE.resetCamera(model=p3dnode)
     pass
 
   def OnSnapshot(self, event):
-
     snapfile = os.path.join(CWD, 'snap02.png')
     snapfile = Filename.fromOsSpecific(snapfile)
     base.graphicsEngine.renderFrame()
