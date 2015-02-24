@@ -57,7 +57,7 @@ from pandac.PandaModules import *
 # need to be before the Direct Start Import
 loadPrcFileData('startup', 'window-type none')
 loadPrcFileData("", "window-title MMD PMX/PMX Model Viewer")
-loadPrcFileData("", "icon-filename viewpmx.ico")
+loadPrcFileData("", "icon-filename mmdviewer.png")
 loadPrcFileData("", "win-size %d %d" % WIN_SIZE)
 loadPrcFileData("", "window-type none")
 loadPrcFileData('', 'text-encoding utf8')
@@ -625,7 +625,8 @@ class MmdViewerApp(ShowBase):
 
     self.setupGL(render)
 
-    icon = wx.Icon('viewpmx.ico', wx.BITMAP_TYPE_ICO)
+    # icon = wx.Icon('viewpmx.ico', wx.BITMAP_TYPE_ICO)
+    icon = wx.Icon('mmdviewer.png', wx.BITMAP_TYPE_ANY)
     self.frame.SetIcon(icon)
     # self.frame.SetTopWindow(self.frame)
     self.frame.Show(True)
@@ -717,13 +718,13 @@ class MmdViewerApp(ShowBase):
         win.Bind(wx.EVT_MENU, self.OnPlanePopupItemSelected, id=mItem.GetId())
         win.Bind(wx.EVT_MENU, self.OnPlanePopupItemSelected, id=item.GetId())
 
-    self.btnPlane = self.frame.toolbar.AddLabelTool( ID_GRIDPLANE, _(u"Plane"), wx.Bitmap( u"icons/gridplane.png", wx.BITMAP_TYPE_ANY ), wx.NullBitmap, wx.ITEM_DROPDOWN, wx.EmptyString, wx.EmptyString, None )
+    self.btnPlane = self.frame.toolbar.AddLabelTool( ID_GRIDPLANE, _(u"Plane"), wx.Bitmap( u"icons/gridplane.png", wx.BITMAP_TYPE_ANY ), wx.NullBitmap, wx.ITEM_DROPDOWN, _('Axis Plane Grid'), wx.EmptyString, None )
     self.frame.toolbar.SetDropdownMenu(ID_GRIDPLANE, self.menuPlane)
 
+    self.frame.toolbar.AddSeparator()
+
     self.menuExpression = wx.Menu()
-    # mItem = self.menuExpression.AppendCheckItem(ID_EXPRESSION+1, _(u'NULL'), '')
-    self.btnExpression = self.frame.toolbar.AddLabelTool(ID_EXPRESSION, _(u"Expression"), wx.Bitmap( u"icons/expression.png", wx.BITMAP_TYPE_ANY ), wx.NullBitmap, wx.ITEM_DROPDOWN, wx.EmptyString, wx.EmptyString, None )
-    # self.frame.toolbar.SetDropdownMenu(ID_EXPRESSION, self.menuExpression)
+    self.btnExpression = self.frame.toolbar.AddLabelTool(ID_EXPRESSION, _(u"Expression"), wx.Bitmap( u"icons/expression.png", wx.BITMAP_TYPE_ANY ), wx.NullBitmap, wx.ITEM_DROPDOWN, _('Expression List'), wx.EmptyString, None )
 
     self.frame.toolbar.Realize()
 
@@ -732,12 +733,10 @@ class MmdViewerApp(ShowBase):
     win.Bind(wx.EVT_TOOL, self.OnResetCamera, id=ID_CAMERARESET)
     win.Bind(wx.EVT_MENU, self.OnResetCamera, id=win.menuResetCamera.GetId())
 
-    win.Bind(wx.EVT_TOOL, self.OnOpen, id=ID_OPEN)
-    win.Bind(wx.EVT_MENU, self.OnOpen, id=win.menuOpen.GetId())
+    win.Bind(wx.EVT_TOOL, self.OnOpenFile, id=ID_OPEN)
+    win.Bind(wx.EVT_MENU, self.OnOpenFile, id=win.menuOpen.GetId())
     win.Bind(wx.EVT_TOOL, self.OnSnapshot, id=ID_SNAPSHOT)
     win.Bind(wx.EVT_MENU, self.OnSnapshot, id=win.menuSnapshot.GetId())
-
-    # win.Bind(wx.EVT_MENU, self.OnPlanePopup, id=ID_GRIDPLANE)
 
 
     pass
@@ -760,7 +759,7 @@ class MmdViewerApp(ShowBase):
 
     pass
 
-  def OnOpen(self, event):
+  def OnOpenFile(self, event):
     # p3dnode = self.loadModel('models/meiko/meiko.pmx')
     modellist = [u'./models/meiko/meiko.pmx', u'panda', u'./models/apimiku/Miku long hair.pmx']
     # p3dnode = self.loadModel(modellist[self.modelidx % 3])

@@ -430,7 +430,7 @@
                 <event name="OnSize"></event>
                 <event name="OnUpdateUI"></event>
                 <object class="tool" expanded="1">
-                    <property name="bitmap">Load From File; icons/import_mesh.png</property>
+                    <property name="bitmap">Load From File; icons\open.png</property>
                     <property name="context_menu">0</property>
                     <property name="id">ID_OPEN</property>
                     <property name="kind">wxITEM_NORMAL</property>

@@ -94,7 +94,7 @@ class MainForm ( wx.Frame ):
 		
 		self.toolbar = self.CreateToolBar( wx.TB_FLAT, wx.ID_ANY )
 		self.toolbar.SetToolBitmapSize( wx.Size( 24,24 ) )
-		self.btnOpen = self.toolbar.AddLabelTool( ID_OPEN, _(u"Open"), wx.Bitmap( u"icons/import_mesh.png", wx.BITMAP_TYPE_ANY ), wx.NullBitmap, wx.ITEM_NORMAL, wx.EmptyString, wx.EmptyString, None ) 
+		self.btnOpen = self.toolbar.AddLabelTool( ID_OPEN, _(u"Open"), wx.Bitmap( u"icons/open.png", wx.BITMAP_TYPE_ANY ), wx.NullBitmap, wx.ITEM_NORMAL, wx.EmptyString, wx.EmptyString, None ) 
 		
 		self.btnSave = self.toolbar.AddLabelTool( ID_SAVE, _(u"Save"), wx.Bitmap( u"icons/save.png", wx.BITMAP_TYPE_ANY ), wx.NullBitmap, wx.ITEM_NORMAL, wx.EmptyString, wx.EmptyString, None ) 
 		

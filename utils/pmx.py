@@ -541,14 +541,25 @@ def loadPmxModel(pmx_model, alpha=True):
 
 def loadPmxBone(pmx_model, alpha=True):
   #
-  # Load IK data
+  # Load Bone data
   #
-  iknode = ModelNode(pmx_model.name)
+  formatArray = GeomVertexArrayFormat()
+  formatArray.addColumn(InternalName.make(str("vindex")), 1, Geom.NTUint32, Geom.CIndex)
+  formatArray.addColumn(InternalName.make(str("vparent")), 3, Geom.NTUint32, Geom.CIndex)
+  formatArray.addColumn(InternalName.make(str("transform_index")), 1, Geom.NTUint32, Geom.CIndex)
+  formatArray.addColumn(InternalName.make(str("transform_weight")), 3, Geom.NTUint32, Geom.COther)
+  formatArray.addColumn(InternalName.make(str("emotion.morph.strange")), 1, Geom.NTFloat32, Geom.COther)
+
+  format = GeomVertexFormat(GeomVertexFormat.getV3())
+  format.addArray(formatArray)
+  format = GeomVertexFormat.registerFormat(format)
+  boneNode = PandaNode('Bones')
+
   pass
 
 def loadPmxMorph(pmx_model, alpha=True):
   #
-  # Load IK data
+  # Load Morph data
   #
   formatArray = GeomVertexArrayFormat()
   formatArray.addColumn(InternalName.make(str("vindex")), 1, Geom.NTUint32, Geom.CIndex)
