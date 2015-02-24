@@ -156,17 +156,25 @@ class Frame(MainForm):
 class STAGE(object):
   lights = None
   @staticmethod
-  def setAxis(render):
-    axisStage = u'./stages/default_axis.bam'
-    try:
-      gridnodepath = loader.loadModel(axisStage)
-      gridnodepath = gridnodepath.getChild(0)
-    except:
-      grid = ThreeAxisGrid(xy=True, yz=False, xz=False, z=False)
+  def setAxis(render, update=False):
+    def CreateAxis(axisStage):
+      grid = ThreeAxisGrid(gridstep=20, subdiv=20, xy=True, yz=False, xz=False, z=False)
       gridnodepath = grid.create()
       grid.showPlane(XY=True)
       grid.showAxis(Z=False)
       gridnodepath.writeBamFile(axisStage)
+      return(gridnodepath)
+
+    axisStage = u'./stages/default_axis.bam'
+    if not update:
+      try:
+        gridnodepath = loader.loadModel(axisStage)
+        gridnodepath = gridnodepath.getChild(0)
+      except:
+        gridnodepath = CreateAxis()
+    else:
+      gridnodepath = CreateAxis()
+
     gridnodepath.reparentTo(render)
     pass
 
@@ -299,28 +307,27 @@ class STAGE(object):
 
   @staticmethod
   def resetCamera(model=None):
+    WIN_SIZE = (500, 500)
     if model:
-      x = base.win.getXSize()
-      y = base.win.getYSize()
-      minsize = min(x, y)
-      print(x, y)
-
       lens = base.camLens
-      print(lens)
+
+      fov_old = render.getPythonTag('lensFov')
+      fov_new = lens.getFov()
       aspect = lens.getAspectRatio()
-      print(aspect)
-      # base.camLens.setFov(LVecBase2f(x, y))
+      scale_x = fov_new.getX() / fov_old.getX()
+      scale_y = fov_new.getY() / fov_old.getY()
+      print('Scale : x=%.4f, y=%.4f' % (scale_x, scale_y))
 
       min_point = LPoint3f()
       max_point = LPoint3f()
       model.calcTightBounds(min_point, max_point)
       node_size = LPoint3f(max_point.x-min_point.x, max_point.y-min_point.y, max_point.z-min_point.z)
-
-      scale = 1.60
+      print(node_size)
 
       camPosX = 0
-      camPosY = 2.67*node_size.z
-      camPosZ = 0.53*node_size.z
+      camPosY = 1.6*node_size.z/scale_y
+      camPosZ = 0.5*node_size.z #/scale_y
+
     else:
       camPosX = 0
       camPosY = 100
@@ -361,8 +368,11 @@ class MmdViewerApp(ShowBase):
     self.wxApp.Bind(wx.EVT_CLOSE, self.quit)
     self.wxApp.Bind(wx.EVT_SIZE, self.resize)
 
-    self.frame = Frame(None)
     # self.frame = TestFrame(None)
+    self.frame = Frame(None)
+    outx, outy = self.frame.GetSize() - self.frame.GetClientSize()
+    diffx, diffy = self.frame.GetClientSize() - wx.Size(500, 500)
+    self.frame.SetSize(self.frame.GetSize() - wx.Size(diffx, diffy))
 
     self.wp = WindowProperties()
     self.wp.setOrigin(0,0)
@@ -397,6 +407,28 @@ class MmdViewerApp(ShowBase):
     base.userExit()
     pass
 
+  def loadModel(self, modelname=None):
+    if modelname == None:
+      modelname = 'panda'
+
+    lastModel = render.getPythonTag('lastModel')
+    if lastModel:
+      loader.unloadModel(lastModel)
+      render.setPythonTag('lastModel', None)
+
+    ext = os.path.splitext(modelname)[1].lower()
+    if ext in ['.pmx', '.pmd']:
+      p3dnode = loadMMDModel(modelname)
+    else:
+      p3dnode = loader.loadModel(Filename.fromOsSpecific(modelname))
+
+    if p3dnode:
+      p3dnode.reparentTo(render)
+      STAGE.lightAtNode(p3dnode, lights=STAGE.lights)
+      STAGE.resetCamera(model=p3dnode)
+      render.setPythonTag('lastModel', p3dnode)
+    pass
+
   def setupUI(self, win):
     self.dt = MyFileDropTarget(win)
     win.SetDropTarget(self.dt)
@@ -409,42 +441,31 @@ class MmdViewerApp(ShowBase):
       if text=='':
         menu.AppendSeparator()
       else:
-        mItem = menu.AppendCheckItem(wx.NewId(), text, help)
+        # mItem = menu.AppendCheckItem(wx.NewId(), text, help)
+        mItem = menu.AppendCheckItem(wx.ID_HIGHEST+id, text, help)
         if item.IsCheckable():
           mItem.Check(item.IsChecked())
-        win.Bind(wx.EVT_MENU, self.OnPlanePopup, id=mItem.GetId())
-        win.Bind(wx.EVT_MENU, self.OnPlanePopup, id=item.GetId())
+        win.Bind(wx.EVT_MENU, self.OnPlanePopupItemSelected, id=mItem.GetId())
+        win.Bind(wx.EVT_MENU, self.OnPlanePopupItemSelected, id=item.GetId())
 
-    btn = self.frame.toolbar.FindById(ID_GRIDPLANE)
+    win.Bind(wx.EVT_MENU_OPEN, self.OnPlanePopup)
+
+    ID_GRIDPLANE = wx.ID_HIGHEST + 1
+    self.btnPlane = self.frame.toolbar.AddLabelTool( ID_GRIDPLANE, _(u"Plane"), wx.Bitmap( u"icons/gridplane.png", wx.BITMAP_TYPE_ANY ), wx.NullBitmap, wx.ITEM_DROPDOWN, wx.EmptyString, wx.EmptyString, None )
     self.frame.toolbar.SetDropdownMenu(ID_GRIDPLANE, menu)
+    self.frame.toolbar.Realize()
 
-    # droparrow = platebtn.PB_STYLE_DROPARROW + platebtn.PB_STYLE_SQUARE + platebtn.PB_STYLE_NOBG
-    # icon = wx.Bitmap( u"icons/layers.png", wx.BITMAP_TYPE_ANY )
-    # self.btnPlane = platebtn.PlateButton(self.frame.toolbar, wx.ID_ANY, "", icon, style=droparrow)
-    # self.frame.toolbar.AddControl(self.btnPlane, _(u'Plane'))
-    # self.frame.toolbar.Realize()
+    win.Bind(wx.EVT_TOOL, self.OnResetCamera, id=ID_CAMERARESET)
+    win.Bind(wx.EVT_MENU, self.OnResetCamera, id=win.menuResetCamera.GetId())
 
-
-    # # make a menu
-    # menu = wx.Menu()
-    # # Show how to put an icon in the menu
-    # item = wx.MenuItem(menu, self.popupID1,"One")
-    # bmp = images.Smiles.GetBitmap()
-    # item.SetBitmap(bmp)
-    # menu.AppendItem(item)
-    # # add some other items
-    # menu.Append(self.popupID2, "Two")
-    # menu.Append(self.popupID3, "Three")
-    # menu.Append(self.popupID4, "Four")
-    # menu.Append(self.popupID5, "Five")
-    # menu.Append(self.popupID6, "Six")
 
     win.Bind(wx.EVT_TOOL, self.OnOpen, id=ID_OPEN)
     win.Bind(wx.EVT_MENU, self.OnOpen, id=win.menuOpen.GetId())
     win.Bind(wx.EVT_TOOL, self.OnSnapshot, id=ID_SNAPSHOT)
     win.Bind(wx.EVT_MENU, self.OnSnapshot, id=win.menuSnapshot.GetId())
 
-    win.Bind(wx.EVT_MENU, self.OnPlanePopup, id=ID_GRIDPLANE)
+    # win.Bind(wx.EVT_MENU, self.OnPlanePopup, id=ID_GRIDPLANE)
+
 
     pass
 
@@ -460,29 +481,122 @@ class MmdViewerApp(ShowBase):
     STAGE.resetCamera()
 
     render.setAntialias(AntialiasAttrib.MAuto)
+
+    fov = base.camLens.getFov()
+    render.setPythonTag('lensFov', LVecBase2f(fov.getX(), fov.getY()))
+
     pass
 
   def OnOpen(self, event):
-    p3dnode = loader.loadModel('panda')
-    p3dnode.reparentTo(render)
-    STAGE.lightAtNode(p3dnode, lights=STAGE.lights)
-    STAGE.resetCamera(model=p3dnode)
+    self.loadModel('models/meiko/meiko.pmx')
+    # self.loadModel('panda')
     pass
 
+  def OnResetCamera(self, event):
+    model = render.getPythonTag('lastModel')
+    STAGE.resetCamera(model=model)
+    print(model)
+
   def OnSnapshot(self, event):
-    snapfile = os.path.join(CWD, 'snap02.png')
+    lastModel = render.getPythonTag('lastModel')
+    if lastModel:
+      path = lastModel.node().getTag('path')
+      if path:
+        fn = os.path.splitext(os.path.basename(path))
+        folder = os.path.dirname(path)
+        snapfile = os.path.join(folder, u'snap_%s.png' % (fn[0]))
+      else:
+        snapfile = os.path.join(CWD, 'snap_%s.png' % lastModel.getName())
+    else:
+      snapfile = os.path.join(CWD, 'snap.png')
     snapfile = Filename.fromOsSpecific(snapfile)
+    # print(Filename.makeTrueCase(snapfile))
+    Filename.makeCanonical(snapfile)
+    axis = render.find('**/threeaxisgrid*')
+    axis.hide()
     base.graphicsEngine.renderFrame()
     source = base.camera.getChild(0).node().getDisplayRegion(0)
     result = base.screenshot(namePrefix=snapfile, defaultFilename=0, source=None, imageComment='')
-    print(result)
+    axis.show()
+    base.graphicsEngine.renderFrame()
+    pass
+
+  def OnPlanePopupItemSelected(self, event):
+    idlist = [5999, 6000, 6001, 6003, 6004, 6005, 6007, -31991, -31990, -31989, -31988, -31987, -31986, -31985]
+    def GetAxisById(id):
+      axis = None
+      if   id in [5999, -31991]:
+        axis = render.find('**/AXISLINE/X*')
+      elif id in [6000, -31990]:
+        axis = render.find('**/AXISLINE/Y*')
+      elif id in [6001, -31989]:
+        axis = render.find('**/AXISLINE/Z*')
+      elif id in [6003, -31988]:
+        axis = render.find('**/PLANEGRID/XY*')
+      elif id in [6004, -31987]:
+        axis = render.find('**/PLANEGRID/YZ*')
+      elif id in [6005, -31986]:
+        axis = render.find('**/PLANEGRID/XZ*')
+      return(axis)
+
+    def RefreshViewState(menu, idlist):
+      menu = event.GetEventObject()
+      for id in idlist:
+        axis = GetAxisById(id)
+        if axis:
+          for item in menu.GetMenuItems():
+            if item.GetId() == id and item.IsCheckable():
+              item.Check(not axis.isHidden())
+              break
+      pass
+
+    arg = event.GetId()
+    if arg in idlist:
+      axis = GetAxisById(arg)
+      if axis:
+        if axis.isHidden():
+          axis.show()
+        else:
+          axis.hide()
+
+      menu = event.GetEventObject()
+      RefreshViewState(menu, idlist)
+    else:
+      pass
     pass
 
   def OnPlanePopup(self, event):
-    # btn = self.frame.toolbar.GetToolClientData(ID_GRIDPLANE)
-    print(event)
-    # pop =
-    # self.frame.PopupMenu(self.frame.menuView)
+    idlist = [5999, 6000, 6001, 6003, 6004, 6005, 6007, -31991, -31990, -31989, -31988, -31987, -31986, -31985]
+    def GetAxisById(id):
+      axis = None
+      if   id in [5999, -31991]:
+        axis = render.find('**/AXISLINE/X*')
+      elif id in [6000, -31990]:
+        axis = render.find('**/AXISLINE/Y*')
+      elif id in [6001, -31989]:
+        axis = render.find('**/AXISLINE/Z*')
+      elif id in [6003, -31988]:
+        axis = render.find('**/PLANEGRID/XY*')
+      elif id in [6004, -31987]:
+        axis = render.find('**/PLANEGRID/YZ*')
+      elif id in [6005, -31986]:
+        axis = render.find('**/PLANEGRID/XZ*')
+      return(axis)
+
+    def RefreshViewState(menu, idlist):
+      menu = event.GetEventObject()
+      for id in idlist:
+        axis = GetAxisById(id)
+        if axis:
+          for item in menu.GetMenuItems():
+            if item.GetId() == id and item.IsCheckable():
+              item.Check(not axis.isHidden())
+              break
+      pass
+
+    menu = event.GetEventObject()
+    RefreshViewState(menu, idlist)
+
   pass
 
 if __name__ == '__main__':

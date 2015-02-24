@@ -683,7 +683,6 @@ def loadPmxJoint(pmx_model, alpha=True):
   iknode = ModelNode(pmx_model.name)
   pass
 
-
 def loadPmxActor(pmx_model, alpha=True):
   model = loadPmxModel(pmx_model, alpha)
   pass
@@ -1098,6 +1097,8 @@ def testPMD(pmd):
 def loadMMDModel(modelfile):
   p3dnode = None
   mmdFile = os.path.relpath(modelfile)
+  if os.path.altsep:
+    mmdFile = mmdFile.replace('\\', os.path.altsep)
   ext = os.path.splitext(mmdFile)[1].lower()
   if ext in ['.pmd']:
     mmdModel = pmdLoad(mmdFile)
@@ -1109,6 +1110,8 @@ def loadMMDModel(modelfile):
       p3dnode = pmx2p3d(mmdModel)
       morphs = loadPmxMorph(mmdModel)
       morphs.reparentTo(p3dnode)
+  elif ext in ['', '.egg', '.pz', '.bam']:
+    return(p3dnode)
   return(p3dnode)
 
 if __name__ == '__main__':

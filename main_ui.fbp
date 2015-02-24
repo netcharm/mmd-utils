@@ -88,7 +88,7 @@
             <event name="OnSetFocus"></event>
             <event name="OnSize"></event>
             <event name="OnUpdateUI"></event>
-            <object class="wxMenuBar" expanded="0">
+            <object class="wxMenuBar" expanded="1">
                 <property name="bg"></property>
                 <property name="context_help"></property>
                 <property name="context_menu">1</property>
@@ -475,15 +475,15 @@
                     <property name="permission">protected</property>
                 </object>
                 <object class="tool" expanded="1">
-                    <property name="bitmap">Load From File; icons/layers.png</property>
+                    <property name="bitmap">Load From File; icons\video-camera.png</property>
                     <property name="context_menu">0</property>
-                    <property name="id">ID_GRIDPLANE</property>
+                    <property name="id">ID_CAMERARESET</property>
                     <property name="kind">wxITEM_NORMAL</property>
                     <property name="label">Reset Camera</property>
                     <property name="name">btnResetCamera</property>
                     <property name="permission">protected</property>
                     <property name="statusbar"></property>
-                    <property name="tooltip"></property>
+                    <property name="tooltip">Reset Camera View</property>
                     <event name="OnAuiToolBarBeginDrag"></event>
                     <event name="OnAuiToolBarMiddleClick"></event>
                     <event name="OnAuiToolBarOverflowClick"></event>
@@ -566,69 +566,6 @@
                 <event name="OnSize"></event>
                 <event name="OnUpdateUI"></event>
             </object>
-        </object>
-        <object class="Frame" expanded="1">
-            <property name="aui_managed">0</property>
-            <property name="aui_manager_style">wxAUI_MGR_DEFAULT</property>
-            <property name="bg"></property>
-            <property name="center">wxBOTH</property>
-            <property name="context_help"></property>
-            <property name="context_menu">1</property>
-            <property name="enabled">1</property>
-            <property name="event_handler">impl_virtual</property>
-            <property name="extra_style"></property>
-            <property name="fg"></property>
-            <property name="font"></property>
-            <property name="hidden">0</property>
-            <property name="id">wxID_ANY</property>
-            <property name="maximum_size"></property>
-            <property name="minimum_size"></property>
-            <property name="name">MyFrame5</property>
-            <property name="pos"></property>
-            <property name="size">500,300</property>
-            <property name="style">wxDEFAULT_FRAME_STYLE</property>
-            <property name="subclass"></property>
-            <property name="title"></property>
-            <property name="tooltip"></property>
-            <property name="window_extra_style"></property>
-            <property name="window_name"></property>
-            <property name="window_style">wxTAB_TRAVERSAL</property>
-            <property name="xrc_skip_sizer">1</property>
-            <event name="OnActivate"></event>
-            <event name="OnActivateApp"></event>
-            <event name="OnAuiFindManager"></event>
-            <event name="OnAuiPaneButton"></event>
-            <event name="OnAuiPaneClose"></event>
-            <event name="OnAuiPaneMaximize"></event>
-            <event name="OnAuiPaneRestore"></event>
-            <event name="OnAuiRender"></event>
-            <event name="OnChar"></event>
-            <event name="OnClose"></event>
-            <event name="OnEnterWindow"></event>
-            <event name="OnEraseBackground"></event>
-            <event name="OnHibernate"></event>
-            <event name="OnIconize"></event>
-            <event name="OnIdle"></event>
-            <event name="OnKeyDown"></event>
-            <event name="OnKeyUp"></event>
-            <event name="OnKillFocus"></event>
-            <event name="OnLeaveWindow"></event>
-            <event name="OnLeftDClick"></event>
-            <event name="OnLeftDown"></event>
-            <event name="OnLeftUp"></event>
-            <event name="OnMiddleDClick"></event>
-            <event name="OnMiddleDown"></event>
-            <event name="OnMiddleUp"></event>
-            <event name="OnMotion"></event>
-            <event name="OnMouseEvents"></event>
-            <event name="OnMouseWheel"></event>
-            <event name="OnPaint"></event>
-            <event name="OnRightDClick"></event>
-            <event name="OnRightDown"></event>
-            <event name="OnRightUp"></event>
-            <event name="OnSetFocus"></event>
-            <event name="OnSize"></event>
-            <event name="OnUpdateUI"></event>
         </object>
     </object>
 </wxFormBuilder_Project>
