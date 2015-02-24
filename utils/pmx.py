@@ -378,7 +378,7 @@ def pmx2p3d(pmx_model, alpha=True):
 
   format = GeomVertexFormat(GeomVertexFormat.getV3n3cpt2())
   format.addArray(formatArray)
-  GeomVertexFormat.registerFormat(format)
+  format = GeomVertexFormat.registerFormat(format)
 
   vdata = GeomVertexData(pmx_model.name, format, Geom.UHDynamic)
 
@@ -560,8 +560,7 @@ def loadPmxMorph(pmx_model, alpha=True):
 
   format = GeomVertexFormat(GeomVertexFormat.getV3())
   format.addArray(formatArray)
-  GeomVertexFormat.registerFormat(format)
-  # print(format)
+  format = GeomVertexFormat.registerFormat(format)
 
   morphNode = PandaNode('Morphs')
   morphIndex = 0
@@ -588,7 +587,10 @@ def loadPmxMorph(pmx_model, alpha=True):
     # print(len(morph.offsets))
     if   morph.morph_type == 0: # group morph
       morphData = []
-      morphData.append((o.morph_index, o.value))
+      for idx in xrange(len(morph.offsets)):
+        offset = morph.offsets[idx]
+        o = offset
+        morphData.append((o.morph_index, o.value))
       pass
     elif morph.morph_type == 1: # vertex morph
       prim = GeomPoints(Geom.UHDynamic)
