@@ -286,7 +286,7 @@ def snapshot(snapfile='snap_00.png'):
   if lastModel:
     GUI = render2d.find('**/aspect2d/*')
     GUI.hide()
-    path = lastModel.node().getTag('path')
+    path = lastModel.node().getPythonTag('path')
     fn = os.path.splitext(os.path.basename(path))
     folder = os.path.dirname(path)
     snapfile = os.path.join(folder, u'snap_%s.png' % (fn[0]))

@@ -133,7 +133,7 @@
                 <event name="OnSetFocus"></event>
                 <event name="OnSize"></event>
                 <event name="OnUpdateUI"></event>
-                <object class="wxMenu" expanded="0">
+                <object class="wxMenu" expanded="1">
                     <property name="label">File</property>
                     <property name="name">menuFile</property>
                     <property name="permission">protected</property>
@@ -154,6 +154,16 @@
                     </object>
                     <object class="separator" expanded="0">
                         <property name="name">m_separator1</property>
+                        <property name="permission">none</property>
+                    </object>
+                    <object class="submenu" expanded="1">
+                        <property name="bitmap"></property>
+                        <property name="label">Recent Files</property>
+                        <property name="name">menuMRU</property>
+                        <property name="permission">protected</property>
+                    </object>
+                    <object class="separator" expanded="1">
+                        <property name="name">m_separator6</property>
                         <property name="permission">none</property>
                     </object>
                     <object class="wxMenuItem" expanded="0">

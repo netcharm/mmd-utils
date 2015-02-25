@@ -405,12 +405,12 @@ def pmx2p3d(pmx_model, alpha=True):
   #
   vIndex = 0
   model = ModelNode(pmx_model.name)
-  model.setTag('path', pmx_model.path)
-  model.setTag('version', str(pmx_model.version))
-  model.setTag('name', pmx_model.name)
-  model.setTag('english_name', pmx_model.english_name)
-  model.setTag('comment', pmx_model.comment)
-  model.setTag('english_comment', pmx_model.english_comment)
+  model.setPythonTag('path', pmx_model.path)
+  model.setPythonTag('version', str(pmx_model.version))
+  model.setPythonTag('name', pmx_model.name)
+  model.setPythonTag('english_name', pmx_model.english_name)
+  model.setPythonTag('comment', pmx_model.comment)
+  model.setPythonTag('english_comment', pmx_model.english_comment)
 
   modelBody = ModelRoot('Body')
   model.addChild(modelBody)
@@ -536,28 +536,48 @@ def pmx2p3d(pmx_model, alpha=True):
   return(modelPath)
   pass
 
-def loadPmxModel(pmx_model, alpha=True):
-  return(pmx2p3d(pmx_model, alpha))
+def loadPmxModel(pmx_model):
+  return(pmx2p3d(pmx_model))
 
-def loadPmxBone(pmx_model, alpha=True):
+def loadPmxBone(pmx_model):
   #
   # Load Bone data
   #
   formatArray = GeomVertexArrayFormat()
   formatArray.addColumn(InternalName.make(str("vindex")), 1, Geom.NTUint32, Geom.CIndex)
   formatArray.addColumn(InternalName.make(str("vparent")), 3, Geom.NTUint32, Geom.CIndex)
-  formatArray.addColumn(InternalName.make(str("transform_index")), 1, Geom.NTUint32, Geom.CIndex)
-  formatArray.addColumn(InternalName.make(str("transform_weight")), 3, Geom.NTUint32, Geom.COther)
-  formatArray.addColumn(InternalName.make(str("emotion.morph.strange")), 1, Geom.NTFloat32, Geom.COther)
 
   format = GeomVertexFormat(GeomVertexFormat.getV3())
   format.addArray(formatArray)
   format = GeomVertexFormat.registerFormat(format)
-  boneNode = PandaNode('Bones')
 
+  boneNode = PandaNode('Bones')
+  boneIndex = 0
+  for bone in pmx_model.bones:
+    2
+    log(u'Loading Bone : %s' % bone.name, force=True)
+
+    #
+    # load vertices(vertex list)
+    #
+    vdata = GeomVertexData(morph.name+'_vdata', format, Geom.UHDynamic)
+    vdata.setNumRows(6)
+    vertex = GeomVertexWriter(vdata, 'vertex')
+    vindex = GeomVertexWriter(vdata, 'vindex')
+    vparent = GeomVertexWriter(vdata, 'vparent')
+
+    node = GeomNode(morph.name)
+
+    boneData = None
+    v = bone.position
+    vertex.addData3f(v.position.x, v.position.z, v.position.y)
+    vindex.addData1i(boneIndex)
+    vparent.addData1i(bone.parent_index)
+
+    bonrIndex += 1
   pass
 
-def loadPmxMorph(pmx_model, alpha=True):
+def loadPmxMorph(pmx_model):
   #
   # Load Morph data
   #
@@ -675,29 +695,36 @@ def loadPmxMorph(pmx_model, alpha=True):
   return(np)
   pass
 
-def loadPmxIK(pmx_model, alpha=True):
+def loadPmxIK(pmx_model):
   #
   # Load IK data
   #
-  iknode = ModelNode(pmx_model.name)
+  iknode = ModelNode('IK')
   pass
 
-def loadPmxRigid(pmx_model, alpha=True):
+def loadPmxRigid(pmx_model):
   #
-  # Load IK data
+  # Load Rigid data
   #
-  iknode = ModelNode(pmx_model.name)
+  rigidNnode = ModelNode('Rigid')
   pass
 
-def loadPmxJoint(pmx_model, alpha=True):
+def loadPmxSlot(pmx_model):
   #
-  # Load IK data
+  # Load Display Slot data
   #
-  iknode = ModelNode(pmx_model.name)
+  slotNnode = ModelNode('Slots')
   pass
 
-def loadPmxActor(pmx_model, alpha=True):
-  model = loadPmxModel(pmx_model, alpha)
+def loadPmxJoint(pmx_model):
+  #
+  # Load Joints data
+  #
+  jointNnode = ModelNode('Joints')
+  pass
+
+def loadPmxActor(pmx_model):
+  model = loadPmxModel(pmx_model)
   pass
 
 def pmd2model(pmd):
@@ -953,12 +980,12 @@ def pmd2p3d(pmd_model, alpha=True):
   vIndex = 0
   modelName = pmd_model.name.decode('shift_jis')
   model = ModelNode(modelName)
-  model.setTag('path', pmd_model.path)
-  model.setTag('version', str(pmd_model.version))
-  model.setTag('name', modelName)
-  model.setTag('english_name', pmd_model.english_name)
-  model.setTag('comment', pmd_model.comment)
-  model.setTag('english_comment', pmd_model.english_comment)
+  model.setPythonTag('path', pmd_model.path)
+  model.setPythonTag('version', str(pmd_model.version))
+  model.setPythonTag('name', modelName)
+  model.setPythonTag('english_name', pmd_model.english_name)
+  model.setPythonTag('comment', pmd_model.comment)
+  model.setPythonTag('english_comment', pmd_model.english_comment)
 
   matIndex = 0
   for mat in pmd_model.materials:

@@ -34,6 +34,9 @@ import random
 
 import StringIO
 
+import codecs
+import json
+
 import locale
 
 rcdomain = 'wxViewMMD'
@@ -109,8 +112,8 @@ SHOW_AXIS = True
 lastModel = None
 
 ID_GRIDPLANE  = 20000
+ID_RECENTFILES = 21000
 ID_EXPRESSION = 30000
-
 
 class TestFrame(wx.Frame):
   def __init__(self, *args, **kwargs):
@@ -602,12 +605,17 @@ class MyFileDropTarget(wx.FileDropTarget):
 class MmdViewerApp(ShowBase):
   wp = None
   modelidx = 0
+  appConfig = dict()
 
   def __init__(self):
+    self.loadConfig()
+
     self.base = ShowBase.__init__(self, fStartDirect=False, windowType=None)
     self.startWx()
-    self.wxApp.Bind(wx.EVT_CLOSE, self.quit)
-    self.wxApp.Bind(wx.EVT_SIZE, self.resize)
+    # self.wxApp.Bind(wx.EVT_QUERY_END_SESSION, self.OnCloseWindow)
+    # self.wxApp.Bind(wx.EVT_CLOSE, self.OnCloseWindow)
+    self.wxApp.Bind(wx.EVT_CLOSE, self.OnClose)
+    self.wxApp.Bind(wx.EVT_SIZE, self.OnResize)
 
     # self.frame = TestFrame(None)
     self.frame = Frame(None)
@@ -632,7 +640,7 @@ class MmdViewerApp(ShowBase):
     self.frame.Show(True)
     pass
 
-  def resize(self, event=None):
+  def OnResize(self, event=None):
     if self.wp:
       w, h = self.frame.panda.GetSize()
       self.wp.setSize(w, h)
@@ -640,70 +648,60 @@ class MmdViewerApp(ShowBase):
       base.messenger.send(base.win.getWindowEvent(), [base.win])
       pass
 
-  def quit(self, event=None):
+  def OnClose(self, event=None):
     self.onDestroy(event)
     try:
+      self.saveConfig()
       base
     except NameError:
       sys.exit()
     base.userExit()
     pass
 
-  def loadModel(self, modelname=None):
-    p3dnode = None
-    if modelname == None:
-      modelname = 'panda'
-
-    lastModel = render.getPythonTag('lastModel')
-    if lastModel:
-      node = lastModel.find('**/+ModelRoot')
-      if node:
-        loader.unloadModel(node)
-      else:
-        loader.unloadModel(lastModel)
-      lastModel.removeNode()
-      render.setPythonTag('lastModel', None)
-
-    ext = os.path.splitext(modelname)[1].lower()
-    if ext in ['.pmx', '.pmd']:
-      p3dnode = loadMMDModel(modelname)
-    else:
-      p3dnode = loader.loadModel(Filename.fromOsSpecific(modelname))
-
-    if p3dnode:
-      p3dnode.reparentTo(render)
-      Stage.lightAtNode(p3dnode, lights=Stage.lights)
-      Stage.resetCamera(model=p3dnode)
-      render.setPythonTag('lastModel', p3dnode)
-
-      self.addExpressionMenu(Utils.getExpressionList(p3dnode))
-
-    return(p3dnode)
+  def OnCloseWindow(self, event=None):
+    self.saveConfig()
+    self.frame.Close()
     pass
 
-  def addExpressionMenu(self, expressionList):
-    if self.menuExpression:
-      for item in self.menuExpression.GetMenuItems():
-        # self.menuExpression.Destroy(item.GetId())
-        item.Destroy()
-      del self.menuExpression
+  def loadConfig(self):
+    fn = os.path.splitext(__file__)
+    fn = os.path.join(CWD, fn[0]+'.config')
+    print('--> Reading config from %s ...' % fn)
+    if os.path.isfile(fn):
+      with codecs.open(fn, 'r', encoding='utf8') as f:
+        try:
+          self.appConfig = json.load(f, encoding='utf8')
+        except:
+          pass
 
-      self.menuExpression = wx.Menu()
-      idx = 0
-      for item in expressionList:
-        mItem = self.menuExpression.AppendCheckItem(ID_EXPRESSION+idx, item['name'], '')
-        mItem.Check(item['state'])
-        self.frame.Bind(wx.EVT_MENU, self.OnExpressionSeleced, id=mItem.GetId())
-        idx += 1
+    if not 'recent' in self.appConfig:
+      self.appConfig['recent'] = []
 
-      self.frame.toolbar.SetDropdownMenu(ID_EXPRESSION, self.menuExpression)
-      self.frame.toolbar.Realize()
+    pass
+
+  def saveConfig(self):
+    fn = os.path.splitext(__file__)
+    fn = os.path.join(CWD, fn[0]+'.config')
+    print('--> Writing config to %s ...' % fn)
+    self.appConfig['recent'] = self.appConfig['recent'][:10]
+    with codecs.open(fn, 'w', encoding='utf8') as f:
+      json.dump(self.appConfig, f, indent=2, encoding='utf8')
+
     pass
 
   def setupUI(self, win):
+    # win.Bind(wx.EVT_QUERY_END_SESSION, self.OnCloseWindow)
+    # win.Bind(wx.EVT_END_SESSION, self.OnCloseWindow)
+
+    #
+    # Create Drag&Drop response
+    #
     self.dt = MyFileDropTarget(win)
     win.SetDropTarget(self.dt)
 
+    #
+    # Create Axis Grid Plane View Menu
+    #
     self.menuPlane = wx.Menu()
     for idx in xrange(self.frame.menuView.GetMenuItemCount()):
       item = self.frame.menuView.FindItemByPosition(idx)
@@ -723,18 +721,49 @@ class MmdViewerApp(ShowBase):
 
     self.frame.toolbar.AddSeparator()
 
+    #
+    # Init the expressions dropdown button
+    #
     self.menuExpression = wx.Menu()
     self.btnExpression = self.frame.toolbar.AddLabelTool(ID_EXPRESSION, _(u"Expression"), wx.Bitmap( u"icons/expression.png", wx.BITMAP_TYPE_ANY ), wx.NullBitmap, wx.ITEM_DROPDOWN, _('Expression List'), wx.EmptyString, None )
 
+    #
+    # Create 'Recent Files' menu
+    #
+    self.btnRecentFiles = self.frame.toolbar.InsertLabelTool(0, ID_RECENTFILES, _(u"Recent Files"), wx.Bitmap( u"icons/open.png", wx.BITMAP_TYPE_ANY ), wx.NullBitmap, wx.ITEM_DROPDOWN, _('Open File \nRecent Files List'), wx.EmptyString, None )
+    self.menuRecentFiles = wx.Menu()
+    idx = 1
+    for recent in self.appConfig['recent']:
+      text = os.path.basename(recent)
+      help = recent
+      mItem = self.menuRecentFiles.Append(ID_RECENTFILES+idx, text, help)
+      mruItem = self.frame.menuMRU.Append(ID_RECENTFILES+idx, text, help)
+      win.Bind(wx.EVT_MENU, self.OnRecentFilesItemSelected, id=mItem.GetId())
+      win.Bind(wx.EVT_MENU, self.OnRecentFilesItemSelected, id=mruItem.GetId())
+      idx += 1
+
+    win.Bind(wx.EVT_TOOL, self.OnRecentFilesItemSelected, id=ID_RECENTFILES)
+    self.frame.toolbar.SetDropdownMenu(ID_RECENTFILES, self.menuRecentFiles)
+
+
+    #
+    # Realize the toolbar to display right
+    #
     self.frame.toolbar.Realize()
 
+    #
+    # Bind other events
+    #
     win.Bind(wx.EVT_MENU_OPEN, self.OnMenuPopup)
 
     win.Bind(wx.EVT_TOOL, self.OnResetCamera, id=ID_CAMERARESET)
     win.Bind(wx.EVT_MENU, self.OnResetCamera, id=win.menuResetCamera.GetId())
 
-    win.Bind(wx.EVT_TOOL, self.OnOpenFile, id=ID_OPEN)
+    win.Bind(wx.EVT_TOOL, self.OnOpenFileTest, id=ID_OPEN)
     win.Bind(wx.EVT_MENU, self.OnOpenFile, id=win.menuOpen.GetId())
+
+    win.Bind(wx.EVT_MENU, self.OnCloseWindow, id=win.menuExit.GetId())
+
     win.Bind(wx.EVT_TOOL, self.OnSnapshot, id=ID_SNAPSHOT)
     win.Bind(wx.EVT_MENU, self.OnSnapshot, id=win.menuSnapshot.GetId())
 
@@ -759,7 +788,67 @@ class MmdViewerApp(ShowBase):
 
     pass
 
-  def OnOpenFile(self, event):
+  def loadModel(self, modelname=None):
+    p3dnode = None
+    if modelname == None:
+      modelname = 'panda'
+
+    lastModel = render.getPythonTag('lastModel')
+    if lastModel:
+      node = lastModel.find('**/+ModelRoot')
+      if node:
+        loader.unloadModel(node)
+      else:
+        loader.unloadModel(lastModel)
+      lastModel.removeNode()
+      render.setPythonTag('lastModel', None)
+
+    modelname = os.path.relpath(modelname, CWD)
+    ext = os.path.splitext(modelname)[1].lower()
+    if ext in ['.pmx', '.pmd']:
+      p3dnode = loadMMDModel(modelname)
+    else:
+      p3dnode = loader.loadModel(Filename.fromOsSpecific(modelname))
+
+    if p3dnode:
+      p3dnode.reparentTo(render)
+      Stage.lightAtNode(p3dnode, lights=Stage.lights)
+      Stage.resetCamera(model=p3dnode)
+      render.setPythonTag('lastModel', p3dnode)
+
+      self.addExpressionMenu(Utils.getExpressionList(p3dnode))
+
+      self.appConfig['lastModel'] = modelname
+      count = len(self.appConfig['recent'])
+      if modelname in self.appConfig['recent']:
+        self.appConfig['recent'].remove(modelname)
+      self.appConfig['recent'].insert(0, modelname)
+
+      # base.wireframeOn()
+      # base.textureOff()
+    return(p3dnode)
+    pass
+
+  def addExpressionMenu(self, expressionList):
+    if self.menuExpression:
+      for item in self.menuExpression.GetMenuItems():
+        self.menuExpression.Delete(item.GetId())
+        item.Destroy()
+      del self.menuExpression
+
+      self.menuExpression = wx.Menu()
+      idx = 0
+      for item in expressionList:
+        mItem = self.menuExpression.AppendCheckItem(ID_EXPRESSION+idx, item['name'], '')
+        mItem.Check(item['state'])
+        self.frame.Bind(wx.EVT_MENU, self.OnExpressionSeleced, id=mItem.GetId())
+        idx += 1
+
+      self.frame.toolbar.SetDropdownMenu(ID_EXPRESSION, self.menuExpression)
+      self.frame.toolbar.Realize()
+    pass
+
+  def OnOpenFileTest(self, event):
     # p3dnode = self.loadModel('models/meiko/meiko.pmx')
     modellist = [u'./models/meiko/meiko.pmx', u'panda', u'./models/apimiku/Miku long hair.pmx']
     # p3dnode = self.loadModel(modellist[self.modelidx % 3])
@@ -771,6 +860,40 @@ class MmdViewerApp(ShowBase):
     # print(type(p3dnode))
     # print(p3dnode.ls())
 
+  def OnOpenFile(self, event):
+    lastFolder = CWD
+    lastModel = render.getPythonTag('lastModel')
+    if lastModel:
+      try:
+        lastFolder = os.path.dirname(lastModel.getPythonTag('path'))
+      except:
+        pass
+    elif 'lastModel' in self.appConfig['lastModel']:
+      lastFolder = os.path.dirname(self.appConfig['lastModel'])
+    else:
+      lastFolder = CWD
+
+    # print(lastFolder)
+    wildcard = "MMD PMX Model (*.pmx)|*.pmx|"    \
+               "MMD PMD Model (*.pmd)|*.pmd|"    \
+               "MMD VMD Model (*.vmd)|*.vmd|"    \
+               "Panda3D Egg file (*.egg)|*.egg|" \
+               "Panda3D bam file (*.bam)|*.bam|" \
+               "All Supported files (*.pmx;*.pmd;*.egg;*.bam*)|*.pmx;*.pmd;*.egg;*.bam|" \
+               "All files (*.*)|*.*"
+
+    dlgOpen = wx.FileDialog(
+            self.frame, message=_("Choose a file"),
+            defaultDir=lastFolder,
+            defaultFile="",
+            wildcard=wildcard,
+            # style=wx.OPEN | wx.CHANGE_DIR
+            style=wx.OPEN | wx.FILE_MUST_EXIST
+            )
+
+    if dlgOpen.ShowModal() == wx.ID_OK:
+      modelFile = dlgOpen.GetPath()
+      self.loadModel(modelFile)
     pass
 
   def OnResetCamera(self, event):
@@ -781,7 +904,7 @@ class MmdViewerApp(ShowBase):
   def OnSnapshot(self, event):
     lastModel = render.getPythonTag('lastModel')
     if lastModel:
-      path = lastModel.node().getTag('path')
+      path = lastModel.node().getPythonTag('path')
       if path:
         fn = os.path.splitext(os.path.basename(path))
         folder = os.path.dirname(path)
@@ -822,10 +945,14 @@ class MmdViewerApp(ShowBase):
     return(axis)
 
   def RefreshMenuState(self, menu):
-    idlist_plane = [20000, 20001, 20002, 20003, 20004, 20005, 20006, 20007, 20008, -31991, -31990, -31989, -31988, -31987, -31986, -31985]
+    #
+    # update Axis Grid Plane menu
+    #
+    idlist_plane = [20000, 20001, 20002, 20003, 20004, 20005, 20006, 20007, 20008,
+                    -31991, -31990, -31989, -31988, -31987, -31986, -31985]
     for mId in idlist_plane:
       axis = self.GetAxisById(mId)
-      if axis:
+      if axis and isinstance(menu, wx.Menu):
         for item in menu.GetMenuItems():
           if item.GetId() == mId and item.IsCheckable():
             if isinstance(axis, NodePathCollection):
@@ -838,6 +965,9 @@ class MmdViewerApp(ShowBase):
               item.Check(not axis.isHidden())
             break
 
+    #
+    # Update expressions menu
+    #
     idlist_expression = [30000, 31000]
     model = render.getPythonTag('lastModel')
     if model:
@@ -849,6 +979,29 @@ class MmdViewerApp(ShowBase):
             item.Check(expression['state'])
             break
         pass
+
+    #
+    # Update Recent Files menu
+    #
+    idlist_expression = [21000, 21100]
+    if self.menuRecentFiles:
+      for item in self.menuRecentFiles.GetMenuItems():
+        self.menuRecentFiles.Delete(item.GetId())
+        item.Destroy()
+    if self.frame.menuMRU:
+      for item in self.frame.menuMRU.GetMenuItems():
+        self.frame.menuMRU.Delete(item.GetId())
+        item.Destroy()
+    idx = 1
+    for recent in self.appConfig['recent']:
+      text = os.path.basename(recent)
+      help = recent
+      mItem = self.menuRecentFiles.Append(ID_RECENTFILES+idx, text, help)
+      mruItem = self.frame.menuMRU.Append(ID_RECENTFILES+idx, text, help)
+      self.frame.Bind(wx.EVT_MENU, self.OnRecentFilesItemSelected, id=mItem.GetId())
+      self.frame.Bind(wx.EVT_MENU, self.OnRecentFilesItemSelected, id=mruItem.GetId())
+      idx += 1
+
     pass
 
   def OnMenuPopup(self, event):
@@ -857,36 +1010,53 @@ class MmdViewerApp(ShowBase):
 
   def OnPlanePopupItemSelected(self, event):
     arg = event.GetId()
-    axis = self.GetAxisById(arg)
-    if axis:
-      menu = event.GetEventObject()
-      if isinstance(axis, NodePathCollection):
-        if menu.IsChecked(arg):
-          for ax in axis:
-            ax.show()
+    menu = event.GetEventObject()
+    if isinstance(menu, wx.Menu):
+      axis = self.GetAxisById(arg)
+      if axis:
+        if isinstance(axis, NodePathCollection):
+          if menu.IsChecked(arg):
+            for ax in axis:
+              ax.show()
+          else:
+            for ax in axis:
+              ax.hide()
         else:
-          for ax in axis:
-            ax.hide()
-      else:
-        if axis.isHidden():
-          axis.show()
-        else:
-          axis.hide()
+          if axis.isHidden():
+            axis.show()
+          else:
+            axis.hide()
 
-      self.RefreshMenuState(menu)
-    else:
+        self.RefreshMenuState(menu)
+      else:
+        pass
       pass
     pass
 
+  def OnRecentFilesItemSelected(self, event):
+    menu = event.GetEventObject()
+    if isinstance(menu, wx.Menu):
+      for item in menu.GetMenuItems():
+        if item.GetId() == event.GetId():
+          modelname = item.GetText()
+          modelpath = item.GetHelp()
+          p3dnode = self.loadModel(modelpath)
+          break
+    else:
+      self.OnOpenFile(event)
+      # print('button clicked')
+      # p3dnode = self.loadModel('panda')
+    pass
 
   def OnExpressionSeleced(self, event):
     menu = event.GetEventObject()
-    for item in menu.GetMenuItems():
-      print(item.GetText())
-      print(item.GetId() , event.GetId())
-      if item.GetId() == event.GetId():
-        Utils.setExpression(render.getPythonTag('lastModel'), item.GetText(), default=False)
-        break
+    if isinstance(menu, wx.Menu):
+      for item in menu.GetMenuItems():
+        if item.GetId() == event.GetId():
+          Utils.setExpression(render.getPythonTag('lastModel'), item.GetText(), default=False)
+          break
+    else:
+      Utils.setExpression(render.getPythonTag('lastModel'), 'default', default=False)
     pass
 
   pass

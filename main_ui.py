@@ -36,6 +36,11 @@ class MainForm ( wx.Frame ):
 		
 		self.menuFile.AppendSeparator()
 		
+		self.menuMRU = wx.Menu()
+		self.menuFile.AppendSubMenu( self.menuMRU, _(u"Recent Files") )
+		
+		self.menuFile.AppendSeparator()
+		
 		self.menuExit = wx.MenuItem( self.menuFile, wx.ID_ANY, _(u"Exit"), wx.EmptyString, wx.ITEM_NORMAL )
 		self.menuFile.AppendItem( self.menuExit )
 		
