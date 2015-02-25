@@ -67,6 +67,7 @@ from pandac.PandaModules import *
 
 from utils.DrawPlane import *
 from utils.pmx import *
+from utils.pmd import *
 
 # Get the location of the 'py' file I'm running:
 CWD = os.path.abspath(sys.path[0])

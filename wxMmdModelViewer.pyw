@@ -94,6 +94,7 @@ from direct.wxwidgets.ViewPort import *
 
 from utils.DrawPlane import *
 from utils.pmx import *
+from utils.pmd import *
 
 from main_ui import *
 
@@ -683,7 +684,12 @@ class MmdViewerApp(ShowBase):
     fn = os.path.splitext(__file__)
     fn = os.path.join(CWD, fn[0]+'.config')
     print('--> Writing config to %s ...' % fn)
+
+    self.appConfig['lastModel'] = self.appConfig['lastModel'].replace('\\', '/')
     self.appConfig['recent'] = self.appConfig['recent'][:10]
+    for idx in xrange(len(self.appConfig['recent'])):
+      self.appConfig['recent'][idx] = self.appConfig['recent'][idx].replace('\\', '/')
+
     with codecs.open(fn, 'w', encoding='utf8') as f:
       json.dump(self.appConfig, f, indent=2, encoding='utf8')
 
@@ -699,6 +705,7 @@ class MmdViewerApp(ShowBase):
     self.dt = MyFileDropTarget(win)
     win.SetDropTarget(self.dt)
 
+    self.frame.toolbar.EnableTool(ID_SAVE, False)
     #
     # Create Axis Grid Plane View Menu
     #
@@ -759,7 +766,9 @@ class MmdViewerApp(ShowBase):
     win.Bind(wx.EVT_TOOL, self.OnResetCamera, id=ID_CAMERARESET)
     win.Bind(wx.EVT_MENU, self.OnResetCamera, id=win.menuResetCamera.GetId())
 
+    # for test load model only.
     win.Bind(wx.EVT_TOOL, self.OnOpenFileTest, id=ID_OPEN)
+
     win.Bind(wx.EVT_MENU, self.OnOpenFile, id=win.menuOpen.GetId())
 
     win.Bind(wx.EVT_MENU, self.OnCloseWindow, id=win.menuExit.GetId())
@@ -803,10 +812,12 @@ class MmdViewerApp(ShowBase):
       lastModel.removeNode()
       render.setPythonTag('lastModel', None)
 
-    modelname = os.path.relpath(modelname, CWD)
+    modelname = os.path.relpath(modelname, CWD).replace('\\', '/')
     ext = os.path.splitext(modelname)[1].lower()
-    if ext in ['.pmx', '.pmd']:
-      p3dnode = loadMMDModel(modelname)
+    if ext in ['.pmx']:
+      p3dnode = loadPmxModel(modelname)
+    elif ext in ['.pmd']:
+      p3dnode = loadPmdModel(modelname)
     else:
       p3dnode = loader.loadModel(Filename.fromOsSpecific(modelname))
 
@@ -824,7 +835,7 @@ class MmdViewerApp(ShowBase):
         self.appConfig['recent'].remove(modelname)
       self.appConfig['recent'].insert(0, modelname)
 
-      # base.wireframeOn()
+      base.wireframeOn()
       # base.textureOff()
     return(p3dnode)
     pass
