@@ -59,13 +59,15 @@ WIN_SIZE = (800, 800)
 from pandac.PandaModules import *
 # need to be before the Direct Start Import
 loadPrcFileData('startup', 'window-type none')
-loadPrcFileData("", "window-title MMD PMX/PMX Model Viewer")
-loadPrcFileData("", "icon-filename mmdviewer.png")
-loadPrcFileData("", "win-size %d %d" % WIN_SIZE)
-loadPrcFileData("", "window-type none")
+loadPrcFileData('', 'window-title MMD PMX/PMX Model Viewer')
+loadPrcFileData('', 'icon-filename mmdviewer.png')
+loadPrcFileData('', 'win-size %d %d' % WIN_SIZE)
+loadPrcFileData('', 'window-type none')
 loadPrcFileData('', 'text-encoding utf8')
 loadPrcFileData('', 'textures-power-2 none')
 loadPrcFileData('', 'geom-cache-size 10')
+loadPrcFileData('', 'coordinate-system zup-right')
+
 
 # loadPrcFileData('', 'notify-level warning')
 # loadPrcFileData('', 'default-directnotify-level warning')
@@ -76,6 +78,18 @@ from panda3d.core import Shader
 from panda3d.core import Filename
 from panda3d.core import Material
 from panda3d.core import VBase4
+
+from panda3d.bullet import BulletWorld
+from panda3d.bullet import BulletDebugNode
+from panda3d.bullet import BulletPlaneShape
+from panda3d.bullet import BulletRigidBodyNode
+from panda3d.bullet import BulletSoftBodyNode
+from panda3d.bullet import BulletPlaneShape
+from panda3d.bullet import BulletBoxShape
+from panda3d.bullet import BulletSphereShape
+from panda3d.bullet import BulletCylinderShape
+from panda3d.bullet import BulletCapsuleShape
+from panda3d.bullet import BulletConeShape
 
 from direct.showbase.ShowBase import ShowBase
 from direct.showbase.ShowBase import WindowControls
@@ -93,6 +107,7 @@ from direct.task import Task
 from direct.wxwidgets.ViewPort import *
 
 from utils.DrawPlane import *
+from utils.common import *
 from utils.pmx import *
 from utils.pmd import *
 
@@ -385,7 +400,7 @@ class Utils(object):
     geomNodeCollection = nodepath.findAllMatches('**/Body/+GeomNode')
     idx = 0
     for nodePath in geomNodeCollection:
-      log(u'%s' % nodePath.getName().replace(u'\u30fb', u'.'))
+      log(u'%s' % nodePath.getName())
       geomNode = nodePath.node()
       Utils.processGeomNode(geomNode, morphNode, morphOn, strength)
       # idx += 1
@@ -647,7 +662,7 @@ class MmdViewerApp(ShowBase):
       self.wp.setSize(w, h)
       base.win.requestProperties(self.wp)
       base.messenger.send(base.win.getWindowEvent(), [base.win])
-      pass
+    pass
 
   def OnClose(self, event=None):
     self.onDestroy(event)
@@ -655,6 +670,7 @@ class MmdViewerApp(ShowBase):
       self.saveConfig()
       base
     except NameError:
+      self.saveConfig()
       sys.exit()
     base.userExit()
     pass
@@ -678,6 +694,9 @@ class MmdViewerApp(ShowBase):
     if not 'recent' in self.appConfig:
       self.appConfig['recent'] = []
 
+    if not 'hana2eng' in self.appConfig:
+      self.appConfig['hana2eng'] = loadJ2ETable(u'和英変換.txt')
+      # print(self.appConfig['hana2eng'])
     pass
 
   def saveConfig(self):
@@ -691,7 +710,7 @@ class MmdViewerApp(ShowBase):
       self.appConfig['recent'][idx] = self.appConfig['recent'][idx].replace('\\', '/')
 
     with codecs.open(fn, 'w', encoding='utf8') as f:
-      json.dump(self.appConfig, f, indent=2, encoding='utf8')
+      json.dump(self.appConfig, f, indent=2, encoding='utf8', ensure_ascii=False)
 
     pass
 
@@ -795,7 +814,28 @@ class MmdViewerApp(ShowBase):
     fov = base.camLens.getFov()
     render.setPythonTag('lensFov', LVecBase2f(fov.getX(), fov.getY()))
 
-    pass
+    self.debugNode = BulletDebugNode('Debug')
+    self.debugNode.showWireframe(True)
+    self.debugNode.showConstraints(True)
+    self.debugNode.showBoundingBoxes(False)
+    self.debugNode.showNormals(False)
+    self.debugNP = render.attachNewNode(self.debugNode)
+    self.debugNP.show()
+
+    self.world = BulletWorld()
+    self.world.setGravity(Vec3(0, 0, -9.81))
+    self.world.setDebugNode(self.debugNP.node())
+
+    self.do = DirectObject()
+    self.do.accept('f1', self.toggleDebug)
+
+  def toggleDebug(self):
+    if self.debugNP.isHidden():
+      self.debugNP.show()
+      print('--> Bullet Debug On')
+    else:
+      self.debugNP.hide()
+      print('--> Bullet Debug Off')
 
   def loadModel(self, modelname=None):
     p3dnode = None
@@ -835,7 +875,7 @@ class MmdViewerApp(ShowBase):
         self.appConfig['recent'].remove(modelname)
       self.appConfig['recent'].insert(0, modelname)
 
-      base.wireframeOn()
+      # base.wireframeOn()
       # base.textureOff()
     return(p3dnode)
     pass
@@ -910,7 +950,6 @@ class MmdViewerApp(ShowBase):
   def OnResetCamera(self, event):
     model = render.getPythonTag('lastModel')
     Stage.resetCamera(model=model)
-    print(model)
 
   def OnSnapshot(self, event):
     lastModel = render.getPythonTag('lastModel')
@@ -975,6 +1014,10 @@ class MmdViewerApp(ShowBase):
             else:
               item.Check(not axis.isHidden())
             break
+          pass
+        pass
+      pass
+    pass
 
     #
     # Update expressions menu
@@ -990,6 +1033,8 @@ class MmdViewerApp(ShowBase):
             item.Check(expression['state'])
             break
         pass
+      pass
+    pass
 
     #
     # Update Recent Files menu

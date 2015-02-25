@@ -35,6 +35,14 @@ import codecs
 
 from pandac.PandaModules import *
 
+from panda3d.bullet import BulletWorld
+from panda3d.bullet import BulletDebugNode
+from panda3d.bullet import BulletPlaneShape
+from panda3d.bullet import BulletRigidBodyNode
+from panda3d.bullet import BulletSoftBodyNode
+from panda3d.bullet import BulletBoxShape
+
+
 from common import *
 
 from pymeshio import pmx
@@ -258,8 +266,8 @@ def pmx2p3d(pmx_model, alpha=True):
   format = GeomVertexFormat.registerFormat(format)
 
   vdata = GeomVertexData(pmx_model.name, format, Geom.UHDynamic)
+  vdata.setNumRows(len(pmx_model.vertices))
 
-  vdata.setNumRows(6)
   vertex = GeomVertexWriter(vdata, 'vertex')
   normal = GeomVertexWriter(vdata, 'normal')
   color = GeomVertexWriter(vdata, 'color')
@@ -416,6 +424,7 @@ def pmx2p3d(pmx_model, alpha=True):
   pass
 
 def loadPmxBody(pmx_model):
+
   return(pmx2p3d(pmx_model))
 
 def loadPmxBone(pmx_model):
@@ -442,7 +451,7 @@ def loadPmxBone(pmx_model):
   #
   formatArray = GeomVertexArrayFormat()
   formatArray.addColumn(InternalName.make(str("vindex")), 1, Geom.NTUint32, Geom.CIndex)
-  formatArray.addColumn(InternalName.make(str("vparent")), 3, Geom.NTUint32, Geom.CIndex)
+  formatArray.addColumn(InternalName.make(str("vparent")), 1, Geom.NTFloat32, Geom.CIndex)
 
   format = GeomVertexFormat(GeomVertexFormat.getV3c4())
   format.addArray(formatArray)
@@ -457,7 +466,8 @@ def loadPmxBone(pmx_model):
     # load vertices(vertex list)
     #
     vdata = GeomVertexData(bone.name+'_vdata', format, Geom.UHDynamic)
-    vdata.setNumRows(4)
+    vdata.setNumRows(2)
+
     vertex = GeomVertexWriter(vdata, 'vertex')
     color = GeomVertexWriter(vdata, 'color')
     vindex = GeomVertexWriter(vdata, 'vindex')
@@ -465,44 +475,57 @@ def loadPmxBone(pmx_model):
 
     node = GeomNode(bone.name)
 
-    boneData = None
     v = bone.position
     vertex.addData3f(v.x, v.z, v.y)
-    color.addData4f(.95, .95, 0, 1)
+    color.addData4f(.95, .95, 0, 1) #yellow
     vindex.addData1i(boneIndex)
     vparent.addData1i(bone.parent_index)
 
-    parentNode = GetParentNode(boneNode, bone.parent_index)
-    if parentNode:
-      if parentNode.getPythonTag('position'):
-        v = parentNode.getPythonTag('position')
-    vertex.addData3f(v.x, v.z, v.y)
-    color.addData4f(.95, 0, 0.95, 1)
-    vindex.addData1i(boneIndex)
-    vparent.addData1i(bone.parent_index)
+    if bone.parent_index >= 0:
+      vp = pmx_model.bones[bone.parent_index].position
+      vertex.addData3f(vp.x, vp.z, vp.y)
+      color.addData4f(.95, 0, 0.95, 1) #red
+      vindex.addData1i(boneIndex)
+      vparent.addData1i(bone.parent_index)
 
-    prim = GeomLines(Geom.UHDynamic)
-    prim.addVertex(1)
-    prim.addVertex(0)
+      prim = GeomLines(Geom.UHDynamic)
+      prim.addVertex(1)
+      prim.addVertex(0)
+    else:
+      prim = GeomPoints(Geom.UHDynamic)
+      prim.addVertex(0)
 
     geom = Geom(vdata)
     geom.addPrimitive(prim)
     node.addGeom(geom)
 
     node.setPythonTag('english_name', bone.english_name)
-    node.setPythonTag('position', bone.position)
+    node.setPythonTag('position', LVector3f(bone.position.x, bone.position.z, bone.position.y))
     node.setPythonTag('parent_index', bone.parent_index)
     node.setPythonTag('layer', bone.layer)
     node.setPythonTag('flag', bone.flag)
     node.setPythonTag('tail_index', bone.tail_index)
-    node.setPythonTag('tail_position', bone.tail_position)
+    node.setPythonTag('tail_position', LVector3f(bone.tail_position.x, bone.tail_position.z, bone.tail_position.y))
     node.setPythonTag('effect_index', bone.effect_index)
     node.setPythonTag('effect_factor', bone.effect_factor)
-    node.setPythonTag('fixed_axis', bone.fixed_axis)
-    node.setPythonTag('local_x_vector', bone.local_x_vector)
-    node.setPythonTag('local_z_vector', bone.local_z_vector)
+    node.setPythonTag('fixed_axis', LVector3f(bone.fixed_axis.x, bone.fixed_axis.z, bone.fixed_axis.y))
+    node.setPythonTag('local_x_vector', LVector3f(bone.local_x_vector.x, bone.local_x_vector.z, bone.local_x_vector.y))
+    node.setPythonTag('local_z_vector', LVector3f(bone.local_z_vector.x, bone.local_z_vector.z, bone.local_z_vector.y))
     node.setPythonTag('external_key', bone.external_key)
-    node.setPythonTag('ik', bone.ik)
+    if bone.ik:
+      iklink = map(lambda ik: {
+        'bone_index':ik.bone_index,
+        'limit_angle':ik.limit_angle,
+        'limit_max':LVector3f(ik.limit_max.x, ik.limit_max.z, ik.limit_max.y),
+        'limit_min':LVector3f(ik.limit_min.x, ik.limit_min.z, ik.limit_min.y)
+        }, bone.ik.link)
+
+      node.setPythonTag('ik.limit_radian', bone.ik.limit_radian)
+      node.setPythonTag('ik.loop', bone.ik.loop)
+      node.setPythonTag('ik.target_index', bone.ik.target_index)
+      node.setPythonTag('ik.link', bone.ik.link)
+    else:
+      node.setPythonTag('ik', None)
     node.setPythonTag('index', bone.index)
     node.setPythonTag('boneIndex', boneIndex)
 
@@ -514,14 +537,10 @@ def loadPmxBone(pmx_model):
     boneIndex += 1
 
   np = NodePath(boneNode)
-  ofs = OFileStream('bonelist.txt', 3)
-  np.ls(ofs, 2)
-  # with codecs.open('bonelist.txt', 'w', encoding='utf8') as f:
-  #   f.write(np.ls())
-
+  # ofs = OFileStream('bonelist.txt', 3)
+  # np.ls(ofs, 2)
   # np.hide()
   return(np)
-  pass
 
 def loadPmxMorph(pmx_model):
   #
@@ -548,7 +567,8 @@ def loadPmxMorph(pmx_model):
     # load vertices(vertex list)
     #
     vdata = GeomVertexData(morph.name+'_vdata', format, Geom.UHDynamic)
-    vdata.setNumRows(6)
+    # vdata.setNumRows(6)
+
     vertex = GeomVertexWriter(vdata, 'vertex')
     vindex = GeomVertexWriter(vdata, 'vindex')
     # vmorph = GeomVertexWriter(vdata, 'v.morph')
@@ -571,6 +591,7 @@ def loadPmxMorph(pmx_model):
       pass
     elif morph.morph_type == 1: # vertex morph
       prim = GeomPoints(Geom.UHDynamic)
+      vdata.setNumRows(len(morph.offsets))
       for idx in xrange(len(morph.offsets)):
         offset = morph.offsets[idx]
         v = pmx_model.vertices[offset.vertex_index]
@@ -642,37 +663,113 @@ def loadPmxMorph(pmx_model):
   return(np)
   pass
 
-def loadPmxIK(pmx_model):
+def loadPmxSlot(pmx_model):
   #
-  # Load IK data
+  # Load Display Slot data
   #
-  iknode = ModelNode('IK')
-  pass
+  slotNode = PandaNode('Slots')
+  slotIndex = 0
+  for slot in pmx_model.display_slots:
+    log(u'Loading Slot : %s' % slot.name, force=True)
+    node = PandaNode(slot.name)
+    node.setPythonTag('english_name', slot.english_name)
+    node.setPythonTag('references', slot.references)
+    node.setPythonTag('special_flag', slot.special_flag)
+    node.setPythonTag('slotIndex', slotIndex)
+
+    slotNode.addChild(node)
+    slotIndex += 1
+  np = NodePath(slotNode)
+  np.hide()
+  return(np)
 
 def loadPmxRigid(pmx_model):
   #
   # Load Rigid data
   #
-  rigidNnode = ModelNode('Rigid')
-  pass
+  rigidNode = PandaNode('Rigid')
+  rigidIndex = 0
+  for rigid in pmx_model.rigidbodies:
+    log(u'Loading RigidBodies : %s' % rigid.name, force=True)
+    node = PandaNode(rigid.name)
+    node.setPythonTag('english_name', rigid.english_name)
+    node.setPythonTag('bone_index', rigid.bone_index)
+    node.setPythonTag('collision_group', rigid.collision_group)
+    node.setPythonTag('no_collision_group', rigid.no_collision_group)
+    node.setPythonTag('shape_type', rigid.shape_type)
+    node.setPythonTag('shape_size', LVector3f(rigid.shape_size.x, rigid.shape_size.z, rigid.shape_size.y))
+    node.setPythonTag('shape_position', LVector3f(rigid.shape_position.x, rigid.shape_position.z, rigid.shape_position.y))
+    node.setPythonTag('shape_rotation', LVector3f(rigid.shape_rotation.x, rigid.shape_rotation.z, rigid.shape_rotation.y))
+    node.setPythonTag('param.mass', rigid.param.mass)
+    node.setPythonTag('param.linear_damping', rigid.param.linear_damping)
+    node.setPythonTag('param.angular_damping', rigid.param.angular_damping)
+    node.setPythonTag('param.restitution', rigid.param.restitution)
+    node.setPythonTag('param.friction', rigid.param.friction)
+    node.setPythonTag('mode', rigid.mode)
+    node.setPythonTag('rigidIndex', rigidIndex)
 
-def loadPmxSlot(pmx_model):
-  #
-  # Load Display Slot data
-  #
-  slotNnode = ModelNode('Slots')
-  pass
+    rigidNode.addChild(node)
+    rigidIndex += 1
+  np = NodePath(rigidNode)
+  np.hide()
+  return(np)
 
 def loadPmxJoint(pmx_model):
   #
   # Load Joints data
   #
-  jointNnode = ModelNode('Joints')
-  pass
+  jointNode = PandaNode('Joints')
+  jointIndex = 0
+  for joint in pmx_model.joints:
+    log(u'Loading RigidBodies : %s' % joint.name, force=True)
+    node = PandaNode(joint.name)
+    node.setPythonTag('english_name', joint.english_name)
+    node.setPythonTag('joint_type', joint.joint_type)
+    node.setPythonTag('rigidbody_index_a', joint.rigidbody_index_a)
+    node.setPythonTag('rigidbody_index_b', joint.rigidbody_index_b)
+    node.setPythonTag('position', LVector3f(joint.position.x, joint.position.z, joint.position.y))
+    node.setPythonTag('rotation', LVector3f(joint.rotation.x, joint.rotation.z, joint.rotation.y))
+    node.setPythonTag('translation_limit_min', LVector3f(joint.translation_limit_min.x, joint.translation_limit_min.z, joint.translation_limit_min.y))
+    node.setPythonTag('translation_limit_max', LVector3f(joint.translation_limit_max.x, joint.translation_limit_max.z, joint.translation_limit_max.y))
+    node.setPythonTag('rotation_limit_min', LVector3f(joint.rotation_limit_min.x, joint.rotation_limit_min.z, joint.rotation_limit_min.y))
+    node.setPythonTag('rotation_limit_max', LVector3f(joint.rotation_limit_max.x, joint.rotation_limit_max.z, joint.rotation_limit_max.y))
+    node.setPythonTag('spring_constant_translation', LVector3f(joint.spring_constant_translation.x, joint.spring_constant_translation.z, joint.spring_constant_translation.y))
+    node.setPythonTag('spring_constant_rotation', LVector3f(joint.spring_constant_rotation.x, joint.spring_constant_rotation.z, joint.spring_constant_rotation.y))
+    node.setPythonTag('jointIndex', jointIndex)
+
+    jointNode.addChild(node)
+    jointIndex += 1
+  np = NodePath(jointNode)
+  np.hide()
+  return(np)
 
 def loadPmxActor(pmx_model):
   model = loadPmxModel(pmx_model)
   pass
+
+def loadBulletModel(pmx_model, bones, rigids, joints):
+  # for bone in bones.Get:
+
+  pass
+
+def loadPmxIK(pmx_model):
+  #
+  # Load IK data, PMX file is no IK now
+  #
+  ikNode = PandaNode('IK')
+  ikIndex = 0
+  for ik in pmx_model.iks:
+    log(u'Loading IK : %s' % ik.name, force=True)
+    node = PandaNode(slot.name)
+    node.setPythonTag('english_name', ik.english_name)
+    node.setPythonTag('references', ik.references)
+    node.setPythonTag('special_flag', ik.special_flag)
+
+    ikNode.addChild(node)
+    ikIndex += 1
+  np = NodePath(ikNode)
+  np.hide()
+  return(np)
 
 def displayPmxModelInfo(model):
   # print(dir(model))
@@ -702,6 +799,12 @@ def loadPmxModel(modelfile):
       morphs.reparentTo(p3dnode)
       bones = loadPmxBone(mmdModel)
       bones.reparentTo(p3dnode)
+      slots = loadPmxSlot(mmdModel)
+      slots.reparentTo(p3dnode)
+      rigids = loadPmxRigid(mmdModel)
+      rigids.reparentTo(p3dnode)
+      joints = loadPmxJoint(mmdModel)
+      joints.reparentTo(p3dnode)
   elif ext in ['', '.egg', '.pz', '.bam']:
     return(p3dnode)
   return(p3dnode)

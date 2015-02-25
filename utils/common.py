@@ -49,16 +49,44 @@ DEBUG = False
 CWD = os.path.abspath(sys.path[0])
 
 JIS2GBK = dict({
-  u'\u30fb': u'·',
   u'\uff77\uff9e': u'ギ',
+  u'\u30db\uff9e': u'ボ',
+  u'\u30af': u'ク',
+  u'\u30f3': u'ン',
+  u'\u30fb': u'·',
+  u'\ufeff': u'',
+  u'\uff11': u'1',
+  u'\uff12': u'2',
+  u'\uff13': u'3',
+  u'\uff14': u'4',
+  u'\uff29': u'I',
+  u'\uff2b': u'K',
   u'\uff68': u'イ',
-  u'\uff73': u'ゥ',
-  u'\uff77': u'キ', # ｷ
-  u'\uff78': u'ク',
-  u'\uff9d': u'ン',
   u'\uff6d': u'ユ', #ュ
   u'\uff6f': u'シ',
+  u'\uff70': u'-',
+  u'\uff71': u'ア',
+  u'\uff72': u'イ',
+  u'\uff73': u'ゥ',
+  u'\uff74': u'エ',
+  u'\uff75': u'ォ',
+  u'\uff76': u'カ',
+  u'\uff77': u'キ', # ｷ
+  u'\uff78': u'ク',
+  u'\uff7d': u'ス',
+  u'\uff80': u'タ',
+  u'\uff84': u'ト',
+  u'\uff88': u'ネ',
+  u'\uff89': u'ノ',
+  u'\uff8a': u'ハ',
+  u'\uff8b': u'ヒ',
+  u'\uff8c': u'フ',
+  u'\uff8d': u'ヘ',
+  u'\uff8e': u'ホ',
+  u'\uff8f': u'マ',
+  u'\uff97': u'ラ',
   u'\uff98': u'リ',
+  u'\uff9d': u'ン',
   u'\uff9e': u'\uff9e',
 })
 
@@ -69,6 +97,10 @@ def log(info, force=False):
       info = info.replace(k, JIS2GBK[k])
     # print(repr(info))
     print(info)
+    # try:
+    #   print(info)
+    # except:
+    #   print(repr(info))
 
 _i16, _i32 = BmpImagePlugin.i16, BmpImagePlugin.i32
 
@@ -154,6 +186,23 @@ def loadTexture(tex_file):
     # texture.setRenderToTexture(True)
   return(texture)
   pass
+
+def loadJ2ETable(j2e_file):
+  with codecs.open(j2e_file, 'r', encoding='utf8') as f:
+    lines = f.readlines()
+
+  J2E = dict()
+  for line in lines:
+    item = line.split(',')
+    j = item[0].strip().decode('utf8')
+    e = item[1].strip()
+    # log(u'%s <-> %s' % (j, e), force=True)
+    J2E[j] = e
+    J2E[e] = j
+
+  return(J2E)
+  pass
+
 
 if __name__ == '__main__':
   pmxFile = u'../models/meiko/meiko.pmx'
