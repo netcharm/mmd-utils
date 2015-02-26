@@ -29,6 +29,8 @@ from __future__ import division
 import os
 import sys
 
+import cmath
+
 import StringIO
 
 import codecs
@@ -202,6 +204,26 @@ def loadJ2ETable(j2e_file):
 
   return(J2E)
   pass
+
+cD2R = 180/cmath.pi
+def V2V(vertex, euler=Vec3(1,1,1)):
+  # if ZUp:
+  return(Vec3(euler.x*vertex.x, euler.y*vertex.z, euler.z*vertex.y))
+
+def R2D(rad, euler=Vec3(1,1,1)):
+  return(Vec3(euler.x*rad.x*cD2R if not cmath.isnan(rad.x) else 0,
+              euler.y*rad.y*cD2R if not cmath.isnan(rad.y) else 0,
+              euler.z*rad.z*cD2R if not cmath.isnan(rad.z) else 0))
+
+def R2DV(rad, euler=Vec3(1,-1,-1)):
+  return(Vec3(euler.x*rad.y*cD2R if not cmath.isnan(rad.y) else 0,
+              euler.z*rad.x*cD2R if not cmath.isnan(rad.x) else 0,
+              euler.y*rad.z*cD2R if not cmath.isnan(rad.z) else 0))
+
+def D2D(rad, euler=Vec3(1,1,1)):
+  return(Vec3(euler.x*rad.x if not cmath.isnan(rad.x) else 0,
+              euler.y*rad.y if not cmath.isnan(rad.y) else 0,
+              euler.z*rad.z if not cmath.isnan(rad.z) else 0))
 
 
 if __name__ == '__main__':

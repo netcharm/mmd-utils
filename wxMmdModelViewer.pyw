@@ -67,6 +67,8 @@ loadPrcFileData('', 'text-encoding utf8')
 loadPrcFileData('', 'textures-power-2 none')
 loadPrcFileData('', 'geom-cache-size 10')
 loadPrcFileData('', 'coordinate-system zup-right')
+loadPrcFileData('', 'clock-mode limited')
+loadPrcFileData('', 'clock-frame-rate 60')
 
 
 # loadPrcFileData('', 'notify-level warning')
@@ -649,7 +651,7 @@ class MmdViewerApp(ShowBase):
 
     self.setupUI(self.frame)
 
-    self.setupGL(render)
+    self.setupGL()
 
     self.setupWorld()
 
@@ -802,7 +804,13 @@ class MmdViewerApp(ShowBase):
 
     pass
 
-  def setupGL(self, render):
+  def setupGL(self):
+    FPS = 60
+    self.globalClock = ClockObject.getGlobalClock()
+    self.globalClock.setMode(ClockObject.MLimited)
+    self.globalClock.setFrameRate(FPS)
+
+    base.setSleep(.01)
     base.setFrameRateMeter(True)
 
     base.camLens.setNearFar(0.1, 550.0)
@@ -823,6 +831,7 @@ class MmdViewerApp(ShowBase):
     # input accept
     self.do = DirectObject()
     self.do.accept('f1', self.toggleDebug)
+    self.do.accept('f2', self.toggleModel)
 
   def setupWorld(self):
     # Task
@@ -852,7 +861,7 @@ class MmdViewerApp(ShowBase):
 
     self.world.attachRigidBody(self.groundNP.node())
 
-    self.worldNP.flattenStrong()
+    # self.worldNP.flattenStrong()
     print('World Setup')
     # render.ls()
     pass
@@ -873,6 +882,17 @@ class MmdViewerApp(ShowBase):
     self.world.doPhysics(dt, 5, 1.0/180.0)
 
     return task.cont
+
+  def toggleModel(self):
+    lastModel = render.getPythonTag('lastModel')
+    if lastModel:
+      if lastModel.isHidden():
+        lastModel.show()
+        print('--> Model On')
+      else:
+        lastModel.hide()
+        print('--> Model Off')
+    pass
 
   def loadModel(self, modelname=None):
     p3dnode = None
@@ -906,17 +926,19 @@ class MmdViewerApp(ShowBase):
 
       self.addExpressionMenu(Utils.getExpressionList(p3dnode))
 
-      p3dnode.hide()
+      # p3dnode.hide()
 
       #
       # Bullet Test
       #
       bulletBody = p3dnode.find('**/Bullet')
-      # render.attachNewNode(bulletBody)
-      # self.world.attachRigidBody(bulletBody)
-      self.bulletNP = self.worldNP.attachNewNode(bulletBody.node())
-      self.bulletNP.setPos(0, 0, 1.0001)
-      self.world.attachRigidBody(self.bulletNP.node())
+      for np in bulletBody.getChildren():
+        node = np.node()
+        if isinstance(node, BulletRigidBodyNode):
+          self.worldNP.attachNewNode(node)
+          self.world.attachRigidBody(node)
+      for cs in bulletBody.getPythonTag('Joints'):
+        self.world.attachConstraint(cs)
 
       #
       # Update config setting

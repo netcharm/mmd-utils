@@ -29,6 +29,7 @@ from __future__ import division
 import os
 import sys
 
+import math
 import StringIO
 
 import codecs
@@ -48,6 +49,7 @@ from panda3d.bullet import BulletCylinderShape
 from panda3d.bullet import BulletCapsuleShape
 from panda3d.bullet import BulletConeShape
 from panda3d.bullet import BulletCharacterControllerNode
+from panda3d.bullet import BulletConeTwistConstraint
 
 
 from common import *
@@ -284,8 +286,8 @@ def pmx2p3d(pmx_model, alpha=True):
 
   idx = 0
   for v in pmx_model.vertices:
-    vertex.addData3f(v.position.x, v.position.z, v.position.y)
-    normal.addData3f(v.normal.x, v.normal.z, v.normal.y)
+    vertex.addData3f(V2V(v.position))
+    normal.addData3f(V2V(v.normal))
     color.addData4f(.95, .95, .95, 1)
     texcoord.addData2f(v.uv.x, v.uv.y)
     edge.addData1f(v.edge_factor)
@@ -483,14 +485,14 @@ def loadPmxBone(pmx_model):
     node = GeomNode(bone.name)
 
     v = bone.position
-    vertex.addData3f(v.x, v.z, v.y)
+    vertex.addData3f(V2V(v))
     color.addData4f(.95, .95, 0, 1) #yellow
     vindex.addData1i(boneIndex)
     vparent.addData1i(bone.parent_index)
 
     if bone.parent_index >= 0:
       vp = pmx_model.bones[bone.parent_index].position
-      vertex.addData3f(vp.x, vp.z, vp.y)
+      vertex.addData3f(V2V(vp))
       color.addData4f(.95, 0, 0.95, 1) #red
       vindex.addData1i(boneIndex)
       vparent.addData1i(bone.parent_index)
@@ -507,24 +509,24 @@ def loadPmxBone(pmx_model):
     node.addGeom(geom)
 
     node.setPythonTag('english_name', bone.english_name)
-    node.setPythonTag('position', LVector3f(bone.position.x, bone.position.z, bone.position.y))
+    node.setPythonTag('position', V2V(bone.position))
     node.setPythonTag('parent_index', bone.parent_index)
     node.setPythonTag('layer', bone.layer)
     node.setPythonTag('flag', bone.flag)
     node.setPythonTag('tail_index', bone.tail_index)
-    node.setPythonTag('tail_position', LVector3f(bone.tail_position.x, bone.tail_position.z, bone.tail_position.y))
+    node.setPythonTag('tail_position', V2V(bone.tail_position))
     node.setPythonTag('effect_index', bone.effect_index)
     node.setPythonTag('effect_factor', bone.effect_factor)
-    node.setPythonTag('fixed_axis', LVector3f(bone.fixed_axis.x, bone.fixed_axis.z, bone.fixed_axis.y))
-    node.setPythonTag('local_x_vector', LVector3f(bone.local_x_vector.x, bone.local_x_vector.z, bone.local_x_vector.y))
-    node.setPythonTag('local_z_vector', LVector3f(bone.local_z_vector.x, bone.local_z_vector.z, bone.local_z_vector.y))
+    node.setPythonTag('fixed_axis', V2V(bone.fixed_axis))
+    node.setPythonTag('local_x_vector', V2V(bone.local_x_vector))
+    node.setPythonTag('local_z_vector', V2V(bone.local_z_vector))
     node.setPythonTag('external_key', bone.external_key)
     if bone.ik:
       iklink = map(lambda ik: {
         'bone_index':ik.bone_index,
         'limit_angle':ik.limit_angle,
-        'limit_max':LVector3f(ik.limit_max.x, ik.limit_max.z, ik.limit_max.y),
-        'limit_min':LVector3f(ik.limit_min.x, ik.limit_min.z, ik.limit_min.y)
+        'limit_max':LVector3f(V2V(ik.limit_max)),
+        'limit_min':LVector3f(V2V(ik.limit_min))
         }, bone.ik.link)
 
       node.setPythonTag('ik.limit_radian', bone.ik.limit_radian)
@@ -604,11 +606,11 @@ def loadPmxMorph(pmx_model):
         v = pmx_model.vertices[offset.vertex_index]
         o = offset.position_offset
         i = offset.vertex_index
-        vertex.addData3f(v.position.x, v.position.z, v.position.y)
+        vertex.addData3f(V2V(v.position))
         vindex.addData1i(i)
-        vmorph.addData3f(o.x, o.z, o.y)
+        vmorph.addData3f(V2V(o))
         transform_index.addData1i(i)
-        transform_weight.addData3f(o.x, o.z, o.y)
+        transform_weight.addData3f(V2V(o))
         column_morph_slider.addData1f(1.0)
 
         prim.addVertex(idx)
@@ -704,9 +706,9 @@ def loadPmxRigid(pmx_model):
     node.setPythonTag('collision_group', rigid.collision_group)
     node.setPythonTag('no_collision_group', rigid.no_collision_group)
     node.setPythonTag('shape_type', rigid.shape_type)
-    node.setPythonTag('shape_size', LVector3f(rigid.shape_size.x, rigid.shape_size.z, rigid.shape_size.y))
-    node.setPythonTag('shape_position', LVector3f(rigid.shape_position.x, rigid.shape_position.z, rigid.shape_position.y))
-    node.setPythonTag('shape_rotation', LVector3f(rigid.shape_rotation.x, rigid.shape_rotation.z, rigid.shape_rotation.y))
+    node.setPythonTag('shape_size', V2V(rigid.shape_size))
+    node.setPythonTag('shape_position', V2V(rigid.shape_position))
+    node.setPythonTag('shape_rotation', R2DV(rigid.shape_rotation))
     node.setPythonTag('param.mass', rigid.param.mass)
     node.setPythonTag('param.linear_damping', rigid.param.linear_damping)
     node.setPythonTag('param.angular_damping', rigid.param.angular_damping)
@@ -734,14 +736,14 @@ def loadPmxJoint(pmx_model):
     node.setPythonTag('joint_type', joint.joint_type)
     node.setPythonTag('rigidbody_index_a', joint.rigidbody_index_a)
     node.setPythonTag('rigidbody_index_b', joint.rigidbody_index_b)
-    node.setPythonTag('position', LVector3f(joint.position.x, joint.position.z, joint.position.y))
-    node.setPythonTag('rotation', LVector3f(joint.rotation.x, joint.rotation.z, joint.rotation.y))
-    node.setPythonTag('translation_limit_min', LVector3f(joint.translation_limit_min.x, joint.translation_limit_min.z, joint.translation_limit_min.y))
-    node.setPythonTag('translation_limit_max', LVector3f(joint.translation_limit_max.x, joint.translation_limit_max.z, joint.translation_limit_max.y))
-    node.setPythonTag('rotation_limit_min', LVector3f(joint.rotation_limit_min.x, joint.rotation_limit_min.z, joint.rotation_limit_min.y))
-    node.setPythonTag('rotation_limit_max', LVector3f(joint.rotation_limit_max.x, joint.rotation_limit_max.z, joint.rotation_limit_max.y))
-    node.setPythonTag('spring_constant_translation', LVector3f(joint.spring_constant_translation.x, joint.spring_constant_translation.z, joint.spring_constant_translation.y))
-    node.setPythonTag('spring_constant_rotation', LVector3f(joint.spring_constant_rotation.x, joint.spring_constant_rotation.z, joint.spring_constant_rotation.y))
+    node.setPythonTag('position', V2V(joint.position))
+    node.setPythonTag('rotation', R2DV(joint.rotation))
+    node.setPythonTag('translation_limit_min', V2V(joint.translation_limit_min))
+    node.setPythonTag('translation_limit_max', V2V(joint.translation_limit_max))
+    node.setPythonTag('rotation_limit_min', R2DV(joint.rotation_limit_min))
+    node.setPythonTag('rotation_limit_max', R2DV(joint.rotation_limit_max))
+    node.setPythonTag('spring_constant_translation', V2V(joint.spring_constant_translation))
+    node.setPythonTag('spring_constant_rotation', R2DV(joint.spring_constant_rotation))
     node.setPythonTag('jointIndex', jointIndex)
 
     jointNode.addChild(node)
@@ -754,20 +756,122 @@ def loadPmxActor(pmx_model):
   model = loadPmxModel(pmx_model)
   pass
 
-def loadPmxBullet(pmx_model, bones=None, rigids=None, joints=None):
-  body = BulletRigidBodyNode('Bullet')
+def loadPmxBullet(pmx_model):
+  # body = BulletRigidBodyNode('Bullet')
+  bodyNP = NodePath('Bullet')
 
-  shape = BulletBoxShape(Vec3(0.5, 0.5, 0.5))
-  body.setMass(40.0)
-  body.addShape(shape)
-  # for bone in bones.Get:
-  height = 1.75
-  radius = 0.4
-  shape = BulletCapsuleShape(radius, height - 2*radius, ZUp)
-  body.addShape(shape)
+  # boxBody = BulletRigidBodyNode('Box')
+  # height = 1.75
+  # radius = 0.4
+  # shape = BulletCapsuleShape(radius, height - 2*radius, ZUp)
+  # boxBody.addShape(shape)
+  # boxBodyNP = NodePath(boxBody)
+  # boxBodyNP.setPos(0, 0, 1.0001)
+  # boxBodyNP.reparentTo(bodyNP)
 
+  rigidIndex = 0
+  rigidList = []
+  for rigid in pmx_model.rigidbodies:
+    shape_size = V2V(rigid.shape_size)
+    shape_pos = V2V(rigid.shape_position)
+    shape_rot = R2DV(rigid.shape_rotation)
 
-  return(body)
+    if rigid.bone_index==-1:
+      bone = pmx_model.bones[0]
+    else:
+      bone = pmx_model.bones[rigid.bone_index]
+
+    if rigid.shape_type == 0:
+      shape = BulletSphereShape(shape_size.x)
+    elif rigid.shape_type == 1:
+      shape = BulletBoxShape(shape_size)
+    elif rigid.shape_type == 2:
+      shape = BulletCapsuleShape(shape_size.x, shape_size.z)
+    else:
+      print('--> other shape type: %d' % rigid.shape_type)
+      continue
+
+    rigidBody = BulletRigidBodyNode(rigid.name)
+    rigidBody.addShape(shape)
+    if rigid.param.mass != 1:
+      rigidBody.setMass(rigid.param.mass)
+      rigidBody.setStatic(False)
+    else:
+      rigidBody.setStatic(True)
+    rigidBody.setLinearDamping(rigid.param.linear_damping)
+    rigidBody.setAngularDamping(rigid.param.angular_damping)
+    rigidBody.setRestitution(rigid.param.restitution)
+    rigidBody.setFriction(rigid.param.friction)
+
+    rigidBody.setPythonTag('bone_index', rigid.bone_index)
+    rigidBody.setPythonTag('rotation', shape_rot)
+    rigidBody.setPythonTag('collision_group', rigid.collision_group)
+    rigidBody.setPythonTag('no_collision_group', rigid.no_collision_group)
+    rigidBody.setPythonTag('mode', rigid.mode)
+    rigidBody.setPythonTag('rigidIndex', rigidIndex)
+
+    if rigid.mode == 0:
+      rigidBody.setKinematic(True)
+      # rigidBody.setDeactivationEnabled(True)
+    elif rigid.mode == 1:
+      rigidBody.setKinematic(False)
+      # rigidBody.setDeactivationEnabled(False)
+    else:
+      rigidBody.setKinematic(True)
+      # rigidBody.setDeactivationEnabled(True)
+
+    # rigidBody.setDeactivationEnabled(True)
+    rigidBody.setCollisionResponse(True)
+    rigidBody.setActive(True)
+
+    rigidBodyNP = NodePath(rigidBody)
+    rigidBodyNP.setPos(shape_pos)
+    rigidBodyNP.setHpr(shape_rot)
+    # rigidBodyNP.setHpr(NodePath(bone), shape_rot)
+
+    rigidBodyNP.reparentTo(bodyNP)
+    rigidList.append(rigidBody)
+    rigidIndex += 1
+
+  csList = []
+  for joint in pmx_model.joints:
+    rigidIndexA = joint.rigidbody_index_a
+    rigidIndexB = joint.rigidbody_index_b
+    translimit_min = V2V(joint.translation_limit_min)
+    translimit_max = V2V(joint.translation_limit_max)
+    rotlimit_min = R2DV(joint.rotation_limit_min)
+    rotlimit_max = R2DV(joint.rotation_limit_max)
+    springTrans = V2V(joint.spring_constant_translation)
+    springRot = R2DV(joint.spring_constant_rotation)
+
+    ragidBodyA = rigidList[rigidIndexA]
+    ragidBodyB = rigidList[rigidIndexB]
+
+    # frameA = TransformState.makePosHpr(translimit_min, rotlimit_min)
+    # frameB = TransformState.makePosHpr(translimit_max, rotlimit_max)
+    pos = V2V(Vec3(0,0,0))
+    rot = R2DV(Vec3(0,0,0))
+    frameA = TransformState.makePosHpr(pos, rot)
+    frameB = TransformState.makePosHpr(pos, rot)
+
+    # swing1 = 60 # degrees
+    # swing2 = 36 # degrees
+    # twist = 120 # degrees
+    rot_limit = rotlimit_max - rotlimit_min
+    swing1 = rot_limit.x # degrees
+    swing2 = rot_limit.y # degrees
+    twist = rot_limit.z # degrees
+
+    cs = BulletConeTwistConstraint(ragidBodyA, ragidBodyB, frameA, frameB)
+    cs.setLimit(swing1, swing2, twist)
+    cs.setDebugDrawSize(1.0)
+
+    csList.append(cs)
+    log(u'%03d: %s <-> %s' % (len(csList)-1, ragidBodyA.getName(), ragidBodyB.getName()),force=True)
+
+  # bodyNP.ls()
+  bodyNP.setPythonTag('Joints', csList)
+  return(bodyNP)
   pass
 
 def loadPmxIK(pmx_model):
@@ -819,12 +923,12 @@ def loadPmxModel(modelfile):
       bones.reparentTo(p3dnode)
       slots = loadPmxSlot(mmdModel)
       slots.reparentTo(p3dnode)
-      rigids = loadPmxRigid(mmdModel)
-      rigids.reparentTo(p3dnode)
-      joints = loadPmxJoint(mmdModel)
-      joints.reparentTo(p3dnode)
+      # rigids = loadPmxRigid(mmdModel)
+      # rigids.reparentTo(p3dnode)
+      # joints = loadPmxJoint(mmdModel)
+      # joints.reparentTo(p3dnode)
       bullet = loadPmxBullet(mmdModel)
-      p3dnode.attachNewNode(bullet)
+      bullet.reparentTo(p3dnode)
   elif ext in ['', '.egg', '.pz', '.bam']:
     return(p3dnode)
   return(p3dnode)

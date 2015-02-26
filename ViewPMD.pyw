@@ -603,6 +603,7 @@ def myWink(value, model, delay):
 
 if __name__ == '__main__':
   base.openMainWindow(type = 'onscreen')
+  base.setFrameRateMeter(True)
 
   mmdFile = u'./models/apimiku/Miku long hair.pmx'
   mmdFile = u'./models/cupidmiku/Cupid Miku.pmx'
