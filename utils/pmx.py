@@ -35,12 +35,19 @@ import codecs
 
 from pandac.PandaModules import *
 
+from panda3d.bullet import ZUp
 from panda3d.bullet import BulletWorld
 from panda3d.bullet import BulletDebugNode
 from panda3d.bullet import BulletPlaneShape
 from panda3d.bullet import BulletRigidBodyNode
 from panda3d.bullet import BulletSoftBodyNode
+from panda3d.bullet import BulletPlaneShape
 from panda3d.bullet import BulletBoxShape
+from panda3d.bullet import BulletSphereShape
+from panda3d.bullet import BulletCylinderShape
+from panda3d.bullet import BulletCapsuleShape
+from panda3d.bullet import BulletConeShape
+from panda3d.bullet import BulletCharacterControllerNode
 
 
 from common import *
@@ -747,9 +754,20 @@ def loadPmxActor(pmx_model):
   model = loadPmxModel(pmx_model)
   pass
 
-def loadBulletModel(pmx_model, bones, rigids, joints):
-  # for bone in bones.Get:
+def loadPmxBullet(pmx_model, bones=None, rigids=None, joints=None):
+  body = BulletRigidBodyNode('Bullet')
 
+  shape = BulletBoxShape(Vec3(0.5, 0.5, 0.5))
+  body.setMass(40.0)
+  body.addShape(shape)
+  # for bone in bones.Get:
+  height = 1.75
+  radius = 0.4
+  shape = BulletCapsuleShape(radius, height - 2*radius, ZUp)
+  body.addShape(shape)
+
+
+  return(body)
   pass
 
 def loadPmxIK(pmx_model):
@@ -805,6 +823,8 @@ def loadPmxModel(modelfile):
       rigids.reparentTo(p3dnode)
       joints = loadPmxJoint(mmdModel)
       joints.reparentTo(p3dnode)
+      bullet = loadPmxBullet(mmdModel)
+      p3dnode.attachNewNode(bullet)
   elif ext in ['', '.egg', '.pz', '.bam']:
     return(p3dnode)
   return(p3dnode)

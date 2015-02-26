@@ -79,6 +79,7 @@ from panda3d.core import Filename
 from panda3d.core import Material
 from panda3d.core import VBase4
 
+from panda3d.bullet import ZUp
 from panda3d.bullet import BulletWorld
 from panda3d.bullet import BulletDebugNode
 from panda3d.bullet import BulletPlaneShape
@@ -90,6 +91,7 @@ from panda3d.bullet import BulletSphereShape
 from panda3d.bullet import BulletCylinderShape
 from panda3d.bullet import BulletCapsuleShape
 from panda3d.bullet import BulletConeShape
+from panda3d.bullet import BulletCharacterControllerNode
 
 from direct.showbase.ShowBase import ShowBase
 from direct.showbase.ShowBase import WindowControls
@@ -649,6 +651,8 @@ class MmdViewerApp(ShowBase):
 
     self.setupGL(render)
 
+    self.setupWorld()
+
     # icon = wx.Icon('viewpmx.ico', wx.BITMAP_TYPE_ICO)
     icon = wx.Icon('mmdviewer.png', wx.BITMAP_TYPE_ANY)
     self.frame.SetIcon(icon)
@@ -799,6 +803,8 @@ class MmdViewerApp(ShowBase):
     pass
 
   def setupGL(self, render):
+    base.setFrameRateMeter(True)
+
     base.camLens.setNearFar(0.1, 550.0)
     base.camLens.setFov(45.0)
     base.camLens.setFocalLength(50)
@@ -814,20 +820,42 @@ class MmdViewerApp(ShowBase):
     fov = base.camLens.getFov()
     render.setPythonTag('lensFov', LVecBase2f(fov.getX(), fov.getY()))
 
-    self.debugNode = BulletDebugNode('Debug')
-    self.debugNode.showWireframe(True)
-    self.debugNode.showConstraints(True)
-    self.debugNode.showBoundingBoxes(False)
-    self.debugNode.showNormals(False)
-    self.debugNP = render.attachNewNode(self.debugNode)
+    # input accept
+    self.do = DirectObject()
+    self.do.accept('f1', self.toggleDebug)
+
+  def setupWorld(self):
+    # Task
+    taskMgr.add(self.updateWorld, 'updateWorld')
+
+    # World
+    self.worldNP = render.attachNewNode('World')
+
+    self.debugNP = self.worldNP.attachNewNode(BulletDebugNode('Debug'))
     self.debugNP.show()
+    self.debugNP.node().showWireframe(True)
+    self.debugNP.node().showConstraints(True)
+    self.debugNP.node().showBoundingBoxes(False)
+    self.debugNP.node().showNormals(True)
 
     self.world = BulletWorld()
     self.world.setGravity(Vec3(0, 0, -9.81))
     self.world.setDebugNode(self.debugNP.node())
 
-    self.do = DirectObject()
-    self.do.accept('f1', self.toggleDebug)
+    # Ground (static)
+    shape = BulletPlaneShape(Vec3(0, 0, 1), 1)
+
+    self.groundNP = self.worldNP.attachNewNode(BulletRigidBodyNode('Ground'))
+    self.groundNP.node().addShape(shape)
+    self.groundNP.setPos(0, 0, -1)
+    self.groundNP.setCollideMask(BitMask32.allOn())
+
+    self.world.attachRigidBody(self.groundNP.node())
+
+    self.worldNP.flattenStrong()
+    print('World Setup')
+    # render.ls()
+    pass
 
   def toggleDebug(self):
     if self.debugNP.isHidden():
@@ -836,6 +864,15 @@ class MmdViewerApp(ShowBase):
     else:
       self.debugNP.hide()
       print('--> Bullet Debug Off')
+
+  def updateWorld(self, task):
+    dt = globalClock.getDt()
+
+    # self.processInput(dt)
+    #self.world.doPhysics(dt)
+    self.world.doPhysics(dt, 5, 1.0/180.0)
+
+    return task.cont
 
   def loadModel(self, modelname=None):
     p3dnode = None
@@ -869,6 +906,21 @@ class MmdViewerApp(ShowBase):
 
       self.addExpressionMenu(Utils.getExpressionList(p3dnode))
 
+      p3dnode.hide()
+
+      #
+      # Bullet Test
+      #
+      bulletBody = p3dnode.find('**/Bullet')
+      # render.attachNewNode(bulletBody)
+      # self.world.attachRigidBody(bulletBody)
+      self.bulletNP = self.worldNP.attachNewNode(bulletBody.node())
+      self.bulletNP.setPos(0, 0, 1.0001)
+      self.world.attachRigidBody(self.bulletNP.node())
+
+      #
+      # Update config setting
+      #
       self.appConfig['lastModel'] = modelname
       count = len(self.appConfig['recent'])
       if modelname in self.appConfig['recent']:
