@@ -69,7 +69,7 @@ loadPrcFileData('', 'geom-cache-size 10')
 loadPrcFileData('', 'coordinate-system zup-right')
 loadPrcFileData('', 'clock-mode limited')
 loadPrcFileData('', 'clock-frame-rate 60')
-
+loadPrcFileData('', 'show-frame-rate-meter 1')
 
 # loadPrcFileData('', 'notify-level warning')
 # loadPrcFileData('', 'default-directnotify-level warning')
@@ -216,7 +216,7 @@ class Stage(object):
       lights = NodePath(PandaNode('StageLights'))
 
       alight = AmbientLight('alight')
-      alight.setColor(VBase4(0.67, 0.67, 0.67, .8))
+      alight.setColor(VBase4(0.33, 0.33, 0.33, 1))
       # alight.setColor(VBase4(0.33, 0.33, 0.33, 0.67))
       alnp = render.attachNewNode(alight)
       alnp.reparentTo(lights)
@@ -811,7 +811,7 @@ class MmdViewerApp(ShowBase):
     self.globalClock.setFrameRate(FPS)
 
     base.setSleep(.01)
-    base.setFrameRateMeter(True)
+    # base.setFrameRateMeter(True)
 
     base.camLens.setNearFar(0.1, 550.0)
     base.camLens.setFov(45.0)
@@ -832,6 +832,9 @@ class MmdViewerApp(ShowBase):
     self.do = DirectObject()
     self.do.accept('f1', self.toggleDebug)
     self.do.accept('f2', self.toggleModel)
+    self.do.accept('f3', base.toggleWireframe)
+    self.do.accept('f4', base.toggleTexture)
+    self.do.accept('f5', self.toggleBone)
 
   def setupWorld(self):
     # Task
@@ -841,7 +844,7 @@ class MmdViewerApp(ShowBase):
     self.worldNP = render.attachNewNode('World')
 
     self.debugNP = self.worldNP.attachNewNode(BulletDebugNode('Debug'))
-    self.debugNP.show()
+    # self.debugNP.show()
     self.debugNP.node().showWireframe(True)
     self.debugNP.node().showConstraints(True)
     self.debugNP.node().showBoundingBoxes(False)
@@ -861,6 +864,8 @@ class MmdViewerApp(ShowBase):
 
     self.world.attachRigidBody(self.groundNP.node())
 
+    self.FirstUpdateWorld = False
+    self.UpdateCount = 0
     # self.worldNP.flattenStrong()
     print('World Setup')
     # render.ls()
@@ -873,13 +878,17 @@ class MmdViewerApp(ShowBase):
     else:
       self.debugNP.hide()
       print('--> Bullet Debug Off')
+      print(self.UpdateCount)
 
   def updateWorld(self, task):
     dt = globalClock.getDt()
 
     # self.processInput(dt)
-    #self.world.doPhysics(dt)
-    self.world.doPhysics(dt, 5, 1.0/180.0)
+    self.world.doPhysics(dt)
+    if not self.FirstUpdateWorld or self.UpdateCount<100:
+      # self.world.doPhysics(dt, 1, 3.0/180.0)
+      self.FirstUpdateWorld = True
+      self.UpdateCount += 1
 
     return task.cont
 
@@ -888,10 +897,19 @@ class MmdViewerApp(ShowBase):
     if lastModel:
       if lastModel.isHidden():
         lastModel.show()
-        print('--> Model On')
       else:
         lastModel.hide()
-        print('--> Model Off')
+    pass
+
+  def toggleBone(self):
+    lastModel = render.getPythonTag('lastModel')
+    if lastModel:
+      bones = lastModel.findAllMatches('**/Bones')
+      for bone in bones:
+        if bone.isHidden():
+          bone.show()
+        else:
+          bone.hide()
     pass
 
   def loadModel(self, modelname=None):
@@ -908,6 +926,11 @@ class MmdViewerApp(ShowBase):
         loader.unloadModel(lastModel)
       lastModel.removeNode()
       render.setPythonTag('lastModel', None)
+      for rigid in self.world.getRigidBodies():
+        self.world.remove(rigid)
+      for cs in self.world.getConstraints():
+        self.world.remove(cs)
+
 
     modelname = os.path.relpath(modelname, CWD).replace('\\', '/')
     ext = os.path.splitext(modelname)[1].lower()

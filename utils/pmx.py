@@ -475,7 +475,7 @@ def loadPmxBone(pmx_model):
     # load vertices(vertex list)
     #
     vdata = GeomVertexData(bone.name+'_vdata', format, Geom.UHDynamic)
-    vdata.setNumRows(2)
+    vdata.setNumRows(3)
 
     vertex = GeomVertexWriter(vdata, 'vertex')
     color = GeomVertexWriter(vdata, 'color')
@@ -484,12 +484,22 @@ def loadPmxBone(pmx_model):
 
     node = GeomNode(bone.name)
 
-    v = bone.position
-    vertex.addData3f(V2V(v))
+    tu = LVector3f(bone.tail_position.x, bone.tail_position.y, bone.tail_position.z)
+    log(tu.cross(LVector3f(bone.position.x, bone.position.y, bone.position.z)))
+
+    t = bone.position+bone.tail_position
+    vertex.addData3f(V2V(t))
     color.addData4f(.95, .95, 0, 1) #yellow
     vindex.addData1i(boneIndex)
     vparent.addData1i(bone.parent_index)
 
+    v = bone.position
+    vertex.addData3f(V2V(v))
+    color.addData4f(0, .95, 0.95, 1) #yellow
+    vindex.addData1i(boneIndex)
+    vparent.addData1i(bone.parent_index)
+
+    geom = Geom(vdata)
     if bone.parent_index >= 0:
       vp = pmx_model.bones[bone.parent_index].position
       vertex.addData3f(V2V(vp))
@@ -499,13 +509,14 @@ def loadPmxBone(pmx_model):
 
       prim = GeomLines(Geom.UHDynamic)
       prim.addVertex(1)
-      prim.addVertex(0)
-    else:
-      prim = GeomPoints(Geom.UHDynamic)
-      prim.addVertex(0)
+      prim.addVertex(2)
+      geom.addPrimitive(prim)
 
-    geom = Geom(vdata)
+    prim = GeomLines(Geom.UHDynamic)
+    prim.addVertex(0)
+    prim.addVertex(1)
     geom.addPrimitive(prim)
+
     node.addGeom(geom)
 
     node.setPythonTag('english_name', bone.english_name)
@@ -548,7 +559,7 @@ def loadPmxBone(pmx_model):
   np = NodePath(boneNode)
   # ofs = OFileStream('bonelist.txt', 3)
   # np.ls(ofs, 2)
-  # np.hide()
+  np.hide()
   return(np)
 
 def loadPmxMorph(pmx_model):
@@ -776,6 +787,8 @@ def loadPmxBullet(pmx_model):
     shape_pos = V2V(rigid.shape_position)
     shape_rot = R2DV(rigid.shape_rotation)
 
+    log(u'%03d: s%s, p%s, r%s'% (len(rigidList), str(shape_size), str(shape_pos), str(shape_rot)))
+
     if rigid.bone_index==-1:
       bone = pmx_model.bones[0]
     else:
@@ -788,7 +801,7 @@ def loadPmxBullet(pmx_model):
     elif rigid.shape_type == 2:
       shape = BulletCapsuleShape(shape_size.x, shape_size.z)
     else:
-      print('--> other shape type: %d' % rigid.shape_type)
+      log('--> other shape type: %d' % rigid.shape_type)
       continue
 
     rigidBody = BulletRigidBodyNode(rigid.name)
@@ -864,13 +877,18 @@ def loadPmxBullet(pmx_model):
 
     cs = BulletConeTwistConstraint(ragidBodyA, ragidBodyB, frameA, frameB)
     cs.setLimit(swing1, swing2, twist)
+    cs.setEnabled(True)
     cs.setDebugDrawSize(1.0)
 
     csList.append(cs)
-    log(u'%03d: %s <-> %s' % (len(csList)-1, ragidBodyA.getName(), ragidBodyB.getName()),force=True)
+    log(u'%03d: %s <-> %s' % (len(csList)-1, ragidBodyA.getName(), ragidBodyB.getName()))
 
   # bodyNP.ls()
   bodyNP.setPythonTag('Joints', csList)
+  bodyNP.setPythonTag('Bones', pmx_model.bones)
+  # ofs = OFileStream('jointlist.txt', 3)
+  # bodyNP.ls(ofs, 2)
+  # bodyNP.ls()
   return(bodyNP)
   pass
 

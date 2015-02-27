@@ -8,3 +8,4 @@ NekoMiku
 *.pyc
 /*.sublime-project
 /*.sublime-workspace
+/_misc
