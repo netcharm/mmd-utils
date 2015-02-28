@@ -213,7 +213,7 @@ def pmxInfo(model, screen=False):
 
 def pmx2p3d(pmx_model):
 
-  return(pmx2p3d(pmx_model))
+  return(loadPmxBody(pmx_model))
 
 def loadPmxBody(pmx_model, alpha=True):
   #
@@ -339,6 +339,7 @@ def loadPmxBody(pmx_model, alpha=True):
     nodePath.setPythonTag('edge_size', mat.edge_size)
     nodePath.setPythonTag('material_index', matIndex)
     nodePath.setPythonTag('material', materials.findMaterial(mat.name))
+    nodePath.setPythonTag('pickableObjTag', 1)
 
     #
     # set polygon face textures
@@ -558,6 +559,7 @@ def loadPmxBone(pmx_model):
       node.setPythonTag('ik', None)
     node.setPythonTag('index', bone.index)
     node.setPythonTag('boneIndex', boneIndex)
+    node.setPythonTag('pickableObjTag', 1)
 
     parentNode = GetParentNode(boneNode, bone.parent_index)
     if isinstance(parentNode, PandaNode):
@@ -684,6 +686,7 @@ def loadPmxMorph(pmx_model):
     node.setPythonTag('morph_type', morph.morph_type)
     node.setPythonTag('morph_data', morphData)
     node.setPythonTag('morph_index', morphIndex)
+    node.setPythonTag('pickableObjTag', 1)
     morphNode.addChild(node)
 
     morphIndex += 1
@@ -706,6 +709,7 @@ def loadPmxSlot(pmx_model):
     node.setPythonTag('references', slot.references)
     node.setPythonTag('special_flag', slot.special_flag)
     node.setPythonTag('slotIndex', slotIndex)
+    node.setPythonTag('pickableObjTag', 1)
 
     slotNode.addChild(node)
     slotIndex += 1
@@ -737,6 +741,7 @@ def loadPmxRigid(pmx_model):
     node.setPythonTag('param.friction', rigid.param.friction)
     node.setPythonTag('mode', rigid.mode)
     node.setPythonTag('rigidIndex', rigidIndex)
+    node.setPythonTag('pickableObjTag', 1)
 
     rigidNode.addChild(node)
     rigidIndex += 1
@@ -766,6 +771,7 @@ def loadPmxJoint(pmx_model):
     node.setPythonTag('spring_constant_translation', V2V(joint.spring_constant_translation))
     node.setPythonTag('spring_constant_rotation', R2DV(joint.spring_constant_rotation))
     node.setPythonTag('jointIndex', jointIndex)
+    node.setPythonTag('pickableObjTag', 1)
 
     jointNode.addChild(node)
     jointIndex += 1
@@ -832,6 +838,7 @@ def loadPmxBullet(pmx_model):
     rigidBody.setPythonTag('no_collision_group', rigid.no_collision_group)
     rigidBody.setPythonTag('mode', rigid.mode)
     rigidBody.setPythonTag('rigidIndex', rigidIndex)
+    rigidBody.setPythonTag('pickableObjTag', 1)
 
     if rigid.mode == 0:
       rigidBody.setKinematic(True)
@@ -851,6 +858,7 @@ def loadPmxBullet(pmx_model):
     rigidBodyNP.setPos(shape_pos)
     rigidBodyNP.setHpr(shape_rot)
     # rigidBodyNP.setHpr(NodePath(bone), shape_rot)
+    rigidBodyNP.setPythonTag('pickableObjTag', 1)
 
     rigidBodyNP.reparentTo(bodyNP)
     rigidList.append(rigidBody)
@@ -889,6 +897,7 @@ def loadPmxBullet(pmx_model):
     cs.setLimit(swing1, swing2, twist)
     cs.setEnabled(True)
     cs.setDebugDrawSize(1.0)
+    # cs.setPythonTag('pickableObjTag', 1)
 
     csList.append(cs)
     log(u'%03d: %s <-> %s' % (len(csList)-1, ragidBodyA.getName(), ragidBodyB.getName()))

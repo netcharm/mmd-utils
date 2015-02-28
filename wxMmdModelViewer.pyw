@@ -100,8 +100,11 @@ from direct.showbase.ShowBase import WindowControls
 from direct.showbase.DirectObject import DirectObject
 # from direct.directtools.DirectGrid import DirectGrid
 # from direct.directtools.DirectGlobals import *
+from direct.directtools.DirectSelection import *
+from direct.directtools.DirectGeometry import *
+from direct.directtools.DirectGlobals import *
 
-from direct.gui.DirectGui import *
+# from direct.gui.DirectGui import *
 
 from direct.actor.Actor import Actor
 from direct.filter.CommonFilters import CommonFilters
@@ -833,6 +836,24 @@ class MmdViewerApp(ShowBase):
     fov = base.camLens.getFov()
     render.setPythonTag('lensFov', LVecBase2f(fov.getX(), fov.getY()))
 
+    #
+    # setup object picker
+    #
+    # Create a traverser that Panda3D will automatically use every frame.
+    base.cTrav = CollisionTraverser()
+    # base.cTrav.showCollisions(render)
+    # Create a handler for the events.
+    self.collHandler = CollisionHandlerQueue()
+
+    self.pickerNode = CollisionNode('mouseRay')
+    self.pickerNP = camera.attachNewNode(self.pickerNode)
+    self.pickerNode.setFromCollideMask(GeomNode.getDefaultCollideMask())
+    self.pickerRay = CollisionRay()
+    self.pickerNode.addSolid(self.pickerRay)
+    self.cTrav.addCollider(self.pickerNP, self.collHandler)
+    self.lastPickedObj = None
+
+    #
     # input accept
     self.do = DirectObject()
     self.do.accept('f1', self.toggleDebug)
@@ -840,6 +861,8 @@ class MmdViewerApp(ShowBase):
     self.do.accept('f3', base.toggleWireframe)
     self.do.accept('f4', base.toggleTexture)
     self.do.accept('f5', self.toggleBone)
+
+    self.do.accept('mouse1', self.OnMouseLeftClick)
 
   def setupWorld(self):
     # Task
@@ -851,9 +874,9 @@ class MmdViewerApp(ShowBase):
     self.debugNP = self.worldNP.attachNewNode(BulletDebugNode('Debug'))
     # self.debugNP.show()
     self.debugNP.node().showWireframe(True)
-    self.debugNP.node().showConstraints(True)
+    self.debugNP.node().showConstraints(False)
     self.debugNP.node().showBoundingBoxes(False)
-    self.debugNP.node().showNormals(True)
+    self.debugNP.node().showNormals(False)
 
     self.world = BulletWorld()
     self.world.setGravity(Vec3(0, 0, -9.81))
@@ -915,6 +938,34 @@ class MmdViewerApp(ShowBase):
           bone.show()
         else:
           bone.hide()
+    pass
+
+  def OnMouseLeftClick(self):
+    if not base.mouseWatcherNode.hasMouse():
+      return
+    if self.lastPickedObj:
+      self.lastPickedObj.clearRenderMode()
+
+    mpos = base.mouseWatcherNode.getMouse()
+    self.pickerRay.setFromLens(base.camNode, mpos.getX(), mpos.getY())
+
+    base.cTrav.traverse(render)
+    # Assume for simplicity's sake that myHandler is a CollisionHandlerQueue.
+    print(self.collHandler.getNumEntries())
+    if self.collHandler.getNumEntries() > 0:
+      for entry in self.collHandler.getEntries():
+        log(entry.getInto(), force=True)
+
+      # This is so we get the closest object.
+      self.collHandler.sortEntries()
+      pickedObj = self.collHandler.getEntry(0).getIntoNodePath()
+      pickedObj = pickedObj.findNetPythonTag('pickableObjTag')
+      if not pickedObj.isEmpty():
+        # pickedObj.showTightBounds()
+        pickedObj.setRenderModeWireframe()
+        self.lastPickedObj = pickedObj
+        # handlePickedObject(pickedObj)
+        log('Selected: %s' % pickedObj.getName(), force=True)
     pass
 
   def loadModel(self, modelname=None):
