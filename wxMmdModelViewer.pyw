@@ -302,10 +302,13 @@ class Stage(object):
     pass
 
   @staticmethod
-  def lightAtNode(node, lights=None):
+  def lightAtNode(node=None, lights=None):
     if not lights:
         return
-    if isinstance(node, NodePathCollection):
+    if not node:
+      for light in lights.getChildren():
+        render.setLight(light)
+    elif isinstance(node, NodePathCollection):
       for np in node:
         for light in lights.getChildren():
           np.setLight(light)
@@ -809,6 +812,7 @@ class MmdViewerApp(ShowBase):
     self.globalClock = ClockObject.getGlobalClock()
     self.globalClock.setMode(ClockObject.MLimited)
     self.globalClock.setFrameRate(FPS)
+    globalClock.setFrameTime(globalClock.getRealTime())
 
     base.setSleep(.01)
     # base.setFrameRateMeter(True)
@@ -820,6 +824,7 @@ class MmdViewerApp(ShowBase):
     Stage.setAxis(render)
 
     self.lights = Stage.setStudioLight(render)
+    Stage.lightAtNode(lights=Stage.lights)
 
     Stage.resetCamera()
 
@@ -943,7 +948,7 @@ class MmdViewerApp(ShowBase):
 
     if p3dnode:
       p3dnode.reparentTo(render)
-      Stage.lightAtNode(p3dnode, lights=Stage.lights)
+      # Stage.lightAtNode(p3dnode, lights=Stage.lights)
       Stage.resetCamera(model=p3dnode)
       render.setPythonTag('lastModel', p3dnode)
 
@@ -955,13 +960,19 @@ class MmdViewerApp(ShowBase):
       # Bullet Test
       #
       bulletBody = p3dnode.find('**/Bullet')
-      for np in bulletBody.getChildren():
-        node = np.node()
-        if isinstance(node, BulletRigidBodyNode):
-          self.worldNP.attachNewNode(node)
-          self.world.attachRigidBody(node)
-      for cs in bulletBody.getPythonTag('Joints'):
-        self.world.attachConstraint(cs)
+      if bulletBody:
+        for np in bulletBody.getChildren():
+          node = np.node()
+          if isinstance(node, BulletRigidBodyNode):
+            self.worldNP.attachNewNode(node)
+            self.world.attachRigidBody(node)
+        for cs in bulletBody.getPythonTag('Joints'):
+          self.world.attachConstraint(cs)
+
+      # p3dnode.writeBamFile('lastModel.bam')
+      # print(p3dnode.hasMaterial())
+      # p3dnode.setMaterialOff()
+      # print(p3dnode.hasMaterial())
 
       #
       # Update config setting

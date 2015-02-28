@@ -211,7 +211,11 @@ def pmxInfo(model, screen=False):
   return(lines)
   pass
 
-def pmx2p3d(pmx_model, alpha=True):
+def pmx2p3d(pmx_model):
+
+  return(pmx2p3d(pmx_model))
+
+def loadPmxBody(pmx_model, alpha=True):
   #
   # load textures
   #
@@ -316,11 +320,13 @@ def pmx2p3d(pmx_model, alpha=True):
     for idx in xrange(vIndex, vIndex+mat.vertex_count, 3):
       # flip trig-face for inverted axis-y/axis-z
       prim.addVertices(pmx_model.indices[idx+2], pmx_model.indices[idx+1], pmx_model.indices[idx+0])
+    prim.closePrimitive()
 
     geom = Geom(vdata)
     geom.addPrimitive(prim)
     node = GeomNode(mat.name)
     node.addGeom(geom)
+
     nodePath = NodePath(node)
     nodePath.setPythonTag('english_name', mat.english_name)
 
@@ -432,10 +438,6 @@ def pmx2p3d(pmx_model, alpha=True):
   return(modelPath)
   pass
 
-def loadPmxBody(pmx_model):
-
-  return(pmx2p3d(pmx_model))
-
 def loadPmxBone(pmx_model):
   def GetParentNode(root, parent_index):
     node = None
@@ -460,7 +462,8 @@ def loadPmxBone(pmx_model):
   #
   formatArray = GeomVertexArrayFormat()
   formatArray.addColumn(InternalName.make(str("vindex")), 1, Geom.NTUint32, Geom.CIndex)
-  formatArray.addColumn(InternalName.make(str("vparent")), 1, Geom.NTFloat32, Geom.CIndex)
+  formatArray.addColumn(InternalName.make(str("tindex")), 1, Geom.NTFloat32, Geom.COther)
+  formatArray.addColumn(InternalName.make(str("pindex")), 1, Geom.NTFloat32, Geom.COther)
 
   format = GeomVertexFormat(GeomVertexFormat.getV3c4())
   format.addArray(formatArray)
@@ -480,37 +483,44 @@ def loadPmxBone(pmx_model):
     vertex = GeomVertexWriter(vdata, 'vertex')
     color = GeomVertexWriter(vdata, 'color')
     vindex = GeomVertexWriter(vdata, 'vindex')
-    vparent = GeomVertexWriter(vdata, 'vparent')
+    tindex = GeomVertexWriter(vdata, 'tindex')
+    pindex = GeomVertexWriter(vdata, 'pindex')
 
     node = GeomNode(bone.name)
 
     tu = LVector3f(bone.tail_position.x, bone.tail_position.y, bone.tail_position.z)
     log(tu.cross(LVector3f(bone.position.x, bone.position.y, bone.position.z)))
 
-    t = bone.position+bone.tail_position
+    if bone.tail_index >= 0:
+      t = pmx_model.bones[bone.tail_index].position
+    else:
+      t = bone.position+bone.tail_position
     vertex.addData3f(V2V(t))
-    color.addData4f(.95, .95, 0, 1) #yellow
+    color.addData4f(.95, .95, 0, 1) # Yellow
     vindex.addData1i(boneIndex)
-    vparent.addData1i(bone.parent_index)
+    tindex.addData1i(bone.tail_index)
+    pindex.addData1i(bone.parent_index)
 
     v = bone.position
     vertex.addData3f(V2V(v))
-    color.addData4f(0, .95, 0.95, 1) #yellow
+    color.addData4f(0, .95, 0.95, 1) # Cyan
     vindex.addData1i(boneIndex)
-    vparent.addData1i(bone.parent_index)
+    tindex.addData1i(bone.tail_index)
+    pindex.addData1i(bone.parent_index)
 
     geom = Geom(vdata)
-    if bone.parent_index >= 0:
-      vp = pmx_model.bones[bone.parent_index].position
-      vertex.addData3f(V2V(vp))
-      color.addData4f(.95, 0, 0.95, 1) #red
-      vindex.addData1i(boneIndex)
-      vparent.addData1i(bone.parent_index)
+    # if bone.parent_index >= 0:
+    #   vp = pmx_model.bones[bone.parent_index].position
+    #   vertex.addData3f(V2V(vp))
+    #   color.addData4f(.95, 0, 0.95, 1) # Purple
+    #   vindex.addData1i(boneIndex)
+    #   tindex.addData1i(bone.tail_index)
+    #   pindex.addData1i(bone.parent_index)
 
-      prim = GeomLines(Geom.UHDynamic)
-      prim.addVertex(1)
-      prim.addVertex(2)
-      geom.addPrimitive(prim)
+    #   prim = GeomLines(Geom.UHDynamic)
+    #   prim.addVertex(1)
+    #   prim.addVertex(2)
+    #   geom.addPrimitive(prim)
 
     prim = GeomLines(Geom.UHDynamic)
     prim.addVertex(0)
