@@ -189,7 +189,7 @@ class Stage(object):
   @staticmethod
   def setAxis(render, update=False):
     def CreateAxis(axisStage):
-      grid = ThreeAxisGrid(gridstep=20, subdiv=20, xy=True, yz=False, xz=False, z=False)
+      grid = ThreeAxisGrid(gridstep=10, subdiv=10, xy=True, yz=False, xz=False, z=False)
       gridnodepath = grid.create()
       grid.showPlane(XY=True)
       grid.showAxis(Z=False)
@@ -202,9 +202,9 @@ class Stage(object):
         gridnodepath = loader.loadModel(axisStage)
         gridnodepath = gridnodepath.getChild(0)
       except:
-        gridnodepath = CreateAxis()
+        gridnodepath = CreateAxis(axisStage)
     else:
-      gridnodepath = CreateAxis()
+      gridnodepath = CreateAxis(axisStage)
 
     gridnodepath.reparentTo(render)
     pass
@@ -827,7 +827,7 @@ class MmdViewerApp(ShowBase):
     Stage.setAxis(render)
 
     self.lights = Stage.setStudioLight(render)
-    Stage.lightAtNode(lights=Stage.lights)
+    # Stage.lightAtNode(lights=Stage.lights)
 
     Stage.resetCamera()
 
@@ -858,7 +858,7 @@ class MmdViewerApp(ShowBase):
     #
     # self.boneObj = loader.loadModel('stages/bone_oct')
     self.colorSelected = LVector4f(1, 0.95, 0, 1)
-    self.colorBone = LVector4f(0.71, 0.31, 0.94, 1)
+    self.colorBone = LVector4f(0.12, 1, 0.44, 1)
 
     #
     # input accept
@@ -930,10 +930,12 @@ class MmdViewerApp(ShowBase):
   def toggleModel(self):
     lastModel = render.getPythonTag('lastModel')
     if lastModel:
-      if lastModel.isHidden():
-        lastModel.show()
-      else:
-        lastModel.hide()
+      bodies = lastModel.findAllMatches('**/Body')
+      for body in bodies:
+        if body.isHidden():
+          body.show()
+        else:
+          body.hide()
     pass
 
   def toggleBone(self):
@@ -960,19 +962,21 @@ class MmdViewerApp(ShowBase):
     base.cTrav.traverse(render)
     # Assume for simplicity's sake that myHandler is a CollisionHandlerQueue.
     if self.collHandler.getNumEntries() > 0:
-      # for entry in self.collHandler.getEntries():
-      #   log(entry.getInto(), force=True)
+      self.collHandler.sortEntries()
 
       # This is so we get the closest object.
-      self.collHandler.sortEntries()
-      pickedObj = self.collHandler.getEntry(0).getIntoNodePath()
-      pickedObj = pickedObj.findNetPythonTag('pickableObjTag')
-      if not pickedObj.isEmpty():
-        pickedObj.setRenderModeWireframe()
-        pickedObj.setColor(self.colorSelected)
-        self.lastPickedObj = pickedObj
-        # handlePickedObject(pickedObj)
-        log('Selected: %s' % pickedObj.getName(), force=True)
+      for entry in self.collHandler.getEntries():
+        pickedObj = entry.getIntoNodePath()
+        if pickedObj.isHidden():
+          continue
+        if not pickedObj.findNetPythonTag('pickableObjTag').isEmpty():
+          pickedObj.setRenderModeWireframe()
+          pickedObj.setColor(self.colorSelected)
+          self.lastPickedObj = pickedObj
+          log('Selected: %s' % pickedObj.getName(), force=True)
+          break
+        pass
+      pass
     pass
 
   def loadModel(self, modelname=None):
@@ -1006,7 +1010,7 @@ class MmdViewerApp(ShowBase):
 
     if p3dnode:
       p3dnode.reparentTo(render)
-      # Stage.lightAtNode(p3dnode, lights=Stage.lights)
+      Stage.lightAtNode(p3dnode, lights=Stage.lights)
       Stage.resetCamera(model=p3dnode)
       render.setPythonTag('lastModel', p3dnode)
 
@@ -1028,9 +1032,6 @@ class MmdViewerApp(ShowBase):
           self.world.attachConstraint(cs)
 
       # p3dnode.writeBamFile('lastModel.bam')
-      # print(p3dnode.hasMaterial())
-      # p3dnode.setMaterialOff()
-      # print(p3dnode.hasMaterial())
 
       #
       # Update config setting

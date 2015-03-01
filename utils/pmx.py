@@ -527,18 +527,6 @@ def loadPmxBone(pmx_model):
     pindex.addData1i(bone.parent_index)
 
     geom = Geom(vdata)
-    # if bone.parent_index >= 0:
-    #   vp = pmx_model.bones[bone.parent_index].position
-    #   vertex.addData3f(V2V(vp))
-    #   color.addData4f(.95, 0, 0.95, 1) # Purple
-    #   vindex.addData1i(boneIndex)
-    #   tindex.addData1i(bone.tail_index)
-    #   pindex.addData1i(bone.parent_index)
-
-    #   prim = GeomLines(Geom.UHDynamic)
-    #   prim.addVertex(1)
-    #   prim.addVertex(2)
-    #   geom.addPrimitive(prim)
 
     prim = GeomLines(Geom.UHDynamic)
     prim.addVertex(0)
@@ -582,7 +570,7 @@ def loadPmxBone(pmx_model):
     scale = vd / 8.0
     s_x = scale if scale<.5 else .5
     s_y = scale if scale<.5 else .5
-    s_z = scale
+    s_z = scale if scale<.5 else .5
     s = LVector3f(s_x, s_y, s_z)
 
     r_h = 0

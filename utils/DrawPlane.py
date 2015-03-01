@@ -68,7 +68,7 @@ DEBUG = False
 
 class ThreeAxisGrid:
    def __init__(self,
-      xsize = 100, ysize = 100, zsize = 100,
+      xsize = 50, ysize = 50, zsize = 50,
       gridstep = 10, subdiv = 10,
       xy=True, xz=True, yz=True,
       x=True, y=True, z=True,
