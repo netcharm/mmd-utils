@@ -854,6 +854,13 @@ class MmdViewerApp(ShowBase):
     self.lastPickedObj = None
 
     #
+    # load bone model
+    #
+    # self.boneObj = loader.loadModel('stages/bone_oct')
+    self.colorSelected = LVector4f(1, 0.95, 0, 1)
+    self.colorBone = LVector4f(0.71, 0.31, 0.94, 1)
+
+    #
     # input accept
     self.do = DirectObject()
     self.do.accept('f1', self.toggleDebug)
@@ -945,24 +952,24 @@ class MmdViewerApp(ShowBase):
       return
     if self.lastPickedObj:
       self.lastPickedObj.clearRenderMode()
+      self.lastPickedObj.setColor(self.colorBone)
 
     mpos = base.mouseWatcherNode.getMouse()
     self.pickerRay.setFromLens(base.camNode, mpos.getX(), mpos.getY())
 
     base.cTrav.traverse(render)
     # Assume for simplicity's sake that myHandler is a CollisionHandlerQueue.
-    print(self.collHandler.getNumEntries())
     if self.collHandler.getNumEntries() > 0:
-      for entry in self.collHandler.getEntries():
-        log(entry.getInto(), force=True)
+      # for entry in self.collHandler.getEntries():
+      #   log(entry.getInto(), force=True)
 
       # This is so we get the closest object.
       self.collHandler.sortEntries()
       pickedObj = self.collHandler.getEntry(0).getIntoNodePath()
       pickedObj = pickedObj.findNetPythonTag('pickableObjTag')
       if not pickedObj.isEmpty():
-        # pickedObj.showTightBounds()
         pickedObj.setRenderModeWireframe()
+        pickedObj.setColor(self.colorSelected)
         self.lastPickedObj = pickedObj
         # handlePickedObject(pickedObj)
         log('Selected: %s' % pickedObj.getName(), force=True)

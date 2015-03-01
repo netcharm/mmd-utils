@@ -225,6 +225,8 @@ def D2D(rad, euler=Vec3(1,1,1)):
               euler.y*rad.y if not cmath.isnan(rad.y) else 0,
               euler.z*rad.z if not cmath.isnan(rad.z) else 0))
 
+def vdist(v1, v2):
+  return(abs(cmath.sqrt((v2.x-v1.x)**2 + (v2.y-v1.y)**2 + (v2.z-v1.z)**2 ).real))
 
 if __name__ == '__main__':
   pmxFile = u'../models/meiko/meiko.pmx'

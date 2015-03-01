@@ -458,6 +458,23 @@ def loadPmxBone(pmx_model):
         pass
     return(node)
     pass
+
+  #
+  # Load Bone outline for display
+  #
+  data = EggData()
+  data.read('stages/bone_oct.egg')
+  # data.read('stages/bone.egg')
+  dnp = NodePath(loadEggData(data))
+  dnp.setColor(LVector4f(1,1,0,1))
+  boneOutline = dnp.node().getChild(0)
+  # g = boneOutline.modifyGeom(0)
+  # vdata_src = g.modifyVertexData()
+  # vertex_src = GeomVertexWriter(vdata_src, 'color')
+  # while not vertex_src.isAtEnd():
+  #   vertex_src.setData4f(1, 1, 0, 1)
+
+
   #
   # Load Bone data
   #
@@ -493,17 +510,17 @@ def loadPmxBone(pmx_model):
     log(tu.cross(LVector3f(bone.position.x, bone.position.y, bone.position.z)))
 
     if bone.tail_index >= 0:
-      t = pmx_model.bones[bone.tail_index].position
+      t = V2V(pmx_model.bones[bone.tail_index].position)
     else:
-      t = bone.position+bone.tail_position
-    vertex.addData3f(V2V(t))
+      t = V2V(bone.position+bone.tail_position)
+    vertex.addData3f(t)
     color.addData4f(.95, .95, 0, 1) # Yellow
     vindex.addData1i(boneIndex)
     tindex.addData1i(bone.tail_index)
     pindex.addData1i(bone.parent_index)
 
-    v = bone.position
-    vertex.addData3f(V2V(v))
+    v = V2V(bone.position)
+    vertex.addData3f(v)
     color.addData4f(0, .95, 0.95, 1) # Cyan
     vindex.addData1i(boneIndex)
     tindex.addData1i(bone.tail_index)
@@ -561,14 +578,37 @@ def loadPmxBone(pmx_model):
     node.setPythonTag('boneIndex', boneIndex)
     node.setPythonTag('pickableObjTag', 1)
 
+    vd = vdist(v, t)
+    scale = vd / 8.0
+    s_x = scale if scale<.5 else .5
+    s_y = scale if scale<.5 else .5
+    s_z = scale
+    s = LVector3f(s_x, s_y, s_z)
+
+    r_h = 0
+    r_p = 0
+    r_r = 0
+    r = LVector3f(r_h, r_p, r_r)
+    trans = TransformState.makePosHprScale(v, r, s)
+    bo = boneOutline.makeCopy()
+    bo.setName(bone.name)
+    bo.setTransform(trans)
+    bo.setPythonTag('pickableObjTag', 1)
+
     parentNode = GetParentNode(boneNode, bone.parent_index)
     if isinstance(parentNode, PandaNode):
+      # print('PNode: ', parentNode)
       parentNode.addChild(node)
+      parentNode.addChild(bo)
     elif isinstance(parentNode, GeomNode):
+      # print('GNode: ', parentNode)
       parentNode.addGeom(node)
+      # parentNode.addGeom(bo)
     boneIndex += 1
 
   np = NodePath(boneNode)
+  np.setRenderModeWireframe()
+  # np.setPythonTag('pickableObjTag', 1)
   # ofs = OFileStream('bonelist.txt', 3)
   # np.ls(ofs, 2)
   np.hide()
