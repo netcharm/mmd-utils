@@ -157,11 +157,20 @@ class BmpAlphaImageFile(ImageFile.ImageFile):
 
   pass
 
-def loadTexture(tex_file):
+def loadTexture(tex_file, model_path=None):
   texture = None #Texture('NULL')
-  tex_file = os.path.relpath(tex_file)
+  try:
+    if model_path:
+      tex_file = os.path.relpath(tex_file, CWD)
+    else:
+      tex_file = os.path.join(model_path, tex_file)
+  except:
+    pass
+
   if tex_file and os.path.isfile(tex_file):
     tex_ext = os.path.splitext(tex_file)[1]
+    if os.altsep:
+      tex_file = tex_file.replace(os.path.sep, os.path.altsep)
     if tex_ext.lower() in ['.spa', '.sph', '.bmp']:
       try:
         im = BmpAlphaImageFile(tex_file)
@@ -172,13 +181,15 @@ def loadTexture(tex_file):
         pnm.read(StringStream(buf.getvalue()))
         buf.close()
       except:
-        # pnm = PNMImage(Filename.toOsSpecific(tex_file))
-        pnm = PNMImage(tex_file)
+        texFile = Filename.fromOsSpecific(tex_file)
+        Filename.makeCanonical(texFile)
+        pnm = PNMImage(texFile)
       texture = Texture(tex_file)
       texture.load(pnm)
     else:
-      # pnm = PNMImage(Filename.toOsSpecific(tex_file))
-      pnm = PNMImage(tex_file)
+      texFile = Filename.fromOsSpecific(tex_file)
+      Filename.makeCanonical(texFile)
+      pnm = PNMImage(texFile)
       texture = Texture(tex_file)
       texture.load(pnm)
 

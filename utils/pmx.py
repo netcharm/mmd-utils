@@ -51,6 +51,7 @@ from panda3d.bullet import BulletConeShape
 from panda3d.bullet import BulletCharacterControllerNode
 from panda3d.bullet import BulletConeTwistConstraint
 
+from direct.actor.Actor import Actor
 
 from common import *
 
@@ -216,6 +217,8 @@ def pmx2p3d(pmx_model):
   return(loadPmxBody(pmx_model))
 
 def loadPmxBody(pmx_model, alpha=True):
+  modelPath = os.path.dirname(pmx_model.path)
+
   #
   # load textures
   #
@@ -223,11 +226,11 @@ def loadPmxBody(pmx_model, alpha=True):
   for tex in pmx_model.textures:
     tex_path = os.path.normpath(os.path.join(os.path.dirname(pmx_model.path), tex))
     tex_path = os.path.normcase(tex_path)
-    log(u'Loading Texture : %s' % tex_path)
-    texture = loadTexture(tex_path)
+    log(u'Loading Texture : %s' % os.path.dirname(tex))
+    texture = loadTexture(tex_path, model_path=modelPath)
     if texture:
       textures.append(texture)
-      log(u'Loaded Texture : %s' % tex_path, force=True)
+      log(u'Loaded Texture : %s' % tex, force=True)
       log(texture)
     else:
       textures.append(Texture('NULL'))
@@ -640,8 +643,7 @@ def loadPmxMorph(pmx_model):
     node = GeomNode(morph.name)
 
     morphData = None
-    # print(dir(morph))
-    # print(len(morph.offsets))
+
     if   morph.morph_type == 0: # group morph
       morphData = []
       for idx in xrange(len(morph.offsets)):
@@ -650,25 +652,45 @@ def loadPmxMorph(pmx_model):
         morphData.append((o.morph_index, o.value))
       pass
     elif morph.morph_type == 1: # vertex morph
+      morphEggText = []
+      morphEggText.append('<CoordinateSystem> { Z-up }')
+      morphEggText.append('<Group> %s_ACTOR {' % morph.name)
+      morphEggText.append('  <DART> { 1 }')
+      morphEggText.append('  <Group> %s {' % morph.name)
+      morphEggText.append('    <VertexPool> %s {' % morph.name)
+
       prim = GeomPoints(Geom.UHDynamic)
       vdata.setNumRows(len(morph.offsets))
       for idx in xrange(len(morph.offsets)):
         offset = morph.offsets[idx]
-        v = pmx_model.vertices[offset.vertex_index]
-        o = offset.position_offset
+        v = V2V(pmx_model.vertices[offset.vertex_index].position)
+        o = V2V(offset.position_offset)
         i = offset.vertex_index
-        vertex.addData3f(V2V(v.position))
+        vertex.addData3f(v)
         vindex.addData1i(i)
-        vmorph.addData3f(V2V(o))
+        vmorph.addData3f(o)
         transform_index.addData1i(i)
-        transform_weight.addData3f(V2V(o))
+        transform_weight.addData3f(o)
         column_morph_slider.addData1f(1.0)
-
         prim.addVertex(idx)
+
+        morphEggText.append('      <Vertex> %d {' % idx)
+        morphEggText.append('        %.11f %.11f %.11f' % (v.x, v.y, v.z))
+        morphEggText.append('        <Dxyz> Wedge { %.6f %.6f %.6f }' % (o.x, o.y, o.z))
+        morphEggText.append('      }')
+
+      morphEggText.append('    }')
+      morphEggText.append('  }')
+      morphEggText.append('}')
 
       geom = Geom(vdata)
       geom.addPrimitive(prim)
       node.addGeom(geom)
+
+      egg = EggData()
+      egg.read(StringStream('\n'.join(morphEggText)))
+      action = loadEggData(egg).getChild(0)
+      node.addChild(action)
       pass
     elif morph.morph_type == 2: # bone morph
       morphData = []
@@ -917,9 +939,9 @@ def loadPmxBullet(pmx_model):
     # swing2 = 36 # degrees
     # twist = 120 # degrees
     rot_limit = rotlimit_max - rotlimit_min
-    swing1 = rot_limit.x # degrees
-    swing2 = rot_limit.y # degrees
-    twist = rot_limit.z # degrees
+    twist = rot_limit.x # degrees
+    swing1 = rot_limit.y # degrees
+    swing2 = rot_limit.z # degrees
 
     cs = BulletConeTwistConstraint(ragidBodyA, ragidBodyB, frameA, frameB)
     cs.setLimit(swing1, swing2, twist)
@@ -974,10 +996,15 @@ def pmx2model(pmx):
 
 def loadPmxModel(modelfile):
   p3dnode = None
-  mmdFile = os.path.relpath(modelfile)
-  if os.path.altsep:
-    mmdFile = mmdFile.replace('\\', os.path.altsep)
+  try:
+    mmdFile = os.path.relpath(modelfile)
+  except:
+    mmdFile = modelfile
+    pass
+
   ext = os.path.splitext(mmdFile)[1].lower()
+  if os.path.altsep:
+    mmdFile = mmdFile.replace(os.path.sep, os.path.altsep)
   if ext in ['.pmx']:
     mmdModel = pmxLoad(mmdFile)
     if mmdModel:

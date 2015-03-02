@@ -305,22 +305,37 @@ class Stage(object):
     pass
 
   @staticmethod
-  def lightAtNode(node=None, lights=None):
+  def lightAtNode(node=None, lights=None, on=True):
     if not lights:
         return
     if not node:
       for light in lights.getChildren():
-        render.setLight(light)
+        if on:
+          render.setLight(light)
+        else:
+          render.clearLight(light)
+        light.setPythonTag('On', on)
+      lights.setPythonTag('On', on)
     elif isinstance(node, NodePathCollection):
       for np in node:
         for light in lights.getChildren():
-          np.setLight(light)
+          if on:
+            np.setLight(light)
+          else:
+            np.clearLight(light)
+          light.setPythonTag('On', on)
+      lights.setPythonTag('On', on)
     elif isinstance(node, NodePath):
       for light in lights.getChildren():
         try:
-          node.setLight(light)
+          if on:
+            node.setLight(light)
+          else:
+            node.clearLight(light)
+          light.setPythonTag('On', on)
         except:
           continue
+      lights.setPythonTag('On', on)
     pass
 
   @staticmethod
@@ -373,6 +388,50 @@ class Stage(object):
 
 
 class Utils(object):
+  @staticmethod
+  def loadMmdModel(modelname, world=None):
+    p3dnode = None
+
+    lastModel = render.getPythonTag('lastModel')
+    if lastModel:
+      node = lastModel.find('**/+ModelRoot')
+      if node:
+        loader.unloadModel(node)
+      else:
+        loader.unloadModel(lastModel)
+      lastModel.removeNode()
+
+      if world:
+        for rigid in world.getRigidBodies():
+          world.remove(rigid)
+        for cs in world.getConstraints():
+          world.remove(cs)
+
+      render.setPythonTag('lastModel', None)
+
+    try:
+      modelname = os.path.relpath(modelname, CWD)
+    except:
+      pass
+
+
+    ext = os.path.splitext(modelname)[1].lower()
+    if os.path.altsep:
+      modelname = modelname.replace(os.path.sep, os.path.altsep)
+      # modelname = modelname.replace('\\', os.path.altsep)
+    if ext in ['.pmx']:
+      p3dnode = loadPmxModel(modelname)
+    elif ext in ['.pmd']:
+      p3dnode = loadPmdModel(modelname)
+    else:
+      p3dnode = loader.loadModel(Filename.fromOsSpecific(modelname))
+
+    if p3dnode:
+      p3dnode.reparentTo(render)
+      render.setPythonTag('lastModel', p3dnode)
+
+    return(p3dnode)
+
   @staticmethod
   def processVertexData(vdata_src, vdata_dst, morphOn=True, strength=1.0):
     vertex_src = GeomVertexWriter(vdata_src, 'vertex')
@@ -608,9 +667,11 @@ class Utils(object):
 
 
 class MyFileDropTarget(wx.FileDropTarget):
-  def __init__(self, window):
+  hostApp = None
+  def __init__(self, window, app):
     wx.FileDropTarget.__init__(self)
     self.window = window
+    self.hostApp = app
 
   def OnDropFiles(self, x, y, filenames):
     info = "%d file(s) dropped at (%d,%d):\n" % (len(filenames), x, y)
@@ -619,11 +680,11 @@ class MyFileDropTarget(wx.FileDropTarget):
       mmdFile = file
       break
 
-    p3dnode = loadMMDModel(mmdFile)
-    p3dnode.reparentTo(render)
-    Stage.lightAtNode(p3dnode, Stage.lights)
-    Stage.resetCamera(model=p3dnode)
-    render.setPythonTag('lastModel', p3dnode)
+    p3dnode = Utils.loadMmdModel(mmdFile)
+    if p3dnode:
+      Stage.lightAtNode(p3dnode, Stage.lights)
+      Stage.resetCamera(model=p3dnode)
+      self.hostApp.addExpressionMenu(Utils.getExpressionList(p3dnode))
 
   pass
 
@@ -733,7 +794,7 @@ class MmdViewerApp(ShowBase):
     #
     # Create Drag&Drop response
     #
-    self.dt = MyFileDropTarget(win)
+    self.dt = MyFileDropTarget(win, self)
     win.SetDropTarget(self.dt)
 
     self.frame.toolbar.EnableTool(ID_SAVE, False)
@@ -763,7 +824,9 @@ class MmdViewerApp(ShowBase):
     # Init the expressions dropdown button
     #
     self.menuExpression = wx.Menu()
+    self.menuExpression.Append(ID_EXPRESSION, _('None'), '')
     self.btnExpression = self.frame.toolbar.AddLabelTool(ID_EXPRESSION, _(u"Expression"), wx.Bitmap( u"icons/expression.png", wx.BITMAP_TYPE_ANY ), wx.NullBitmap, wx.ITEM_DROPDOWN, _('Expression List'), wx.EmptyString, None )
+    self.frame.toolbar.SetDropdownMenu(ID_EXPRESSION, self.menuExpression)
 
     #
     # Create 'Recent Files' menu
@@ -871,6 +934,10 @@ class MmdViewerApp(ShowBase):
 
     self.do.accept('mouse1', self.OnMouseLeftClick)
 
+    self.do.accept('l', self.toggleLight)
+
+    self.do.accept('t', self.testFunc)
+
   def setupWorld(self):
     # Task
     taskMgr.add(self.updateWorld, 'updateWorld')
@@ -926,6 +993,36 @@ class MmdViewerApp(ShowBase):
       self.UpdateCount += 1
 
     return task.cont
+
+  def testFunc(self):
+    lastModel = render.getPythonTag('lastModel')
+    if lastModel:
+      morph = lastModel.find('**/Morphs*')
+      morphs = dict()
+      for item in morph.getChildren():
+        morphs[item.getName()] = item.find('**/*ACTOR')
+        # if item.getName() == '笑い':
+        #   actor = item.find('**/*ACTOR')
+        #   if not actor.is_empty():
+        #     actor = Actor(actor)
+        #     actor.reparentTo(render)
+        #     actor.ls()
+        #     actor.play('笑い')
+      print(morphs)
+      actor = Actor(lastModel, morphs)
+      print(actor)
+    pass
+
+  def toggleLight(self):
+    if self.lights:
+      lastModel = render.getPythonTag('lastModel')
+      if lastModel:
+        lightState = Stage.lights.getPythonTag('On')
+        if lightState:
+          Stage.lightAtNode(lastModel, lights=Stage.lights, on=False)
+        else:
+          Stage.lightAtNode(lastModel, lights=Stage.lights, on=True)
+    pass
 
   def toggleModel(self):
     lastModel = render.getPythonTag('lastModel')
@@ -984,35 +1081,11 @@ class MmdViewerApp(ShowBase):
     if modelname == None:
       modelname = 'panda'
 
-    lastModel = render.getPythonTag('lastModel')
-    if lastModel:
-      node = lastModel.find('**/+ModelRoot')
-      if node:
-        loader.unloadModel(node)
-      else:
-        loader.unloadModel(lastModel)
-      lastModel.removeNode()
-      render.setPythonTag('lastModel', None)
-      for rigid in self.world.getRigidBodies():
-        self.world.remove(rigid)
-      for cs in self.world.getConstraints():
-        self.world.remove(cs)
-
-
-    modelname = os.path.relpath(modelname, CWD).replace('\\', '/')
-    ext = os.path.splitext(modelname)[1].lower()
-    if ext in ['.pmx']:
-      p3dnode = loadPmxModel(modelname)
-    elif ext in ['.pmd']:
-      p3dnode = loadPmdModel(modelname)
-    else:
-      p3dnode = loader.loadModel(Filename.fromOsSpecific(modelname))
+    p3dnode = Utils.loadMmdModel(modelname, world=self.world)
 
     if p3dnode:
-      p3dnode.reparentTo(render)
       Stage.lightAtNode(p3dnode, lights=Stage.lights)
       Stage.resetCamera(model=p3dnode)
-      render.setPythonTag('lastModel', p3dnode)
 
       self.addExpressionMenu(Utils.getExpressionList(p3dnode))
 
@@ -1131,7 +1204,6 @@ class MmdViewerApp(ShowBase):
     else:
       snapfile = os.path.join(CWD, 'snap.png')
     snapfile = Filename.fromOsSpecific(snapfile)
-    # print(Filename.makeTrueCase(snapfile))
     Filename.makeCanonical(snapfile)
     axis = render.find('**/threeaxisgrid*')
     axis.hide()
