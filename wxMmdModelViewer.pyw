@@ -99,7 +99,7 @@ from direct.showbase.ShowBase import ShowBase
 from direct.showbase.ShowBase import WindowControls
 from direct.showbase.DirectObject import DirectObject
 # from direct.directtools.DirectGrid import DirectGrid
-# from direct.directtools.DirectGlobals import *
+from direct.directtools.DirectCameraControl import *
 from direct.directtools.DirectSelection import *
 from direct.directtools.DirectGeometry import *
 from direct.directtools.DirectGlobals import *
@@ -219,8 +219,8 @@ class Stage(object):
       lights = NodePath(PandaNode('StageLights'))
 
       alight = AmbientLight('alight')
-      alight.setColor(VBase4(0.33, 0.33, 0.33, 1))
-      # alight.setColor(VBase4(0.33, 0.33, 0.33, 0.67))
+      # alight.setColor(VBase4(0.33, 0.33, 0.33, .2))
+      alight.setColor(VBase4(0.33, 0.33, 0.33, 0.67))
       alnp = render.attachNewNode(alight)
       alnp.reparentTo(lights)
 
@@ -228,9 +228,8 @@ class Stage(object):
       dlnp_top = render.attachNewNode(dlight_top)
       dlnp_top.setX(-5)
       dlnp_top.setZ(45)
-      dlnp_top.setY(0)
-      # dlnp_top.node().setAttenuation( Vec3( 0.001, 0.005, 0.001 ) )
-      dlnp_top.node().setAttenuation( Vec3( 0.005, 0.005, 0.005 ) )
+      dlnp_top.setY(-5)
+      dlnp_top.node().setAttenuation( Vec3( 0., 0., 0.005 ) )
       dlnp_top.setHpr(0, -180, 0)
       if SHOW_LIGHT_POS:
         dlnp_top.node().showFrustum()
@@ -241,8 +240,7 @@ class Stage(object):
       dlnp_back.setX(0)
       dlnp_back.setZ(25)
       dlnp_back.setY(+55)
-      # dlnp_back.node().setAttenuation( Vec3( 0.001, 0.005, 0.001 ) )
-      dlnp_back.node().setAttenuation( Vec3( 0.001, 0.005, 0.001 ) )
+      dlnp_back.node().setAttenuation( Vec3( 0., 0., 0.0003 ) )
       dlnp_back.setHpr(0, -168, 0)
       if SHOW_LIGHT_POS:
         dlnp_back.node().showFrustum()
@@ -256,8 +254,7 @@ class Stage(object):
       dlens = dlnp_front.node().getLens()
       dlens.setFilmSize(41, 21)
       # dlens.setNearFar(50, 75)
-      dlnp_front.node().setAttenuation( Vec3( 0.001, 0.005, 0.001 ) )
-      # dlnp_front.node().setAttenuation( Vec3( 0.005, 0.005, 0.005 ) )
+      dlnp_front.node().setAttenuation( Vec3( 0., 0., 0.00043 ) )
       dlnp_front.setHpr(0, -10, 0)
       if SHOW_LIGHT_POS:
         dlnp_front.node().showFrustum()
@@ -271,8 +268,7 @@ class Stage(object):
       dlens = dlnp_left.node().getLens()
       dlens.setFilmSize(41, 21)
       # dlens.setNearFar(50, 75)
-      dlnp_left.node().setAttenuation( Vec3( 0.001, 0.002, 0.001 ) )
-      # dlnp_left.node().setAttenuation( Vec3( 0.011, 0.011, 0.011 ) )
+      dlnp_left.node().setAttenuation( Vec3( 0, 0, 0.00045 ) )
       dlnp_left.setHpr(-130, -15, 0)
       if SHOW_LIGHT_POS:
         dlnp_left.node().showFrustum()
@@ -286,8 +282,7 @@ class Stage(object):
       dlens = dlnp_right.node().getLens()
       dlens.setFilmSize(41, 21)
       # dlens.setNearFar(50, 75)
-      dlnp_right.node().setAttenuation( Vec3( 0.001, 0.002, 0.001 ) )
-      # dlnp_right.node().setAttenuation( Vec3( 0.011, 0.011, 0.011 ) )
+      dlnp_right.node().setAttenuation( Vec3( 0, 0, 0.00055 ) )
       dlnp_right.setHpr(130, -15, 0)
       if SHOW_LIGHT_POS:
         dlnp_right.node().showFrustum()

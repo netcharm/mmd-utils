@@ -248,6 +248,7 @@ def loadPmxBody(pmx_model, alpha=True):
     material.setSpecular(VBase4(mat.specular_color.r, mat.specular_color.g, mat.specular_color.b, mat.alpha))
     material.setShininess(mat.specular_factor)
     material.setEmission(VBase4(mat.edge_color.r, mat.edge_color.g, mat.edge_color.b, 0.33))
+    # material.setEmission(VBase4(1, 1, 1, 0.67))
     material.setLocal(False)
     material.setTwoside(False)
     if   mat.flag & 0x00000001:
@@ -350,6 +351,7 @@ def loadPmxBody(pmx_model, alpha=True):
     #
     if mat.texture_index >= 0 and textures[mat.texture_index]:
       textures[mat.texture_index].setBorderColor(VBase4(mat.edge_color.r, mat.edge_color.g, mat.edge_color.b, mat.alpha))
+      # if setWrapU then some model may be error, such as not mirror symmetry texture.
       # textures[mat.texture_index].setWrapU(Texture.WM_clamp)
       # # textures[mat.texture_index].setWrapV(Texture.WM_clamp)
       nodePath.setTexture(textures[mat.texture_index], matIndex)
@@ -360,7 +362,6 @@ def loadPmxBody(pmx_model, alpha=True):
     #
     # Set Sphere Texture
     #
-    # if mat.sphere_mode > 0 and textures[mat.sphere_texture_index]:
     if mat.sphere_mode > 0:
       if mat.sphere_mode == 1:
         texMode = TextureStage.MModulateGlow
@@ -371,25 +372,21 @@ def loadPmxBody(pmx_model, alpha=True):
       else:
         texMode = TextureStage.MGloss
 
-      if (mat.sphere_texture_index < 0) or (not textures[mat.sphere_texture_index]):
-        pass
-      else:
-        tex = textures[mat.sphere_texture_index]
-        tex.setWrapU(Texture.WM_clamp)
-        # tex.setWrapV(Texture.WM_clamp)
+    if mat.sphere_texture_index >=0 and textures[mat.sphere_texture_index]:
+      tex = textures[mat.sphere_texture_index]
+      tex.setWrapU(Texture.WM_clamp)
+      # tex.setWrapV(Texture.WM_clamp)
 
-        ts_sphere = TextureStage(mat.name+'_sphere')
-        ts_sphere.setMode(texMode)
+      ts_sphere = TextureStage(mat.name+'_sphere')
+      ts_sphere.setMode(texMode)
 
-        ts_sphere.setSort(matIndex)
-        ts_sphere.setPriority(matIndex)
-        if matIndex != -1:
-          # nodePath.setTexGen(ts_sphere, TexGenAttrib.MEyeCubeMap, matIndex)
-          nodePath.setTexGen(ts_sphere, TexGenAttrib.MEyeSphereMap, matIndex)
-          # nodePath.setTexGen(ts_sphere, TexGenAttrib.MPointSprite, matIndex)
-          nodePath.setTexture(ts_sphere, tex, matIndex)
-          nodePath.setTexScale(ts_sphere, 1, -1, -1)
-          # nodePath.setShaderAuto(matIndex)
+      ts_sphere.setSort(matIndex)
+      ts_sphere.setPriority(matIndex)
+
+      nodePath.setTexGen(ts_sphere, TexGenAttrib.MEyeSphereMap, matIndex)
+      nodePath.setTexture(ts_sphere, tex, matIndex)
+      nodePath.setTexScale(ts_sphere, 1, -1, -1)
+      # nodePath.setShaderAuto(matIndex)
 
     #
     # Set Toon Texture
@@ -404,7 +401,7 @@ def loadPmxBody(pmx_model, alpha=True):
       else:
         texMode = TextureStage.MGloss
 
-      texMode = TextureStage.MModulateGlow #Glow
+      texMode = TextureStage.MModulateGloss #Glow
 
       ts_toon = TextureStage(mat.name+'_toon')
       ts_toon.setColor(VBase4(1,1,1,0))
@@ -419,31 +416,16 @@ def loadPmxBody(pmx_model, alpha=True):
       else:
         tex = textures[mat.toon_texture_index]
       tex.setWrapU(Texture.WM_clamp)
-      # tex.setWrapV(Texture.WM_clamp)
+      #tex.setWrapV(Texture.WM_clamp)
 
-      # nodePath.setTexGen(ts_toon, TexGenAttrib.MPointSprite, matIndex)
-      # nodePath.setTexGen(ts_toon, TexGenAttrib.MEyePosition, matIndex)
       nodePath.setTexGen(ts_toon, TexGenAttrib.MEyeSphereMap, matIndex)
       nodePath.setTexture(ts_toon, tex, matIndex)
       nodePath.setTexScale(ts_toon, 1, -1, -1)
-
 
     # nodePath.setColorOff()
     # nodePath.setShaderAuto(2)
     # nodePath.setShaderAuto(BitMask32.bit(Shader.BitAutoShaderNormal) , 2)
     nodePath.setAntialias(AntialiasAttrib.MAuto)
-
-    if alpha:
-      #
-      # Here is not really to solve the tex alpha-transparency bug, only a other bug :(
-      #
-      if mat.flag & 0x00000001:
-        # nodePath.setTransparency(True, 0)
-        # nodePath.setTransparency(True, 1)
-        # nodePath.setTransparency(TransparencyAttrib.MAlpha, matIndex)
-        # nodePath.setTransparency(TransparencyAttrib.MDual, matIndex)
-        # nodePath.setTransparency(TransparencyAttrib.MBinary, 0)
-        pass
 
     vIndex += mat.vertex_count
     modelBody.addChild(node)
