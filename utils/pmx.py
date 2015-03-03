@@ -249,6 +249,7 @@ def loadPmxBody(pmx_model, alpha=True):
     material.setShininess(mat.specular_factor)
     material.setEmission(VBase4(mat.edge_color.r, mat.edge_color.g, mat.edge_color.b, 0.33))
     material.setLocal(False)
+    material.setTwoside(False)
     if   mat.flag & 0x00000001:
       # 两面描画
       material.setTwoside(True)
@@ -345,7 +346,7 @@ def loadPmxBody(pmx_model, alpha=True):
     nodePath.setPythonTag('pickableObjTag', 1)
 
     #
-    # set polygon face textures
+    # set polygon face main textures
     #
     if mat.texture_index >= 0 and textures[mat.texture_index]:
       textures[mat.texture_index].setBorderColor(VBase4(mat.edge_color.r, mat.edge_color.g, mat.edge_color.b, mat.alpha))
@@ -353,44 +354,15 @@ def loadPmxBody(pmx_model, alpha=True):
       # # textures[mat.texture_index].setWrapV(Texture.WM_clamp)
       nodePath.setTexture(textures[mat.texture_index], matIndex)
       nodePath.setTexScale(TextureStage.getDefault(), 1, -1, -1)
+      textures[mat.texture_index].setAnisotropicDegree(30)
       if textures[mat.texture_index].getFormat() in [Texture.FRgba, Texture.FRgbm, Texture.FRgba4, Texture.FRgba5, Texture.FRgba8, Texture.FRgba12, Texture.FRgba16, Texture.FRgba32]: #, Texture.FSrgbAlpha]:
         nodePath.setTransparency(TransparencyAttrib.MDual, matIndex)
 
+    #
+    # Set Sphere Texture
+    #
     # if mat.sphere_mode > 0 and textures[mat.sphere_texture_index]:
     if mat.sphere_mode > 0:
-      if mat.sphere_mode == 1:
-        texMode = TextureStage.MGloss
-        # texMode = TextureStage.MModulateGlow
-      elif mat.sphere_mode == 2:
-        texMode = TextureStage.MAdd
-      elif mat.sphere_mode == 3:
-        texMode = TextureStage.MReplace
-      else:
-        texMode = TextureStage.MGlow
-        # texMode = TextureStage.MReplace
-
-      log(u'%s: mode[%d], texop[%d], sysop[modulate(%d), modulategloss(%d), add(%d), replace(%d), gloss(%d)]' % (mat.name, mat.sphere_mode, texMode, TextureStage.MModulate, TextureStage.MModulateGlow, TextureStage.MAdd, TextureStage.MReplace, TextureStage.MGloss))
-      # texMode = TextureStage.MAdd
-      ts_sphere = TextureStage(mat.name+'_sphere')
-      ts_sphere.setColor(VBase4(1,1,1,1))
-      ts_sphere.setMode(texMode)
-      ts_sphere.setSort(matIndex)
-      ts_sphere.setPriority(matIndex)
-      if (mat.sphere_texture_index < 0) or (not textures[mat.sphere_texture_index]):
-        tex = Texture('NULL')
-        ts_sphere.setColor(VBase4(0.9, 0.9, 0.9, 0.68))
-      else:
-        tex = textures[mat.sphere_texture_index]
-      tex.setWrapU(Texture.WM_clamp)
-      tex.setWrapV(Texture.WM_clamp)
-
-      # nodePath.setTexGen(ts_sphere, TexGenAttrib.MEyeCubeMap, matIndex)
-      nodePath.setTexGen(ts_sphere, TexGenAttrib.MPointSprite, matIndex)
-      nodePath.setTexture(ts_sphere, tex, matIndex)
-      nodePath.setTexScale(ts_sphere, 1, -1, -1)
-      # nodePath.setShaderAuto(matIndex)
-
-    if mat.toon_texture_index>=0 and textures[mat.toon_texture_index] and mat.toon_sharing_flag >= 0:
       if mat.sphere_mode == 1:
         texMode = TextureStage.MModulateGlow
       elif mat.sphere_mode == 2:
@@ -400,18 +372,64 @@ def loadPmxBody(pmx_model, alpha=True):
       else:
         texMode = TextureStage.MGloss
 
-      texMode = TextureStage.MGloss
+      if (mat.sphere_texture_index < 0) or (not textures[mat.sphere_texture_index]):
+        pass
+      else:
+        tex = textures[mat.sphere_texture_index]
+        tex.generateRamMipmapImages()
+        tex.setMagfilter(Texture.FTNearestMipmapNearest)
+        tex.setMinfilter(Texture.FTNearestMipmapNearest)
+        tex.setAnisotropicDegree(30)
+        tex.setWrapU(Texture.WM_clamp)
+        # tex.setWrapV(Texture.WM_clamp)
+
+        ts_sphere = TextureStage(mat.name+'_sphere')
+        ts_sphere.setMode(texMode)
+
+        ts_sphere.setSort(matIndex)
+        ts_sphere.setPriority(matIndex)
+        if matIndex != -1:
+          # nodePath.setTexGen(ts_sphere, TexGenAttrib.MEyeCubeMap, matIndex)
+          nodePath.setTexGen(ts_sphere, TexGenAttrib.MEyeSphereMap, matIndex)
+          # nodePath.setTexGen(ts_sphere, TexGenAttrib.MPointSprite, matIndex)
+          nodePath.setTexture(ts_sphere, tex, matIndex)
+          nodePath.setTexScale(ts_sphere, 1, -1, -1)
+          # nodePath.setShaderAuto(matIndex)
+
+    #
+    # Set Toon Texture
+    #
+    if mat.toon_texture_index>=0:
+      if mat.sphere_mode == 1:
+        texMode = TextureStage.MModulateGlow
+      elif mat.sphere_mode == 2:
+        texMode = TextureStage.MAdd
+      elif mat.sphere_mode == 3:
+        texMode = TextureStage.MReplace
+      else:
+        texMode = TextureStage.MGloss
+
+      texMode = TextureStage.MModulateGloss #Glow
 
       ts_toon = TextureStage(mat.name+'_toon')
-      ts_toon.setColor(VBase4(1,1,1,1))
+      ts_toon.setColor(VBase4(1,1,1,0))
       ts_toon.setMode(texMode)
       ts_toon.setSort(matIndex)
       ts_toon.setPriority(matIndex)
-      textures[mat.toon_texture_index].setWrapU(Texture.WM_clamp)
-      # nodePath.setTexGen(ts_sphere, TexGenAttrib.MEyeCubeMap, matIndex)
+
+      if mat.toon_sharing_flag > 0:
+        tex = loadTexture(u'toon/toon%02d.bmp' % (mat.toon_texture_index+1))
+      elif (mat.toon_texture_index < 0) or (not textures[mat.toon_texture_index]):
+        tex = loadTexture(u'toon/toon0.bmp')
+      else:
+        tex = textures[mat.toon_texture_index]
+      tex.setWrapU(Texture.WM_clamp)
+      # tex.setWrapV(Texture.WM_clamp)
+
+      # nodePath.setTexGen(ts_toon, TexGenAttrib.MPointSprite, matIndex)
       # nodePath.setTexGen(ts_toon, TexGenAttrib.MEyePosition, matIndex)
-      nodePath.setTexGen(ts_toon, TexGenAttrib.MPointSprite, matIndex)
-      nodePath.setTexture(ts_toon, textures[mat.toon_texture_index], matIndex)
+      nodePath.setTexGen(ts_toon, TexGenAttrib.MEyeSphereMap, matIndex)
+      nodePath.setTexture(ts_toon, tex, matIndex)
       nodePath.setTexScale(ts_toon, 1, -1, -1)
 
 

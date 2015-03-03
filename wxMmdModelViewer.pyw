@@ -336,6 +336,10 @@ class Stage(object):
         except:
           continue
       lights.setPythonTag('On', on)
+    if on:
+      print('--> lights on')
+    else:
+      print('--> lights off')
     pass
 
   @staticmethod
@@ -677,14 +681,15 @@ class MyFileDropTarget(wx.FileDropTarget):
     info = "%d file(s) dropped at (%d,%d):\n" % (len(filenames), x, y)
     print(info)
     for file in filenames:
-      mmdFile = file
+      modelname = file
       break
 
-    p3dnode = Utils.loadMmdModel(mmdFile)
+    p3dnode = Utils.loadMmdModel(modelname)
     if p3dnode:
       Stage.lightAtNode(p3dnode, Stage.lights)
       Stage.resetCamera(model=p3dnode)
       self.hostApp.addExpressionMenu(Utils.getExpressionList(p3dnode))
+      self.hostApp.updateConfig(modelname)
 
   pass
 
@@ -777,10 +782,12 @@ class MmdViewerApp(ShowBase):
     fn = os.path.join(CWD, fn[0]+'.config')
     print('--> Writing config to %s ...' % fn)
 
-    self.appConfig['lastModel'] = self.appConfig['lastModel'].replace('\\', '/')
+    if os.path.altsep and 'lastModel' in self.appConfig:
+      self.appConfig['lastModel'] = self.appConfig['lastModel'].replace(os.path.sep, os.path.altsep)
     self.appConfig['recent'] = self.appConfig['recent'][:10]
     for idx in xrange(len(self.appConfig['recent'])):
-      self.appConfig['recent'][idx] = self.appConfig['recent'][idx].replace('\\', '/')
+      if os.path.altsep:
+        self.appConfig['recent'][idx] = self.appConfig['recent'][idx].replace(os.path.sep, os.path.altsep)
 
     with codecs.open(fn, 'w', encoding='utf8') as f:
       json.dump(self.appConfig, f, indent=2, encoding='utf8', ensure_ascii=False)
@@ -1109,16 +1116,25 @@ class MmdViewerApp(ShowBase):
       #
       # Update config setting
       #
-      self.appConfig['lastModel'] = modelname
-      count = len(self.appConfig['recent'])
-      if modelname in self.appConfig['recent']:
-        self.appConfig['recent'].remove(modelname)
-      self.appConfig['recent'].insert(0, modelname)
+      self.updateConfig(modelname)
 
       # base.wireframeOn()
       # base.textureOff()
     return(p3dnode)
     pass
+
+  def updateConfig(self, modelname):
+    self.appConfig['lastModel'] = modelname
+    count = len(self.appConfig['recent'])
+    try:
+      modelname = os.path.relpath(modelname, CWD)
+      if os.path.altsep:
+        modelname = modelname.replace(os.path.sep, os.path.altsep)
+    except:
+      pass
+    if modelname in self.appConfig['recent']:
+      self.appConfig['recent'].remove(modelname)
+    self.appConfig['recent'].insert(0, modelname)
 
   def addExpressionMenu(self, expressionList):
     if self.menuExpression:

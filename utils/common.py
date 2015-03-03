@@ -52,8 +52,11 @@ CWD = os.path.abspath(sys.path[0])
 
 JIS2GBK = dict({
   u'\uff77\uff9e': u'ギ',
+  u'\u30bf\uff9e': u'ダ',
   u'\u30db\uff9e': u'ボ',
+  u'\u30f3\uff9e': u'ゾ',
   u'\u30af': u'ク',
+  u'\u30bf': u'タ',
   u'\u30f3': u'ン',
   u'\u30fb': u'·',
   u'\ufeff': u'',
@@ -98,11 +101,11 @@ def log(info, force=False):
     for k in JIS2GBK:
       info = info.replace(k, JIS2GBK[k])
     # print(repr(info))
-    print(info)
-    # try:
-    #   print(info)
-    # except:
-    #   print(repr(info))
+    # print(info)
+    try:
+      print(info)
+    except:
+      print(repr(info))
 
 _i16, _i32 = BmpImagePlugin.i16, BmpImagePlugin.i32
 
