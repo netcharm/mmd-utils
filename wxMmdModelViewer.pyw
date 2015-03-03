@@ -608,7 +608,7 @@ class Utils(object):
   def setExpression(model, expression, morphOn=True, strength=1.0, default=True):
     if strength < 0: strength = 0.0;
     if strength > 1: strength = 1.0;
-    strength = 0.95
+    strength = 0.99
     morph = model.find('**/Morphs*')
     if len(expression)==0 or expression.lower()=='default':
       for item in morph.getChildren():

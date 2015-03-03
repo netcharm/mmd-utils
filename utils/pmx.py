@@ -354,7 +354,6 @@ def loadPmxBody(pmx_model, alpha=True):
       # # textures[mat.texture_index].setWrapV(Texture.WM_clamp)
       nodePath.setTexture(textures[mat.texture_index], matIndex)
       nodePath.setTexScale(TextureStage.getDefault(), 1, -1, -1)
-      textures[mat.texture_index].setAnisotropicDegree(30)
       if textures[mat.texture_index].getFormat() in [Texture.FRgba, Texture.FRgbm, Texture.FRgba4, Texture.FRgba5, Texture.FRgba8, Texture.FRgba12, Texture.FRgba16, Texture.FRgba32]: #, Texture.FSrgbAlpha]:
         nodePath.setTransparency(TransparencyAttrib.MDual, matIndex)
 
@@ -376,10 +375,6 @@ def loadPmxBody(pmx_model, alpha=True):
         pass
       else:
         tex = textures[mat.sphere_texture_index]
-        tex.generateRamMipmapImages()
-        tex.setMagfilter(Texture.FTNearestMipmapNearest)
-        tex.setMinfilter(Texture.FTNearestMipmapNearest)
-        tex.setAnisotropicDegree(30)
         tex.setWrapU(Texture.WM_clamp)
         # tex.setWrapV(Texture.WM_clamp)
 
@@ -409,7 +404,7 @@ def loadPmxBody(pmx_model, alpha=True):
       else:
         texMode = TextureStage.MGloss
 
-      texMode = TextureStage.MModulateGloss #Glow
+      texMode = TextureStage.MModulateGlow #Glow
 
       ts_toon = TextureStage(mat.name+'_toon')
       ts_toon.setColor(VBase4(1,1,1,0))

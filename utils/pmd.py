@@ -232,6 +232,9 @@ def pmd2p3d(pmd_model, alpha=True):
   textures = TextureCollection()
   for tex in pmd_model.toon_textures:
     tex_path = os.path.join(modelPath, tex)
+    if tex.lower() in ['toon01.bmp', 'toon02.bmp', 'toon03.bmp', 'toon04.bmp', 'toon05.bmp',
+                       'toon06.bmp', 'toon07.bmp', 'toon08.bmp', 'toon09.bmp', 'toon10.bmp']:
+      tex_path = u'toon/%s' % tex
     log(u'Loading Texture : %s' % tex_path)
     texture = loadTexture(tex_path)
     if texture:
@@ -265,7 +268,7 @@ def pmd2p3d(pmd_model, alpha=True):
   # load vertices(vertex list)
   #
   formatArray = GeomVertexArrayFormat()
-  formatArray.addColumn(InternalName.make("drawFlag"), 1, Geom.NTUint8, Geom.COther)
+  formatArray.addColumn(InternalName.make(str("drawFlag")), 1, Geom.NTUint8, Geom.COther)
 
   format = GeomVertexFormat(GeomVertexFormat.getV3n3cpt2())
   format.addArray(formatArray)
@@ -357,26 +360,28 @@ def pmd2p3d(pmd_model, alpha=True):
         texSphere = loadTexture(os.path.join(modelPath, texFileSphere))
         if texSphere:
           texSphere.setWrapU(Texture.WM_clamp)
-          texSphere.setWrapV(Texture.WM_clamp)
+          # tex.setWrapV(Texture.WM_clamp)
 
           ts_sphere = TextureStage(matName+'_sphere')
           ts_sphere.setMode(texMode)
           ts_sphere.setSort(2)
           ts_sphere.setPriority(0)
-          # nodePath.setTexGen(ts_sphere, TexGenAttrib.MEyeCubeMap, 2)
-          nodePath.setTexGen(ts_sphere, TexGenAttrib.MPointSprite, 2)
+          nodePath.setTexGen(ts_sphere, TexGenAttrib.MEyeSphereMap, 2)
           nodePath.setTexture(ts_sphere, texSphere, 1)
           nodePath.setTexScale(ts_sphere, 1, -1, -1)
 
     if mat.toon_index>=0 and textures[mat.toon_index]:
-      texMode = TextureStage.MGlow
-
-      textures[mat.toon_index].setWrapU(Texture.WM_clamp)
+      texMode = TextureStage.MModulateGlow
+      tex = textures[mat.toon_index]
+      tex.setMagfilter(Texture.FTNearestMipmapNearest)
+      tex.setMinfilter(Texture.FTNearestMipmapNearest)
+      tex.setAnisotropicDegree(30)
+      tex.setWrapU(Texture.WM_clamp)
 
       ts_toon = TextureStage(matName+'_toon')
       ts_toon.setMode(texMode)
-      nodePath.setTexGen(ts_toon, TexGenAttrib.MPointSprite) #MEyePosition)
-      nodePath.setTexture(ts_toon, textures[mat.toon_index], 1)
+      nodePath.setTexGen(ts_toon, TexGenAttrib.MEyeSphereMap)
+      nodePath.setTexture(ts_toon, tex, 1)
       nodePath.setTexScale(ts_toon, 1, -1, -1)
 
 
