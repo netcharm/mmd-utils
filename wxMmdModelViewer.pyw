@@ -756,7 +756,7 @@ class MmdViewerApp(ShowBase):
   def loadConfig(self):
     fn = os.path.splitext(__file__)
     fn = os.path.join(CWD, fn[0]+'.config')
-    print('--> Reading config from %s ...' % fn)
+    print('--> Reading config from %s ...' % os.path.relpath(fn, CWD))
     if os.path.isfile(fn):
       with codecs.open(fn, 'r', encoding='utf8') as f:
         try:
@@ -919,13 +919,6 @@ class MmdViewerApp(ShowBase):
     self.lastPickedObj = None
 
     #
-    # load bone model
-    #
-    # self.boneObj = loader.loadModel('stages/bone_oct')
-    self.colorSelected = LVector4f(1, 0.95, 0, 1)
-    self.colorBone = LVector4f(0.12, 1, 0.44, 1)
-
-    #
     # input accept
     self.do = DirectObject()
     self.do.accept('f1', self.toggleDebug)
@@ -934,11 +927,10 @@ class MmdViewerApp(ShowBase):
     self.do.accept('f4', base.toggleTexture)
     self.do.accept('f5', self.toggleBone)
 
-    self.do.accept('mouse1', self.OnMouseLeftClick)
-
     self.do.accept('l', self.toggleLight)
-
     self.do.accept('t', self.testFunc)
+
+    self.do.accept('control-mouse1', self.OnMouseLeftClick)
 
   def setupWorld(self):
     # Task
@@ -988,12 +980,18 @@ class MmdViewerApp(ShowBase):
     dt = globalClock.getDt()
 
     # self.processInput(dt)
-    self.world.doPhysics(dt)
-    if not self.FirstUpdateWorld or self.UpdateCount<100:
-      # self.world.doPhysics(dt, 1, 3.0/180.0)
-      self.FirstUpdateWorld = True
-      self.UpdateCount += 1
+    self.world.doPhysics(dt, 10, 1.0/180.0)
+    # self.world.doPhysics(dt)
 
+    # if not self.FirstUpdateWorld or self.UpdateCount<100:
+    #   self.world.doPhysics(dt, 10, 1.0/180.0)
+    #   self.FirstUpdateWorld = True
+    #   self.UpdateCount += 1
+
+    self.cTrav.clearRecorder()
+    self.collHandler.clearEntries()
+
+    wx.GetApp().Yield()
     return task.cont
 
   def testFunc(self):
@@ -1051,9 +1049,14 @@ class MmdViewerApp(ShowBase):
   def OnMouseLeftClick(self):
     if not base.mouseWatcherNode.hasMouse():
       return
+
+    # lastModel = render.getPythonTag('lastModel')
+    # if lastModel:
+    #   self.cTrav.traverse(lastModel)
+
     if self.lastPickedObj:
       self.lastPickedObj.clearRenderMode()
-      self.lastPickedObj.setColor(self.colorBone)
+      self.lastPickedObj.setColor(colorBone)
 
     mpos = base.mouseWatcherNode.getMouse()
     self.pickerRay.setFromLens(base.camNode, mpos.getX(), mpos.getY())
@@ -1068,14 +1071,17 @@ class MmdViewerApp(ShowBase):
         pickedObj = entry.getIntoNodePath()
         if pickedObj.isHidden():
           continue
-        if not pickedObj.findNetPythonTag('pickableObjTag').isEmpty():
+        # elif not pickedObj.findNetPythonTag('pickableObjTag').isEmpty():
+        elif pickedObj.getPythonTag('pickableObjTag'):
           pickedObj.setRenderModeWireframe()
-          pickedObj.setColor(self.colorSelected)
+          pickedObj.setColor(colorSelected)
           self.lastPickedObj = pickedObj
           log('Selected: %s' % pickedObj.getName(), force=True)
           break
         pass
       pass
+    self.collHandler.clearEntries()
+    self.cTrav.clearRecorder()
     pass
 
   def loadModel(self, modelname=None):
@@ -1218,9 +1224,11 @@ class MmdViewerApp(ShowBase):
     Filename.makeCanonical(snapfile)
     axis = render.find('**/threeaxisgrid*')
     axis.hide()
+    base.setFrameRateMeter(False)
     base.graphicsEngine.renderFrame()
     source = base.camera.getChild(0).node().getDisplayRegion(0)
     result = base.screenshot(namePrefix=snapfile, defaultFilename=0, source=None, imageComment='')
+    base.setFrameRateMeter(True)
     axis.show()
     base.graphicsEngine.renderFrame()
     pass

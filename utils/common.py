@@ -29,6 +29,7 @@ from __future__ import division
 import os
 import sys
 
+import math
 import cmath
 
 import StringIO
@@ -40,15 +41,24 @@ from PIL import Image, ImageFile, BmpImagePlugin
 
 from pandac.PandaModules import *
 
-# Shader.load(Shader.SLGLSL, './shaders/shader_v.sha', './shaders/shader_f.sha' )
-Shader.load(Shader.SLGLSL, './shaders/phong.vert', './shaders/phong.frag' )
-
 
 DEBUG = True
 DEBUG = False
 
 # Get the location of the 'py' file I'm running:
 CWD = os.path.abspath(sys.path[0])
+
+shader_v = os.path.relpath(os.path.join(os.path.dirname(__file__), u'../shaders/phong.vert'), CWD)
+shader_f = os.path.relpath(os.path.join(os.path.dirname(__file__), u'../shaders/phong.frag'), CWD)
+if os.path.altsep:
+  shader_v = shader_v.replace(os.path.sep, os.path.altsep)
+  shader_f = shader_f.replace(os.path.sep, os.path.altsep)
+Shader.load(Shader.SLGLSL, shader_v, shader_f)
+print(u'Loading shader, Vertex: %s, Fragment: %s' % (shader_v, shader_f))
+
+colorSelected = LVector4f(1, 0.95, 0, 1)
+colorBone = LVector4f(0.12, 1, 0.44, 1)
+
 
 JIS2GBK = dict({
   u'\uff77\uff9e': u'ギ',
@@ -244,22 +254,65 @@ def D2D(rad, euler=Vec3(1,1,1)):
 def vdist(v1, v2):
   return(abs(cmath.sqrt((v2.x-v1.x)**2 + (v2.y-v1.y)**2 + (v2.z-v1.z)**2 ).real))
 
+def getHprFromTo( fromPt, toPt ):
+  """
+  HPR to rotate *from* point to look at *to* point
+  """
+
+  # Translate points so that fromPt is origin
+  pos2 = toPt - fromPt
+
+  # Find which XY-plane quadrant toPt lies in
+  #    +Y
+  #    ^
+  #  2 | 1
+  # ---o---> +X
+  #  3 | 4
+  quad = 0
+
+  if pos2.x < 0:
+    if pos2.y < 0:
+      quad = 3
+    else:
+      quad = 2
+  else:
+    if pos2.y < 0:
+      quad = 4
+
+  # Get heading angle
+  ax   = abs( pos2.x )
+  ay   = abs( pos2.y )
+  head = math.degrees( math.atan2( ay, ax ) )
+
+  # Adjust heading angle based on quadrant
+  if 2 == quad:
+    head = 180 - head
+  elif 3 == quad:
+    head = 180 + head
+  elif 4 == quad:
+    head = 360 - head
+
+  # Compute roll angle
+  v    = Vec3( pos2.x, pos2.y, 0 )
+  vd   = abs( v.length() )
+  az   = abs( pos2.z )
+  roll = math.degrees( math.atan2( az, vd ) )
+
+  # Adjust if toPt lies below XY-plane
+  if pos2.z < 0:
+    roll = - roll
+
+  # Make HPR
+  return Vec3( head, 0, -roll-90 )
+
+def getHprFromToNP( fromNP, toNP ):
+  # Rotate Y-axis of *from* to point to *to*
+  fromNP.lookAt( toNP )
+  # Rotate *from* so X-axis points at *to*
+  fromNP.setHpr( fromNP, Vec3( 90, 0, 0 ) )
+  # Extract HPR of *from*
+  return fromNP.getHpr()
+
 if __name__ == '__main__':
-  pmxFile = u'../models/meiko/meiko.pmx'
-  pmxFile = u'../models/apimiku/Miku long hair.pmx'
-  # pmxFile = u'../models/cupidmiku/Cupid Miku.pmx'
-
-  pmxFile = u'../models/alice/alice.pmd'
-
-  if len(sys.argv) > 1:
-    if len(sys.argv[1]) > 0:
-      pmxFile = sys.argv[1]
-
-  ext = os.path.splitext(pmxFile)[1].lower()
-  if ext in ['.pmd']:
-    testPMD(pmxFile)
-  elif ext in ['.pmx']:
-    testPMX(pmxFile)
-
-  # testPMD(pmdFile)
+  pass
 

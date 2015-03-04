@@ -29,7 +29,6 @@ from __future__ import division
 import os
 import sys
 
-import math
 import StringIO
 
 import codecs
@@ -228,13 +227,11 @@ def loadPmxBody(pmx_model, alpha=True):
     tex_path = os.path.normcase(tex_path)
     log(u'Loading Texture : %s' % os.path.dirname(tex))
     texture = loadTexture(tex_path, model_path=modelPath)
+    textures.append(texture)
     if texture:
-      textures.append(texture)
       log(u'Loaded Texture : %s' % tex, force=True)
-      log(texture)
     else:
-      textures.append(Texture('NULL'))
-      log('Texture Error: %s' % tex_path)
+      log(u'Texture Failed : %s' % tex, force=True)
 
   #
   # load materials
@@ -277,7 +274,7 @@ def loadPmxBody(pmx_model, alpha=True):
   formatArray.addColumn(InternalName.make(str("edge_factor")), 1, Geom.NTFloat32, Geom.COther)
   formatArray.addColumn(InternalName.make(str("drawFlag")), 1, Geom.NTUint8, Geom.COther)
   formatArray.addColumn(InternalName.make(str("index")), 1, Geom.NTUint32, Geom.CIndex)
-  # formatArray.addColumn(InternalName.make("morph"), 1, Geom.NTFloat32, Geom.CMorphDelta)
+  # formatArray.addColumn(InternalName.make(str("morph")), 1, Geom.NTFloat32, Geom.CMorphDelta)
 
   format = GeomVertexFormat(GeomVertexFormat.getV3n3cpt2())
   format.addArray(formatArray)
@@ -392,19 +389,11 @@ def loadPmxBody(pmx_model, alpha=True):
     # Set Toon Texture
     #
     if mat.toon_texture_index>=0:
-      if mat.sphere_mode == 1:
-        texMode = TextureStage.MModulateGlow
-      elif mat.sphere_mode == 2:
-        texMode = TextureStage.MAdd
-      elif mat.sphere_mode == 3:
-        texMode = TextureStage.MReplace
-      else:
-        texMode = TextureStage.MGloss
-
-      texMode = TextureStage.MModulateGloss #Glow
+      # texMode = TextureStage.MModulateGloss
+      texMode = TextureStage.MGlow
 
       ts_toon = TextureStage(mat.name+'_toon')
-      ts_toon.setColor(VBase4(1,1,1,0))
+      ts_toon.setColor(VBase4(1,1,1,.33))
       ts_toon.setMode(texMode)
       ts_toon.setSort(matIndex)
       ts_toon.setPriority(matIndex)
@@ -422,9 +411,6 @@ def loadPmxBody(pmx_model, alpha=True):
       nodePath.setTexture(ts_toon, tex, matIndex)
       nodePath.setTexScale(ts_toon, 1, -1, -1)
 
-    # nodePath.setColorOff()
-    # nodePath.setShaderAuto(2)
-    # nodePath.setShaderAuto(BitMask32.bit(Shader.BitAutoShaderNormal) , 2)
     nodePath.setAntialias(AntialiasAttrib.MAuto)
 
     vIndex += mat.vertex_count
@@ -461,17 +447,16 @@ def loadPmxBone(pmx_model):
   # Load Bone outline for display
   #
   data = EggData()
-  data.read('stages/bone_oct.egg')
-  # data.read('stages/bone.egg')
+  data.read('stages/bone.egg')
+  # data.read('stages/bone_oct.egg')
+  # data.read('stages/bone_cone.egg')
   dnp = NodePath(loadEggData(data))
   dnp.setColor(LVector4f(1,1,0,1))
   boneOutline = dnp.node().getChild(0)
-  # g = boneOutline.modifyGeom(0)
-  # vdata_src = g.modifyVertexData()
-  # vertex_src = GeomVertexWriter(vdata_src, 'color')
-  # while not vertex_src.isAtEnd():
-  #   vertex_src.setData4f(1, 1, 0, 1)
-
+  min_point = LPoint3f()
+  max_point = LPoint3f()
+  dnp.calcTightBounds(min_point, max_point)
+  bone_size = LPoint3f(max_point.x-min_point.x, max_point.y-min_point.y, max_point.z-min_point.z)
 
   #
   # Load Bone data
@@ -565,16 +550,13 @@ def loadPmxBone(pmx_model):
     node.setPythonTag('pickableObjTag', 1)
 
     vd = vdist(v, t)
-    scale = vd / 8.0
-    s_x = scale if scale<.5 else .5
-    s_y = scale if scale<.5 else .5
-    s_z = scale if scale<.5 else .5
+    scale = vd / bone_size.z
+    s_x = scale if scale<.25 else .25
+    s_y = scale if scale<.25 else .25
+    s_z = scale #if scale<.25 else .25
     s = LVector3f(s_x, s_y, s_z)
 
-    r_h = 0
-    r_p = 0
-    r_r = 0
-    r = LVector3f(r_h, r_p, r_r)
+    r = getHprFromTo(v, t)
     trans = TransformState.makePosHprScale(v, r, s)
     bo = boneOutline.makeCopy()
     bo.setName(bone.name)
