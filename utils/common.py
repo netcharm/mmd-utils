@@ -61,13 +61,25 @@ colorBone = LVector4f(0.12, 1, 0.44, 1)
 
 
 JIS2GBK = dict({
-  u'\uff77\uff9e': u'ギ',
   u'\u30bf\uff9e': u'ダ',
   u'\u30db\uff9e': u'ボ',
   u'\u30f3\uff9e': u'ゾ',
+  u'\uff77\uff9e': u'ギ',
+  u'\u3095': u'か',
+  u'\u3096': u'け',
+  u'\u3099': u'゛',
+  u'\u309c': u'゜',
+  u'\u309d': u'ゝ',
+  u'\u309e': u'ゞ',
+  u'\u309f': u'より',
   u'\u30af': u'ク',
+  u'\u30b3': u'コ',
   u'\u30bf': u'タ',
   u'\u30f3': u'ン',
+  u'\u30f7': u'ぁ',
+  u'\u30f8': u'ヰ゛',
+  u'\u30f9': u'ヱ゛',
+  u'\u30fa': u'ヲ゛',
   u'\u30fb': u'·',
   u'\ufeff': u'',
   u'\uff11': u'1',
@@ -102,7 +114,9 @@ JIS2GBK = dict({
   u'\uff97': u'ラ',
   u'\uff98': u'リ',
   u'\uff9d': u'ン',
-  u'\uff9e': u'\uff9e',
+  # u'\uff9e': u'\uff9e',
+  u'\uff9e': u'゛',
+
 })
 
 def log(info, force=False):
@@ -170,6 +184,21 @@ class BmpAlphaImageFile(ImageFile.ImageFile):
 
   pass
 
+def bmp2png(bmpfile):
+  pngfile = bmpfile
+  fn = os.path.splitext(bmpfile)
+  name = fn[0]
+  ext = fn[1]
+  if ext.lower() in ['.spa', '.sph', '.bmp']:
+    try:
+      im = BmpAlphaImageFile(bmpfile)
+    except:
+      im = Image.open(bmpfile)
+    pngfile = u'%s.png' % name
+    im.save(pngfile, 'PNG')
+    log('Converted %s to %s' % (bmpfile, pngfile))
+  return(pngfile)
+
 def loadTexture(tex_file, model_path=None):
   texture = None #Texture('NULL')
   try:
@@ -207,6 +236,7 @@ def loadTexture(tex_file, model_path=None):
       texture.load(pnm)
 
     texture.setFilename(tex_file)
+    texture.setCompression(Texture.CMOn)
 
     texture.generateRamMipmapImages()
     texture.setMagfilter(Texture.FTNearestMipmapNearest)
@@ -254,7 +284,7 @@ def D2D(rad, euler=Vec3(1,1,1)):
 def vdist(v1, v2):
   return(abs(cmath.sqrt((v2.x-v1.x)**2 + (v2.y-v1.y)**2 + (v2.z-v1.z)**2 ).real))
 
-def getHprFromTo( fromPt, toPt ):
+def getHprFromTo(fromPt, toPt):
   """
   HPR to rotate *from* point to look at *to* point
   """
@@ -305,13 +335,14 @@ def getHprFromTo( fromPt, toPt ):
   # Make HPR
   return Vec3( head, 0, -roll-90 )
 
-def getHprFromToNP( fromNP, toNP ):
+def getHprFromToNP(fromNP, toNP):
   # Rotate Y-axis of *from* to point to *to*
   fromNP.lookAt( toNP )
   # Rotate *from* so X-axis points at *to*
   fromNP.setHpr( fromNP, Vec3( 90, 0, 0 ) )
   # Extract HPR of *from*
   return fromNP.getHpr()
+
 
 if __name__ == '__main__':
   pass

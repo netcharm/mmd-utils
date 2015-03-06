@@ -980,7 +980,7 @@ class MmdViewerApp(ShowBase):
     dt = globalClock.getDt()
 
     # self.processInput(dt)
-    self.world.doPhysics(dt, 10, 1.0/180.0)
+    self.world.doPhysics(dt, 5, 1.0/180.0)
     # self.world.doPhysics(dt)
 
     # if not self.FirstUpdateWorld or self.UpdateCount<100:
@@ -997,20 +997,25 @@ class MmdViewerApp(ShowBase):
   def testFunc(self):
     lastModel = render.getPythonTag('lastModel')
     if lastModel:
-      morph = lastModel.find('**/Morphs*')
-      morphs = dict()
-      for item in morph.getChildren():
-        morphs[item.getName()] = item.find('**/*ACTOR')
-        # if item.getName() == '笑い':
-        #   actor = item.find('**/*ACTOR')
-        #   if not actor.is_empty():
-        #     actor = Actor(actor)
-        #     actor.reparentTo(render)
-        #     actor.ls()
-        #     actor.play('笑い')
-      print(morphs)
-      actor = Actor(lastModel, morphs)
-      print(actor)
+      bamfile = lastModel.getPythonTag('path') if lastModel.getPythonTag('path') else 'bam_test.bam'
+      bamfile = bamfile.replace('.pmx', '.bam')
+      print('Writing %s file.....' % bamfile)
+      render.writeBamFile(bamfile)
+      print('Wrote %s file.' % bamfile)
+      # morph = lastModel.find('**/Morphs*')
+      # morphs = dict()
+      # for item in morph.getChildren():
+      #   morphs[item.getName()] = item.find('**/*ACTOR')
+      #   # if item.getName() == '笑い':
+      #   #   actor = item.find('**/*ACTOR')
+      #   #   if not actor.is_empty():
+      #   #     actor = Actor(actor)
+      #   #     actor.reparentTo(render)
+      #   #     actor.ls()
+      #   #     actor.play('笑い')
+      # print(morphs)
+      # actor = Actor(lastModel, morphs)
+      # print(actor)
     pass
 
   def toggleLight(self):

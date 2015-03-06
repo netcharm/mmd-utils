@@ -304,7 +304,7 @@ def loadPmxBody(pmx_model, alpha=True):
   # load polygons face
   #
   vIndex = 0
-  model = ModelNode(pmx_model.name)
+  model = Character(pmx_model.name)
   model.setPythonTag('path', pmx_model.path)
   model.setPythonTag('version', str(pmx_model.version))
   model.setPythonTag('name', pmx_model.name)
@@ -359,31 +359,31 @@ def loadPmxBody(pmx_model, alpha=True):
     #
     # Set Sphere Texture
     #
-    if mat.sphere_mode > 0:
-      if mat.sphere_mode == 1:
-        texMode = TextureStage.MModulateGlow
-      elif mat.sphere_mode == 2:
-        texMode = TextureStage.MAdd
-      elif mat.sphere_mode == 3:
-        texMode = TextureStage.MReplace
-      else:
-        texMode = TextureStage.MGloss
-
     if mat.sphere_texture_index >=0 and textures[mat.sphere_texture_index]:
-      tex = textures[mat.sphere_texture_index]
-      tex.setWrapU(Texture.WM_clamp)
-      # tex.setWrapV(Texture.WM_clamp)
+      if mat.sphere_mode > 0:
+        if mat.sphere_mode == 1:
+          texMode = TextureStage.MModulateGlow
+        elif mat.sphere_mode == 2:
+          texMode = TextureStage.MAdd
+        elif mat.sphere_mode == 3:
+          texMode = TextureStage.MReplace
+        else:
+          texMode = TextureStage.MGloss
 
-      ts_sphere = TextureStage(mat.name+'_sphere')
-      ts_sphere.setMode(texMode)
+        tex = textures[mat.sphere_texture_index]
+        tex.setWrapU(Texture.WM_clamp)
+        # tex.setWrapV(Texture.WM_clamp)
 
-      ts_sphere.setSort(matIndex)
-      ts_sphere.setPriority(matIndex)
+        ts_sphere = TextureStage(mat.name+'_sphere')
+        ts_sphere.setMode(texMode)
 
-      nodePath.setTexGen(ts_sphere, TexGenAttrib.MEyeSphereMap, matIndex)
-      nodePath.setTexture(ts_sphere, tex, matIndex)
-      nodePath.setTexScale(ts_sphere, 1, -1, -1)
-      # nodePath.setShaderAuto(matIndex)
+        ts_sphere.setSort(matIndex)
+        ts_sphere.setPriority(matIndex)
+
+        nodePath.setTexGen(ts_sphere, TexGenAttrib.MEyeSphereMap, matIndex)
+        nodePath.setTexture(ts_sphere, tex, matIndex)
+        nodePath.setTexScale(ts_sphere, 1, -1, -1)
+        # nodePath.setShaderAuto(matIndex)
 
     #
     # Set Toon Texture
