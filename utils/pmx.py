@@ -221,7 +221,8 @@ def loadPmxBody(pmx_model, alpha=True):
   #
   # load textures
   #
-  textures = TextureCollection()
+  # textures = TextureCollection()
+  textures = []
   for tex in pmx_model.textures:
     tex_path = os.path.normpath(os.path.join(os.path.dirname(pmx_model.path), tex))
     tex_path = os.path.normcase(tex_path)
@@ -267,6 +268,7 @@ def loadPmxBody(pmx_model, alpha=True):
     materials.addMaterial(material)
     log(u'Loaded Material : %s' % mat.name, force=True)
 
+  modelName = pmx_model.name
   #
   # load vertices(vertex list)
   #
@@ -280,7 +282,7 @@ def loadPmxBody(pmx_model, alpha=True):
   format.addArray(formatArray)
   format = GeomVertexFormat.registerFormat(format)
 
-  vdata = GeomVertexData(pmx_model.name, format, Geom.UHDynamic)
+  vdata = GeomVertexData(modelName, format, Geom.UHDynamic)
   vdata.setNumRows(len(pmx_model.vertices))
 
   vertex = GeomVertexWriter(vdata, 'vertex')
@@ -304,7 +306,7 @@ def loadPmxBody(pmx_model, alpha=True):
   # load polygons face
   #
   vIndex = 0
-  model = Character(pmx_model.name)
+  model = Character(modelName)
   model.setPythonTag('path', pmx_model.path)
   model.setPythonTag('version', str(pmx_model.version))
   model.setPythonTag('name', pmx_model.name)
@@ -987,17 +989,21 @@ def loadPmxModel(modelfile):
     if mmdModel:
       p3dnode = loadPmxBody(mmdModel)
       morphs = loadPmxMorph(mmdModel)
-      morphs.reparentTo(p3dnode)
+      if morphs:
+        morphs.reparentTo(p3dnode)
       bones = loadPmxBone(mmdModel)
-      bones.reparentTo(p3dnode)
+      if bones:
+        bones.reparentTo(p3dnode)
       slots = loadPmxSlot(mmdModel)
-      slots.reparentTo(p3dnode)
+      if slots:
+        slots.reparentTo(p3dnode)
       # rigids = loadPmxRigid(mmdModel)
       # rigids.reparentTo(p3dnode)
       # joints = loadPmxJoint(mmdModel)
       # joints.reparentTo(p3dnode)
       bullet = loadPmxBullet(mmdModel)
-      bullet.reparentTo(p3dnode)
+      if bullet:
+        bullet.reparentTo(p3dnode)
   elif ext in ['', '.egg', '.pz', '.bam']:
     return(p3dnode)
   return(p3dnode)

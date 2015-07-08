@@ -339,7 +339,7 @@ class Stage(object):
 
   @staticmethod
   def setCamera(x=0, y=0, z=0, h=0, p=0, r=0, oobe=False):
-    base.camLens.setNearFar(0.1, 550.0)
+    base.camLens.setNearFar(0.1, 5500.0)
     base.camLens.setFov(45.0)
     base.camLens.setFocalLength(50)
 

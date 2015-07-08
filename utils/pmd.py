@@ -223,9 +223,12 @@ def pmdInfo(model, screen=False):
   return(lines)
   pass
 
-def pmd2p3d(pmd_model, alpha=True):
-  modelPath = os.path.normpath(os.path.dirname(pmd_model.path))
-  modelPath = os.path.normcase(modelPath)
+def pmd2p3d(pmd_model):
+  return(loadPmdBody(pmd_model))
+
+def loadPmdBody(pmd_model, alpha=True):
+  modelPath = os.path.dirname(pmd_model.path)
+
   #
   # load textures
   #
@@ -264,42 +267,55 @@ def pmd2p3d(pmd_model, alpha=True):
     matIndex += 1
     log(u'Loaded Material : %s' % matName, force=True)
 
+  modelName = pmd_model.name.decode('shift_jis')
   #
   # load vertices(vertex list)
   #
   formatArray = GeomVertexArrayFormat()
+  formatArray.addColumn(InternalName.make(str("edge_factor")), 1, Geom.NTFloat32, Geom.COther)
   formatArray.addColumn(InternalName.make(str("drawFlag")), 1, Geom.NTUint8, Geom.COther)
+  formatArray.addColumn(InternalName.make(str("index")), 1, Geom.NTUint32, Geom.CIndex)
+  # formatArray.addColumn(InternalName.make(str("morph")), 1, Geom.NTFloat32, Geom.CMorphDelta)
 
   format = GeomVertexFormat(GeomVertexFormat.getV3n3cpt2())
   format.addArray(formatArray)
-  GeomVertexFormat.registerFormat(format)
+  format = GeomVertexFormat.registerFormat(format)
 
-  vdata = GeomVertexData(pmd_model.name.decode('shift_jis'), format, Geom.UHStatic)
+  vdata = GeomVertexData(modelName, format, Geom.UHDynamic)
+  vdata.setNumRows(len(pmd_model.vertices))
 
-  vdata.setNumRows(4)
   vertex = GeomVertexWriter(vdata, 'vertex')
   normal = GeomVertexWriter(vdata, 'normal')
   color = GeomVertexWriter(vdata, 'color')
   texcoord = GeomVertexWriter(vdata, 'texcoord')
+  edge = GeomVertexWriter(vdata, 'edge_factor')
+  index = GeomVertexWriter(vdata, 'index')
 
+  idx = 0
   for v in pmd_model.vertices:
-    vertex.addData3f(v.pos.x, v.pos.z, v.pos.y)
-    normal.addData3f(v.normal.x, v.normal.z, v.normal.y)
+    vertex.addData3f(V2V(v.pos))
+    normal.addData3f(V2V(v.normal))
     color.addData4f(.95, .95, .95, 1)
     texcoord.addData2f(v.uv.x, v.uv.y)
+    edge.addData1f(1.0)
+    index.addData1i(idx)
+    idx += 1
+
 
   #
   # load polygons face
   #
   vIndex = 0
-  modelName = pmd_model.name.decode('shift_jis')
-  model = ModelNode(modelName)
+  model = Character(modelName)
   model.setPythonTag('path', pmd_model.path)
   model.setPythonTag('version', str(pmd_model.version))
   model.setPythonTag('name', modelName)
   model.setPythonTag('english_name', pmd_model.english_name)
   model.setPythonTag('comment', pmd_model.comment)
   model.setPythonTag('english_comment', pmd_model.english_comment)
+
+  modelBody = ModelRoot('Body')
+  model.addChild(modelBody)
 
   matIndex = 0
   for mat in pmd_model.materials:
@@ -401,11 +417,13 @@ def pmd2p3d(pmd_model, alpha=True):
       pass
 
     vIndex += mat.vertex_count
-    model.addChild(node)
+    modelBody.addChild(node)
     matIndex += 1
     log(u'Loaded Node : %s' % matName, force=True)
 
-  return(NodePath(model))
+  modelPath = NodePath(model)
+  # modelPath.setShaderAuto()
+  return(modelPath)
   pass
 
 def displayPmdModelInfo(model):
@@ -433,14 +451,19 @@ def testPMD(pmd):
 
 def loadPmdModel(modelfile):
   p3dnode = None
-  mmdFile = os.path.relpath(modelfile)
+  try:
+    mmdFile = os.path.relpath(modelfile)
+  except:
+    mmdFile = modelfile
+    pass
+
   if os.path.altsep:
     mmdFile = mmdFile.replace('\\', os.path.altsep)
   ext = os.path.splitext(mmdFile)[1].lower()
   if ext in ['.pmd']:
     mmdModel = pmdLoad(mmdFile)
     if mmdModel:
-      p3dnode = pmd2p3d(mmdModel)
+      p3dnode = loadPmdBody(mmdModel)
   elif ext in ['.pmx']:
     mmdModel = pmxLoad(mmdFile)
     if mmdModel:

@@ -237,14 +237,23 @@ def pmx2egg(pmx):
   # load bone data
   #
   idx = 0
-  lines.append('<Joint> %s {' % 'aa')
+  depth = 0
   boneRelative = dict()
-  for bone in pmx.bones:
-    if bone.parent_index in boneRelative:
-      boneRelative[bone.parent_index].append()
+   if parent_index in boneRelative:
+      boneRelative[parent_index].append(bone)
     else:
-      boneRelative[bone.parent_index] = dict()
-    pass
+      boneRelative[parent_index] = [bone]
+
+
+    # if bone.parent_index == -1:
+    #   depth = 1
+    # lines.append('  '*depth+'<Joint> %s {' % bone.name)
+    # if bone.parent_index in boneRelative:
+    #   boneRelative[bone.parent_index].append()
+    # else:
+    #   boneRelative[bone.parent_index] = dict()
+    # lines.append('  '*depth+'}')
+    # pass
 
   lines.append('}')
   lines.append('')
