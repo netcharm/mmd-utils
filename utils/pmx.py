@@ -247,6 +247,9 @@ def loadPmxBody(pmx_model, alpha=True):
     material.setShininess(mat.specular_factor)
     material.setEmission(VBase4(mat.edge_color.r, mat.edge_color.g, mat.edge_color.b, 0.33))
     # material.setEmission(VBase4(1, 1, 1, 0.67))
+    # material.setEmission(VBase4(mat.edge_color.r, mat.edge_color.g, mat.edge_color.b, mat.alpha))
+
+
     material.setLocal(False)
     material.setTwoside(False)
     if   mat.flag & 0x00000001:
@@ -357,6 +360,8 @@ def loadPmxBody(pmx_model, alpha=True):
       nodePath.setTexScale(TextureStage.getDefault(), 1, -1, -1)
       if textures[mat.texture_index].getFormat() in [Texture.FRgba, Texture.FRgbm, Texture.FRgba4, Texture.FRgba5, Texture.FRgba8, Texture.FRgba12, Texture.FRgba16, Texture.FRgba32]: #, Texture.FSrgbAlpha]:
         nodePath.setTransparency(TransparencyAttrib.MDual, matIndex)
+        # nodePath.setAttrib(ColorBlendAttrib.make(ColorBlendAttrib.MAdd,
+        #                    ColorBlendAttrib.OIncomingAlpha, ColorBlendAttrib.OOne))
 
     #
     # Set Sphere Texture
@@ -631,12 +636,13 @@ def loadPmxMorph(pmx_model):
         morphData.append((o.morph_index, o.value))
       pass
     elif morph.morph_type == 1: # vertex morph
+      morphID = encode(morph.name)
       morphEggText = []
-      morphEggText.append('<CoordinateSystem> { Z-up }')
-      morphEggText.append('<Group> %s_ACTOR {' % morph.name)
-      morphEggText.append('  <DART> { 1 }')
-      morphEggText.append('  <Group> %s {' % morph.name)
-      morphEggText.append('    <VertexPool> %s {' % morph.name)
+      morphEggText.append(u'<CoordinateSystem> { Z-up }')
+      morphEggText.append(u'<Group> %s_ACTOR {' % morphID)
+      morphEggText.append(u'  <DART> { 1 }')
+      morphEggText.append(u'  <Group> %s {' % morphID)
+      morphEggText.append(u'    <VertexPool> %s {' % morphID)
 
       prim = GeomPoints(Geom.UHDynamic)
       vdata.setNumRows(len(morph.offsets))
@@ -653,14 +659,14 @@ def loadPmxMorph(pmx_model):
         column_morph_slider.addData1f(1.0)
         prim.addVertex(idx)
 
-        morphEggText.append('      <Vertex> %d {' % idx)
-        morphEggText.append('        %.11f %.11f %.11f' % (v.x, v.y, v.z))
-        morphEggText.append('        <Dxyz> Wedge { %.6f %.6f %.6f }' % (o.x, o.y, o.z))
-        morphEggText.append('      }')
+        morphEggText.append(u'      <Vertex> %d {' % idx)
+        morphEggText.append(u'        %.11f %.11f %.11f' % (v.x, v.y, v.z))
+        morphEggText.append(u'        <Dxyz> Wedge { %.6f %.6f %.6f }' % (o.x, o.y, o.z))
+        morphEggText.append(u'      }')
 
-      morphEggText.append('    }')
-      morphEggText.append('  }')
-      morphEggText.append('}')
+      morphEggText.append(u'    }')
+      morphEggText.append(u'  }')
+      morphEggText.append(u'}')
 
       geom = Geom(vdata)
       geom.addPrimitive(prim)

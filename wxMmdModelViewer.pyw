@@ -212,6 +212,7 @@ class Stage(object):
   @staticmethod
   def setStudioLight(render):
     lightsStage = u'./stages/default_lights.bam'
+    lightsStage = ''
     try:
       lights = loader.loadModel(lightsStage)
       lights = lights.getChild(0)
@@ -229,7 +230,8 @@ class Stage(object):
       dlnp_top.setX(-5)
       dlnp_top.setZ(45)
       dlnp_top.setY(-5)
-      dlnp_top.node().setAttenuation( Vec3( 0., 0., 0.005 ) )
+      # dlnp_top.node().setAttenuation( Vec3( 0., 0., 0.005 ) )
+      dlnp_top.node().setAttenuation( Vec3( 0., 0., 0.008 ) )
       dlnp_top.setHpr(0, -180, 0)
       if SHOW_LIGHT_POS:
         dlnp_top.node().showFrustum()
@@ -240,7 +242,8 @@ class Stage(object):
       dlnp_back.setX(0)
       dlnp_back.setZ(25)
       dlnp_back.setY(+55)
-      dlnp_back.node().setAttenuation( Vec3( 0., 0., 0.0003 ) )
+      # dlnp_back.node().setAttenuation( Vec3( 0., 0., 0.0003 ) )
+      dlnp_back.node().setAttenuation( Vec3( 0., 0., 0.0008 ) )
       dlnp_back.setHpr(0, -168, 0)
       if SHOW_LIGHT_POS:
         dlnp_back.node().showFrustum()
@@ -254,7 +257,8 @@ class Stage(object):
       dlens = dlnp_front.node().getLens()
       dlens.setFilmSize(41, 21)
       # dlens.setNearFar(50, 75)
-      dlnp_front.node().setAttenuation( Vec3( 0., 0., 0.00043 ) )
+      # dlnp_front.node().setAttenuation( Vec3( 0., 0., 0.00043 ) )
+      dlnp_front.node().setAttenuation( Vec3( 0., 0., 0.0007 ) )
       dlnp_front.setHpr(0, -10, 0)
       if SHOW_LIGHT_POS:
         dlnp_front.node().showFrustum()
@@ -269,6 +273,7 @@ class Stage(object):
       dlens.setFilmSize(41, 21)
       # dlens.setNearFar(50, 75)
       dlnp_left.node().setAttenuation( Vec3( 0, 0, 0.00045 ) )
+      # dlnp_left.node().setAttenuation( Vec3( 0, 0, 0.0009 ) )
       dlnp_left.setHpr(-130, -15, 0)
       if SHOW_LIGHT_POS:
         dlnp_left.node().showFrustum()
@@ -283,6 +288,7 @@ class Stage(object):
       dlens.setFilmSize(41, 21)
       # dlens.setNearFar(50, 75)
       dlnp_right.node().setAttenuation( Vec3( 0, 0, 0.00055 ) )
+      # dlnp_right.node().setAttenuation( Vec3( 0, 0, 0.0011 ) )
       dlnp_right.setHpr(130, -15, 0)
       if SHOW_LIGHT_POS:
         dlnp_right.node().showFrustum()

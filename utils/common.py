@@ -32,6 +32,8 @@ import sys
 import math
 import cmath
 
+import urllib
+
 import StringIO
 
 import codecs
@@ -118,6 +120,10 @@ JIS2GBK = dict({
   u'\uff9e': u'゛',
 
 })
+
+def encode(url):
+  url_e = url.replace(r' ', '%20')
+  return(url_e)
 
 def log(info, force=False):
   if DEBUG or force:
@@ -215,7 +221,10 @@ def loadTexture(tex_file, model_path=None):
       tex_file = tex_file.replace(os.path.sep, os.path.altsep)
     if tex_ext.lower() in ['.spa', '.sph', '.bmp']:
       try:
-        im = BmpAlphaImageFile(tex_file)
+        try:
+          im = BmpAlphaImageFile(tex_file)
+        except:
+          im = Image.open(tex_file)
         buf = StringIO.StringIO()
         im.save(buf, 'PNG')
 

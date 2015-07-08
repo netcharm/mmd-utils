@@ -257,9 +257,9 @@ def loadPmdBody(pmd_model, alpha=True):
     matName = u'mat_%04d' % matIndex
     log(u'Loading Material : %s' % matName)
     material = Material(matName)
-    material.setAmbient(VBase4(mat.ambient_color.r, mat.ambient_color.g, mat.ambient_color.b, mat.alpha)) #Make this material blue
+    material.setAmbient(VBase4(mat.ambient_color.r, mat.ambient_color.g, mat.ambient_color.b, mat.alpha)) #1))
     material.setDiffuse(VBase4(mat.diffuse_color.r, mat.diffuse_color.g, mat.diffuse_color.b, mat.alpha))
-    material.setSpecular(VBase4(mat.specular_color.r, mat.specular_color.g, mat.specular_color.b, mat.alpha))
+    material.setSpecular(VBase4(mat.specular_color.r, mat.specular_color.g, mat.specular_color.b, mat.alpha)) #1))
     material.setShininess(mat.specular_factor)
     material.setLocal(False)
     material.setTwoside(False)
@@ -336,6 +336,8 @@ def loadPmdBody(pmd_model, alpha=True):
     # set polygon face material
     #
     nodePath.setMaterial(materials.findMaterial(matName), 1) #Apply the material to this nodePath
+    nodePath.setPythonTag('material', materials.findMaterial(matName))
+    nodePath.setPythonTag('pickableObjTag', 1)
 
     #
     # set polygon face textures
@@ -365,23 +367,31 @@ def loadPmdBody(pmd_model, alpha=True):
         nodePath.setTexture(texture, matIndex)
         nodePath.setTexScale(TextureStage.getDefault(), 1, -1, -1)
 
+        if texture.getFormat() in [Texture.FRgba, Texture.FRgbm, Texture.FRgba4, Texture.FRgba5, Texture.FRgba8, Texture.FRgba12, Texture.FRgba16, Texture.FRgba32]: #, Texture.FSrgbAlpha]:
+          nodePath.setTransparency(TransparencyAttrib.MDual, matIndex)
+          # nodePath.setTransparency(TransparencyAttrib.MAlpha, matIndex)
+          # nodePath.setAttrib(ColorBlendAttrib.make(ColorBlendAttrib.MAdd,
+          #                    ColorBlendAttrib.OIncomingAlpha, ColorBlendAttrib.OOne))
+
       if texFileSphere:
         texMode = TextureStage.MModulateGloss
         ext = os.path.splitext(texFileSphere)[1]
         if ext.lower() in ['.spa']:
           texMode = TextureStage.MAdd
         elif ext.lower() in ['.sph']:
+          # texMode = TextureStage.MGlow
           texMode = TextureStage.MModulateGlow
 
         texSphere = loadTexture(os.path.join(modelPath, texFileSphere))
         if texSphere:
           texSphere.setWrapU(Texture.WM_clamp)
-          # tex.setWrapV(Texture.WM_clamp)
+          # texSphere.setWrapV(Texture.WM_clamp)
 
           ts_sphere = TextureStage(matName+'_sphere')
           ts_sphere.setMode(texMode)
-          ts_sphere.setSort(2)
-          ts_sphere.setPriority(0)
+          ts_sphere.setSort(matIndex)
+          ts_sphere.setPriority(matIndex)
+
           nodePath.setTexGen(ts_sphere, TexGenAttrib.MEyeSphereMap, 2)
           nodePath.setTexture(ts_sphere, texSphere, 1)
           nodePath.setTexScale(ts_sphere, 1, -1, -1)
@@ -395,7 +405,11 @@ def loadPmdBody(pmd_model, alpha=True):
       tex.setWrapU(Texture.WM_clamp)
 
       ts_toon = TextureStage(matName+'_toon')
+      ts_toon.setColor(VBase4(1,1,1,.67))
       ts_toon.setMode(texMode)
+      ts_toon.setSort(matIndex)
+      ts_toon.setPriority(matIndex)
+
       nodePath.setTexGen(ts_toon, TexGenAttrib.MEyeSphereMap)
       nodePath.setTexture(ts_toon, tex, 1)
       nodePath.setTexScale(ts_toon, 1, -1, -1)
@@ -413,7 +427,7 @@ def loadPmdBody(pmd_model, alpha=True):
       # nodePath.setTransparency(True, 0)
       # nodePath.setTransparency(True, 1)
       # nodePath.setTransparency(TransparencyAttrib.MAlpha, 1)
-      nodePath.setTransparency(TransparencyAttrib.MDual, 1)
+      # nodePath.setTransparency(TransparencyAttrib.MDual, 1)
       pass
 
     vIndex += mat.vertex_count
@@ -425,6 +439,338 @@ def loadPmdBody(pmd_model, alpha=True):
   # modelPath.setShaderAuto()
   return(modelPath)
   pass
+
+def loadPmdBone(pmd_model):
+  def GetParentNode(root, parent_index):
+    node = None
+    if parent_index == -1:
+      node = root
+      pass
+    else:
+      for child in root.getChildren():
+        node = GetParentNode(child, parent_index)
+        if node:
+          break
+        else:
+          boneIndex = child.getPythonTag('boneIndex')
+          if boneIndex == parent_index:
+            node = child
+            break
+        pass
+    return(node)
+    pass
+
+  #
+  # Load Bone outline for display
+  #
+  data = EggData()
+  data.read('stages/bone.egg')
+  # data.read('stages/bone_oct.egg')
+  # data.read('stages/bone_cone.egg')
+  dnp = NodePath(loadEggData(data))
+  dnp.setColor(LVector4f(1,1,0,1))
+  boneOutline = dnp.node().getChild(0)
+  min_point = LPoint3f()
+  max_point = LPoint3f()
+  dnp.calcTightBounds(min_point, max_point)
+  bone_size = LPoint3f(max_point.x-min_point.x, max_point.y-min_point.y, max_point.z-min_point.z)
+
+  #
+  # Load Bone data
+  #
+  formatArray = GeomVertexArrayFormat()
+  formatArray.addColumn(InternalName.make(str("vindex")), 1, Geom.NTUint32, Geom.CIndex)
+  formatArray.addColumn(InternalName.make(str("tindex")), 1, Geom.NTFloat32, Geom.COther)
+  formatArray.addColumn(InternalName.make(str("pindex")), 1, Geom.NTFloat32, Geom.COther)
+
+  format = GeomVertexFormat(GeomVertexFormat.getV3c4())
+  format.addArray(formatArray)
+  format = GeomVertexFormat.registerFormat(format)
+
+  boneNode = PandaNode('Bones')
+  boneIndex = 0
+  for bone in pmd_model.bones:
+    boneName = bone.name.decode('shift_jis')
+    log(u'Loading Bone : %s' % boneName, force=True)
+
+    #
+    # load vertices(vertex list)
+    #
+    vdata = GeomVertexData(boneName+'_vdata', format, Geom.UHDynamic)
+    vdata.setNumRows(3)
+
+    vertex = GeomVertexWriter(vdata, 'vertex')
+    color = GeomVertexWriter(vdata, 'color')
+    vindex = GeomVertexWriter(vdata, 'vindex')
+    tindex = GeomVertexWriter(vdata, 'tindex')
+    pindex = GeomVertexWriter(vdata, 'pindex')
+
+    node = GeomNode(boneName)
+
+    tu = LVector3f(bone.tail.x, bone.tail.y, bone.tail.z)
+    log(tu.cross(LVector3f(bone.pos.x, bone.pos.y, bone.pos.z)))
+
+    if bone.tail_index >= 0:
+      t = V2V(pmd_model.bones[bone.tail_index].pos)
+    else:
+      t = V2V(bone.pos+bone.tail)
+    vertex.addData3f(t)
+    color.addData4f(.95, .95, 0, 1) # Yellow
+    vindex.addData1i(boneIndex)
+    tindex.addData1i(bone.tail_index)
+    pindex.addData1i(bone.parent_index)
+
+    v = V2V(bone.pos)
+    vertex.addData3f(v)
+    color.addData4f(0, .95, 0.95, 1) # Cyan
+    vindex.addData1i(boneIndex)
+    tindex.addData1i(bone.tail_index)
+    pindex.addData1i(bone.parent_index)
+
+    geom = Geom(vdata)
+
+    prim = GeomLines(Geom.UHDynamic)
+    prim.addVertex(0)
+    prim.addVertex(1)
+    geom.addPrimitive(prim)
+
+    node.addGeom(geom)
+
+    node.setPythonTag('english_name', bone.english_name)
+    node.setPythonTag('position', V2V(bone.pos))
+    node.setPythonTag('parent_index', bone.parent_index)
+    node.setPythonTag('tail_index', bone.tail_index)
+    node.setPythonTag('tail_position', V2V(bone.tail))
+    # if bone.ik:
+    #   iklink = map(lambda ik: {
+    #     'bone_index':ik.bone_index,
+    #     'limit_angle':ik.limit_angle,
+    #     'limit_max':LVector3f(V2V(ik.limit_max)),
+    #     'limit_min':LVector3f(V2V(ik.limit_min))
+    #     }, bone.ik.link)
+
+    #   node.setPythonTag('ik.limit_radian', bone.ik.limit_radian)
+    #   node.setPythonTag('ik.loop', bone.ik.loop)
+    #   node.setPythonTag('ik.target_index', bone.ik.target_index)
+    #   node.setPythonTag('ik.link', bone.ik.link)
+    # else:
+    #   node.setPythonTag('ik', None)
+
+    node.setPythonTag('index', bone.index)
+    node.setPythonTag('boneIndex', boneIndex)
+    node.setPythonTag('pickableObjTag', 1)
+
+    vd = vdist(v, t)
+    scale = vd / bone_size.z
+    s_x = scale if scale<.25 else .25
+    s_y = scale if scale<.25 else .25
+    s_z = scale #if scale<.25 else .25
+    s = LVector3f(s_x, s_y, s_z)
+
+    r = getHprFromTo(v, t)
+    trans = TransformState.makePosHprScale(v, r, s)
+    bo = boneOutline.makeCopy()
+    bo.setName(boneName)
+    bo.setTransform(trans)
+    bo.setPythonTag('pickableObjTag', 1)
+
+    parentNode = GetParentNode(boneNode, bone.parent_index)
+    if isinstance(parentNode, PandaNode):
+      # print('PNode: ', parentNode)
+      parentNode.addChild(node)
+      parentNode.addChild(bo)
+    elif isinstance(parentNode, GeomNode):
+      # print('GNode: ', parentNode)
+      parentNode.addGeom(node)
+      # parentNode.addGeom(bo)
+    boneIndex += 1
+
+  np = NodePath(boneNode)
+  np.setRenderModeWireframe()
+  # np.setPythonTag('pickableObjTag', 1)
+  # ofs = OFileStream('bonelist.txt', 3)
+  # np.ls(ofs, 2)
+  np.hide()
+  return(np)
+
+def loadPmdMorph(pmd_model):
+  #
+  # Load Morph data
+  #
+  formatArray = GeomVertexArrayFormat()
+  formatArray.addColumn(InternalName.make(str("vindex")), 1, Geom.NTUint32, Geom.CIndex)
+  # formatArray.addColumn(InternalName.make(str("v.morph")), 3, Geom.NTFloat32, Geom.CMorphDelta)
+  formatArray.addColumn(InternalName.make(str("vmorph")), 3, Geom.NTFloat32, Geom.COther)
+  formatArray.addColumn(InternalName.make(str("transform_index")), 1, Geom.NTUint32, Geom.CIndex)
+  formatArray.addColumn(InternalName.make(str("transform_weight")), 3, Geom.NTUint32, Geom.COther)
+  formatArray.addColumn(InternalName.make(str("emotion.morph.strange")), 1, Geom.NTFloat32, Geom.COther)
+
+  format = GeomVertexFormat(GeomVertexFormat.getV3())
+  format.addArray(formatArray)
+  format = GeomVertexFormat.registerFormat(format)
+
+  morphNode = PandaNode('Morphs')
+  morphIndex = 0
+  for morph in pmd_model.morphs:
+    morphName = morph.name.decode('shift_jis')
+    log(u'Loading Morph : %s' % morphName, force=True)
+
+    #
+    # load vertices(vertex list)
+    #
+    vdata = GeomVertexData(morphName+'_vdata', format, Geom.UHDynamic)
+    # vdata.setNumRows(6)
+
+    vertex = GeomVertexWriter(vdata, 'vertex')
+    vindex = GeomVertexWriter(vdata, 'vindex')
+    # vmorph = GeomVertexWriter(vdata, 'v.morph')
+    vmorph = GeomVertexWriter(vdata, 'vmorph')
+    transform_index = GeomVertexWriter(vdata, 'transform_index')
+    transform_weight = GeomVertexWriter(vdata, 'transform_weight')
+    column_morph_slider = GeomVertexWriter(vdata, 'emotion.morph.strange')
+
+    node = GeomNode(morphName)
+
+    morphData = None
+    morphID = encode(morphName)
+    morphEggText = []
+    morphEggText.append('<CoordinateSystem> { Z-up }')
+    morphEggText.append('<Group> %s_ACTOR {' % morphID)
+    morphEggText.append('  <DART> { 1 }')
+    morphEggText.append('  <Group> %s {' % morphID)
+    morphEggText.append('    <VertexPool> %s {' % morphID)
+
+    prim = GeomPoints(Geom.UHDynamic)
+    vdata.setNumRows(len(morph.pos_list))
+    for idx in xrange(len(morph.pos_list)):
+      v = V2V(pmd_model.vertices[morph.indices[idx]].pos)
+      o = V2V(morph.pos_list[idx])
+      i = morph.indices[idx]
+      vertex.addData3f(v)
+      vindex.addData1i(i)
+      vmorph.addData3f(o)
+      transform_index.addData1i(i)
+      transform_weight.addData3f(o)
+      column_morph_slider.addData1f(1.0)
+      prim.addVertex(idx)
+
+      morphEggText.append('      <Vertex> %d {' % idx)
+      morphEggText.append('        %.11f %.11f %.11f' % (v.x, v.y, v.z))
+      morphEggText.append('        <Dxyz> Wedge { %.6f %.6f %.6f }' % (o.x, o.y, o.z))
+      morphEggText.append('      }')
+
+    morphEggText.append('    }')
+    morphEggText.append('  }')
+    morphEggText.append('}')
+
+    geom = Geom(vdata)
+    geom.addPrimitive(prim)
+    node.addGeom(geom)
+
+    egg = EggData()
+    egg.read(StringStream('\n'.join(morphEggText)))
+    action = loadEggData(egg).getChild(0)
+    node.addChild(action)
+
+    node.setPythonTag('english_name', morph.english_name)
+    node.setPythonTag('morph_type', 1)
+    node.setPythonTag('morph_data', morphData)
+    node.setPythonTag('morph_index', morphIndex)
+    node.setPythonTag('pickableObjTag', 1)
+    morphNode.addChild(node)
+
+    morphIndex += 1
+
+  np = NodePath(morphNode)
+  np.hide()
+  return(np)
+  pass
+
+def loadPmdSlot(pmd_model):
+  #
+  # Load Display Slot data
+  #
+  slotNode = PandaNode('Slots')
+  slotIndex = 0
+  for slot in pmd_model.display_slots:
+    slotName = slot.name.decode('shift_jis')
+    log(u'Loading Slot : %s' % slotName, force=True)
+    node = PandaNode(slotName)
+    node.setPythonTag('english_name', slot.english_name)
+    node.setPythonTag('references', slot.references)
+    node.setPythonTag('special_flag', slot.special_flag)
+    node.setPythonTag('slotIndex', slotIndex)
+    node.setPythonTag('pickableObjTag', 1)
+
+    slotNode.addChild(node)
+    slotIndex += 1
+  np = NodePath(slotNode)
+  np.hide()
+  return(np)
+
+def loadPmdRigid(pmd_model):
+  #
+  # Load Rigid data
+  #
+  rigidNode = PandaNode('Rigid')
+  rigidIndex = 0
+  for rigid in pmd_model.rigidbodies:
+    rigidName = rigid.name.decode('shift_jis')
+    log(u'Loading RigidBodies : %s' % rigidName, force=True)
+    node = PandaNode(rigidName)
+    node.setPythonTag('english_name', rigid.english_name)
+    node.setPythonTag('bone_index', rigid.bone_index)
+    node.setPythonTag('collision_group', rigid.collision_group)
+    node.setPythonTag('no_collision_group', rigid.no_collision_group)
+    node.setPythonTag('shape_type', rigid.shape_type)
+    node.setPythonTag('shape_size', V2V(rigid.shape_size))
+    node.setPythonTag('shape_position', V2V(rigid.shape_position))
+    node.setPythonTag('shape_rotation', R2DV(rigid.shape_rotation))
+    node.setPythonTag('param.mass', rigid.param.mass)
+    node.setPythonTag('param.linear_damping', rigid.param.linear_damping)
+    node.setPythonTag('param.angular_damping', rigid.param.angular_damping)
+    node.setPythonTag('param.restitution', rigid.param.restitution)
+    node.setPythonTag('param.friction', rigid.param.friction)
+    node.setPythonTag('mode', rigid.mode)
+    node.setPythonTag('rigidIndex', rigidIndex)
+    node.setPythonTag('pickableObjTag', 1)
+
+    rigidNode.addChild(node)
+    rigidIndex += 1
+  np = NodePath(rigidNode)
+  np.hide()
+  return(np)
+
+def loadPmdJoint(pmd_model):
+  #
+  # Load Joints data
+  #
+  jointNode = PandaNode('Joints')
+  jointIndex = 0
+  for joint in pmd_model.joints:
+    jointName = joint.name.decode('shift_jis')
+    log(u'Loading RigidBodies : %s' % jointName, force=True)
+    node = PandaNode(jointName)
+    node.setPythonTag('english_name', joint.english_name)
+    node.setPythonTag('joint_type', joint.joint_type)
+    node.setPythonTag('rigidbody_index_a', joint.rigidbody_index_a)
+    node.setPythonTag('rigidbody_index_b', joint.rigidbody_index_b)
+    node.setPythonTag('position', V2V(joint.position))
+    node.setPythonTag('rotation', R2DV(joint.rotation))
+    node.setPythonTag('translation_limit_min', V2V(joint.translation_limit_min))
+    node.setPythonTag('translation_limit_max', V2V(joint.translation_limit_max))
+    node.setPythonTag('rotation_limit_min', R2DV(joint.rotation_limit_min))
+    node.setPythonTag('rotation_limit_max', R2DV(joint.rotation_limit_max))
+    node.setPythonTag('spring_constant_translation', V2V(joint.spring_constant_translation))
+    node.setPythonTag('spring_constant_rotation', R2DV(joint.spring_constant_rotation))
+    node.setPythonTag('jointIndex', jointIndex)
+    node.setPythonTag('pickableObjTag', 1)
+
+    jointNode.addChild(node)
+    jointIndex += 1
+  np = NodePath(jointNode)
+  np.hide()
+  return(np)
 
 def displayPmdModelInfo(model):
   # print(dir(model))
@@ -464,6 +810,15 @@ def loadPmdModel(modelfile):
     mmdModel = pmdLoad(mmdFile)
     if mmdModel:
       p3dnode = loadPmdBody(mmdModel)
+      morphs = loadPmdMorph(mmdModel)
+      if morphs:
+        morphs.reparentTo(p3dnode)
+      bones = loadPmdBone(mmdModel)
+      if bones:
+        bones.reparentTo(p3dnode)
+      # slots = loadPmdSlot(mmdModel)
+      # if slots:
+      #   slots.reparentTo(p3dnode)
   elif ext in ['.pmx']:
     mmdModel = pmxLoad(mmdFile)
     if mmdModel:
