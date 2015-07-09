@@ -339,7 +339,7 @@ def loadPmdBody(pmd_model, alpha=True):
     #
     # nodePath.setMaterial(materials.findMaterial(matName), 1) #Apply the material to this nodePath
     nodePath.setMaterial(materials[matIndex], 1) #Apply the material to this nodePath
-    nodePath.setPythonTag('material', materials.findMaterial(matName))
+    nodePath.setPythonTag('material', materials[matIndex])
     nodePath.setPythonTag('pickableObjTag', 1)
 
     #
@@ -369,23 +369,25 @@ def loadPmdBody(pmd_model, alpha=True):
           texList[texFileMain] = loadTexture(os.path.join(modelPath, texFileMain))
           if texList[texFileMain]:
             log(u'Loaded Texture : %s' % texFileMain, force=True)
-            texList[texFileMain].setMagfilter(Texture.FTNearestMipmapNearest)
-            texList[texFileMain].setMinfilter(Texture.FTNearestMipmapNearest)
-            texList[texFileMain].setAnisotropicDegree(30)
             texList[texFileMain].setWrapU(Texture.WM_clamp)
 
         texMain = texList[texFileMain]
         if texMain and texMain.hasRamImage():
+          texMain.setBorderColor(VBase4(mat.edge_color.r, mat.edge_color.g, mat.edge_color.b, mat.edge_color.a))
 
-          #texMain.setWrapV(Texture.WM_clamp)
-          nodePath.setTexture(texMain)
-          nodePath.setTexScale(TextureStage.getDefault(), 1, -1, -1)
+          ts_main = TextureStage('%s_%3d_main' % (matName, matIndex))
+          ts_main.setColor(VBase4(mat.ambient_color.r, mat.ambient_color.g, mat.ambient_color.b, 1))
+          ts_main.setSort(matIndex)
+          ts_main.setPriority(matIndex)
+
+          if not texFileSphere:
+            ts_main.setMode(TextureStage.MReplace)
 
           if texMain.getFormat() in [Texture.FRgba, Texture.FRgbm, Texture.FRgba4, Texture.FRgba5, Texture.FRgba8, Texture.FRgba12, Texture.FRgba16, Texture.FRgba32]: #, Texture.FSrgbAlpha]:
-            nodePath.setTransparency(TransparencyAttrib.MDual)
-            # nodePath.setTransparency(TransparencyAttrib.MAlpha, matIndex)
-            # nodePath.setAttrib(ColorBlendAttrib.make(ColorBlendAttrib.MAdd,
-            #                    ColorBlendAttrib.OIncomingAlpha, ColorBlendAttrib.OOne))
+            nodePath.setTransparency(TransparencyAttrib.MDual, matIndex)
+
+          nodePath.setTexture(ts_main, texMain)
+          nodePath.setTexScale(ts_main, 1, -1, -1)
 
       if texFileSphere:
         texMode = TextureStage.MReplace
@@ -404,13 +406,10 @@ def loadPmdBody(pmd_model, alpha=True):
         texSphere = texList[texFileSphere]
         if texSphere and texSphere.hasRamImage():
           log(u'Loaded Texture : %s' % texFileSphere, force=True)
-          texSphere.setMagfilter(Texture.FTNearestMipmapNearest)
-          texSphere.setMinfilter(Texture.FTNearestMipmapNearest)
-          texSphere.setAnisotropicDegree(30)
-          texSphere.setWrapU(Texture.WM_clamp)
+          # texSphere.setWrapU(Texture.WM_clamp)
           # texSphere.setWrapV(Texture.WM_clamp)
 
-          ts_sphere = TextureStage(matName+'_sphere')
+          ts_sphere = TextureStage('%s_%03d_sphere' % (matName, matIndex))
           ts_sphere.setMode(texMode)
           ts_sphere.setSort(matIndex)
           ts_sphere.setPriority(matIndex)
@@ -424,12 +423,12 @@ def loadPmdBody(pmd_model, alpha=True):
       # texMode = TextureStage.MModulateGloss
       # texMode = TextureStage.MBlend
       texToon = textures[mat.toon_index]
-      texToon.setMagfilter(Texture.FTNearestMipmapNearest)
-      texToon.setMinfilter(Texture.FTNearestMipmapNearest)
-      texToon.setAnisotropicDegree(30)
-      texToon.setWrapU(Texture.WM_clamp)
+      # texToon.setMagfilter(Texture.FTNearestMipmapNearest)
+      # texToon.setMinfilter(Texture.FTNearestMipmapNearest)
+      # texToon.setAnisotropicDegree(30)
+      # texToon.setWrapU(Texture.WM_clamp)
 
-      ts_toon = TextureStage(matName+'_toon')
+      ts_toon = TextureStage('%s_%03d_toon' % (matName, matIndex))
       # ts_toon.setColor(VBase4(1,1,1,.67))
       ts_toon.setMode(texMode)
       ts_toon.setSort(matIndex)

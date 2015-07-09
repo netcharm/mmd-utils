@@ -258,9 +258,9 @@ def loadTexture(tex_file, model_path=None):
     texture.setFilename(tex_file)
     texture.setCompression(Texture.CMOn)
 
-    texture.generateRamMipmapImages()
-    texture.setMagfilter(Texture.FTNearestMipmapNearest)
-    texture.setMinfilter(Texture.FTNearestMipmapNearest)
+    # texture.generateRamMipmapImages()
+    # texture.setMagfilter(Texture.FTNearestMipmapNearest)
+    # texture.setMinfilter(Texture.FTNearestMipmapNearest)
     # texture.setAnisotropicDegree(30)
   return(texture)
   pass

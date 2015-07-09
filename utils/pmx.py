@@ -222,35 +222,34 @@ def loadPmxBody(pmx_model, alpha=True):
   # load textures
   #
   # textures = TextureCollection()
+  texIndex = 0
   textures = []
   for tex in pmx_model.textures:
     tex_path = os.path.normpath(os.path.join(os.path.dirname(pmx_model.path), tex))
     tex_path = os.path.normcase(tex_path)
-    log(u'Loading Texture : %s' % os.path.dirname(tex))
+    log(u'Loading Texture %03d: %s' % (texIndex, os.path.dirname(tex)))
     texture = loadTexture(tex_path, model_path=modelPath)
     textures.append(texture)
     if texture:
-      log(u'Loaded Texture : %s' % tex, force=True)
+      log(u'Loaded Texture %03d: %s' % (texIndex, tex), force=True)
     else:
-      log(u'Texture Failed : %s' % tex, force=True)
+      log(u'Texture Failed %03d: %s' % (texIndex, tex), force=True)
+    texIndex += 1
 
   #
   # load materials
   #
+  matIndex = 0
   materials = MaterialCollection()
   for mat in pmx_model.materials:
-    log(u'Loading Material : %s' % mat.name)
+    log(u'Loading Material %03d: %s' % (matIndex, mat.name))
     material = Material(mat.name)
     material.setDiffuse(VBase4(mat.diffuse_color.r, mat.diffuse_color.g, mat.diffuse_color.b, mat.alpha))
-    material.setSpecular(VBase4(mat.specular_color.r, mat.specular_color.g, mat.specular_color.b, 1)) #mat.alpha))
+    material.setSpecular(VBase4(mat.specular_color.r, mat.specular_color.g, mat.specular_color.b, 1))
     material.setShininess(mat.specular_factor)
-    material.setAmbient(VBase4(mat.ambient_color.r, mat.ambient_color.g, mat.ambient_color.b, 1)) # mat.alpha))
-    material.setEmission(VBase4(mat.edge_color.r, mat.edge_color.g, mat.edge_color.b, mat.edge_color.a))
-    # material.setEmission(VBase4(1, 1, 1, 0.67))
-    # material.setEmission(VBase4(mat.edge_color.r, mat.edge_color.g, mat.edge_color.b, mat.alpha))
-
-
-    material.setLocal(True)
+    material.setAmbient(VBase4(mat.ambient_color.r, mat.ambient_color.g, mat.ambient_color.b, 1))
+    # material.setEmission(VBase4(mat.edge_color.r, mat.edge_color.g, mat.edge_color.b, mat.edge_color.a))
+    material.setLocal(False)
     material.setTwoside(False)
     if   mat.flag & 0x00000001:
       # 两面描画
@@ -269,7 +268,8 @@ def loadPmxBody(pmx_model, alpha=True):
       pass
 
     materials.addMaterial(material)
-    log(u'Loaded Material : %s' % mat.name, force=True)
+    log(u'Loaded Material %03d: %s' % (matIndex, mat.name), force=True)
+    matIndex += 1
 
   modelName = pmx_model.name
   #
@@ -340,38 +340,51 @@ def loadPmxBody(pmx_model, alpha=True):
     #
     # set polygon face material
     #
-    # nodePath.setMaterial(materials.findMaterial(mat.name), 1) #Apply the material to this nodePath
+    # Apply the material to this nodePath
     nodePath.setMaterial(materials[matIndex], 1)
 
     nodePath.setPythonTag('edge_color', mat.edge_color)
     nodePath.setPythonTag('edge_size', mat.edge_size)
     nodePath.setPythonTag('material_index', matIndex)
-    nodePath.setPythonTag('material', materials.findMaterial(mat.name))
+    nodePath.setPythonTag('material', materials[matIndex])
     nodePath.setPythonTag('pickableObjTag', 1)
 
     #
     # set polygon face main textures
     #
     if mat.texture_index >= 0 and textures[mat.texture_index] and textures[mat.texture_index].hasRamImage():
-      textures[mat.texture_index].setBorderColor(VBase4(mat.edge_color.r, mat.edge_color.g, mat.edge_color.b, mat.edge_color.a))
-      # if setWrapU then some model may be error, such as not mirror symmetry texture.
-      # textures[mat.texture_index].setWrapU(Texture.WM_clamp)
-      # # textures[mat.texture_index].setWrapV(Texture.WM_clamp)
-      nodePath.setTexture(textures[mat.texture_index], matIndex)
-      nodePath.setTexScale(TextureStage.getDefault(), 1, -1, -1)
-      if textures[mat.texture_index].getFormat() in [Texture.FRgba, Texture.FRgbm, Texture.FRgba4, Texture.FRgba5, Texture.FRgba8, Texture.FRgba12, Texture.FRgba16, Texture.FRgba32]: #, Texture.FSrgbAlpha]:
+      # print('Texture %s : Main %03d' % (mat.name, mat.texture_index))
+      texMain = textures[mat.texture_index]
+      texMain.setBorderColor(VBase4(mat.edge_color.r, mat.edge_color.g, mat.edge_color.b, mat.edge_color.a))
+
+      # ts_main = TextureStage.getDefault()
+      ts_main = TextureStage('%3d_%s_main' % (matIndex, mat.name))
+      # ts_main.setColor(VBase4(mat.ambient_color.r, mat.ambient_color.g, mat.ambient_color.b, mat.alpha))
+      ts_main.setColor(VBase4(mat.ambient_color.r, mat.ambient_color.g, mat.ambient_color.b, 1))
+      ts_main.setSort(matIndex)
+      ts_main.setPriority(matIndex)
+
+      if mat.sphere_texture_index < 0:
+        ts_main.setMode(TextureStage.MReplace)
+      if texMain.getFormat() in [Texture.FRgba, Texture.FRgbm, Texture.FRgba4, Texture.FRgba5, Texture.FRgba8, Texture.FRgba12, Texture.FRgba16, Texture.FRgba32]: #, Texture.FSrgbAlpha]:
+        # ts_main.setMode(TextureStage.MReplace)
         nodePath.setTransparency(TransparencyAttrib.MDual, matIndex)
-        # nodePath.setAttrib(ColorBlendAttrib.make(ColorBlendAttrib.MAdd,
-        #                    ColorBlendAttrib.OIncomingAlpha, ColorBlendAttrib.OOne))
-        # nodePath.setAttrib(ColorBlendAttrib.make(ColorBlendAttrib.MAdd))
+
+      nodePath.setTexture(ts_main, texMain, matIndex)
+      nodePath.setTexScale(ts_main, 1, -1, -1)
+    else:
+      print(u'Texture %s : Main %03d' % (mat.name, mat.texture_index))
 
     #
     # Set Sphere Texture
     #
     if mat.sphere_texture_index >=0 and textures[mat.sphere_texture_index] and textures[mat.sphere_texture_index].hasRamImage():
+      # print('Texture %s : Sphere %03d' % (mat.name, mat.sphere_texture_index))
       if mat.sphere_mode > 0:
+        texSphere = textures[mat.sphere_texture_index]
+
         if mat.sphere_mode == 1:
-          texMode = TextureStage.MModulateGlow
+          texMode = TextureStage.MModulateGloss
         elif mat.sphere_mode == 2:
           texMode = TextureStage.MAdd
         elif mat.sphere_mode == 3:
@@ -379,18 +392,15 @@ def loadPmxBody(pmx_model, alpha=True):
         else:
           texMode = TextureStage.MGloss
 
-        tex = textures[mat.sphere_texture_index]
-        # tex.setWrapU(Texture.WM_clamp)
-        # tex.setWrapV(Texture.WM_clamp)
+        ts_sphere = TextureStage('%3d_%s_sphere' % (matIndex, mat.name))
 
-        ts_sphere = TextureStage(mat.name+'_sphere')
         ts_sphere.setMode(texMode)
 
         ts_sphere.setSort(matIndex)
         ts_sphere.setPriority(matIndex)
 
         nodePath.setTexGen(ts_sphere, TexGenAttrib.MEyeSphereMap, matIndex)
-        nodePath.setTexture(ts_sphere, tex, matIndex)
+        nodePath.setTexture(ts_sphere, texSphere, matIndex)
         nodePath.setTexScale(ts_sphere, 1, -1, -1)
         # nodePath.setShaderAuto(matIndex)
 
@@ -398,31 +408,35 @@ def loadPmxBody(pmx_model, alpha=True):
     # Set Toon Texture
     #
     if mat.toon_texture_index>=0:
-      texMode = TextureStage.MModulateGloss
-      # texMode = TextureStage.MGlow
-      # texMode = TextureStage.MAdd
+      # print('Texture %s : Toon %03d' % (mat.name, mat.toon_texture_index))
 
-      ts_toon = TextureStage(mat.name+'_toon')
-      # ts_toon.setColor(VBase4(1,1,1,.33))
+      # texMode = TextureStage.MDecal
+      # texMode = TextureStage.MGloss
+      # texMode = TextureStage.MAdd
+      texMode = TextureStage.MModulateGlow
+
+      ts_toon = TextureStage('%3d_%s_toon' % (matIndex, mat.name))
+      ts_toon.setColor(VBase4(0,0,0,.33))
       ts_toon.setMode(texMode)
       ts_toon.setSort(matIndex)
       ts_toon.setPriority(matIndex)
 
       if mat.toon_sharing_flag > 0:
-        tex = loadTexture(u'toon/toon%02d.bmp' % (mat.toon_texture_index+1))
+        texToon = loadTexture(u'toon/toon%02d.bmp' % (mat.toon_texture_index+1))
       elif (mat.toon_texture_index < 0) or (not textures[mat.toon_texture_index]):
         # tex = loadTexture(u'toon/toon0.bmp')
-        tex = Texture('NULL')
+        texToon = Texture('NULL')
       else:
-        tex = textures[mat.toon_texture_index]
-      # tex.setWrapU(Texture.WM_clamp)
-      # tex.setWrapV(Texture.WM_clamp)
+        texToon = textures[mat.toon_texture_index]
+      # texToon.setWrapU(Texture.WM_clamp)
+      # texToon.setWrapV(Texture.WM_clamp)
 
-      if tex.hasRamImage():
-        nodePath.setTexGen(ts_toon, TexGenAttrib.MEyeSphereMap, matIndex)
+      if texToon.hasRamImage():
         # nodePath.setTexGen(ts_toon, TexGenAttrib.MUnused, matIndex)
-        nodePath.setTexture(ts_toon, tex, matIndex)
+        nodePath.setTexGen(ts_toon, TexGenAttrib.MEyeSphereMap, matIndex)
+        nodePath.setTexture(ts_toon, texToon, matIndex)
         nodePath.setTexScale(ts_toon, 1, -1, -1)
+        pass
 
     nodePath.setAntialias(AntialiasAttrib.MAuto)
 
