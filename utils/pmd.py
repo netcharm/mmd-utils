@@ -373,7 +373,6 @@ def loadPmdBody(pmd_model, alpha=True):
 
         texMain = texList[texFileMain]
         if texMain and texMain.hasRamImage():
-          texMain.setBorderColor(VBase4(mat.edge_color.r, mat.edge_color.g, mat.edge_color.b, mat.edge_color.a))
 
           ts_main = TextureStage('%s_%3d_main' % (matName, matIndex))
           ts_main.setColor(VBase4(mat.ambient_color.r, mat.ambient_color.g, mat.ambient_color.b, 1))
@@ -417,6 +416,11 @@ def loadPmdBody(pmd_model, alpha=True):
           nodePath.setTexGen(ts_sphere, TexGenAttrib.MEyeSphereMap, 2)
           nodePath.setTexture(ts_sphere, texSphere, 1)
           nodePath.setTexScale(ts_sphere, 1, -1, -1)
+
+          if not texFileMain:
+            if texSphere.getFormat() in [Texture.FRgba, Texture.FRgbm, Texture.FRgba4, Texture.FRgba5, Texture.FRgba8, Texture.FRgba12, Texture.FRgba16, Texture.FRgba32]: #, Texture.FSrgbAlpha]:
+              nodePath.setTransparency(TransparencyAttrib.MDual, matIndex)
+
 
     if mat.toon_index>=0 and textures[mat.toon_index] and textures[mat.toon_index].hasRamImage():
       texMode = TextureStage.MModulateGlow

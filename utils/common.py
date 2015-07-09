@@ -70,6 +70,7 @@ JIS2GBK = dict({
   u'\u3095': u'か',
   u'\u3096': u'け',
   u'\u3099': u'゛',
+  u'\u309b': u'ダ',
   u'\u309c': u'゜',
   u'\u309d': u'ゝ',
   u'\u309e': u'ゞ',
@@ -83,6 +84,7 @@ JIS2GBK = dict({
   u'\u30f9': u'ヱ゛',
   u'\u30fa': u'ヲ゛',
   u'\u30fb': u'·',
+  u'\u8ffd': u'追',
   u'\ufeff': u'',
   u'\uff11': u'1',
   u'\uff12': u'2',
@@ -113,6 +115,7 @@ JIS2GBK = dict({
   u'\uff8d': u'ヘ',
   u'\uff8e': u'ホ',
   u'\uff8f': u'マ',
+  u'\uff90': u'ミ',
   u'\uff97': u'ラ',
   u'\uff98': u'リ',
   u'\uff9d': u'ン',
@@ -264,6 +267,9 @@ def loadTexture(tex_file, model_path=None):
     # texture.setAnisotropicDegree(30)
   return(texture)
   pass
+
+def isAlpha(texture):
+  return(texture.getFormat() in [Texture.FRgba, Texture.FRgbm, Texture.FRgba4, Texture.FRgba5, Texture.FRgba8, Texture.FRgba12, Texture.FRgba16, Texture.FRgba32])
 
 def loadJ2ETable(j2e_file):
   with codecs.open(j2e_file, 'r', encoding='utf8') as f:

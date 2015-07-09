@@ -251,19 +251,19 @@ def loadPmxBody(pmx_model, alpha=True):
     # material.setEmission(VBase4(mat.edge_color.r, mat.edge_color.g, mat.edge_color.b, mat.edge_color.a))
     material.setLocal(False)
     material.setTwoside(False)
-    if   mat.flag & 0x00000001:
+    if   mat.flag & 0b00000001:
       # 两面描画
       material.setTwoside(True)
-    elif mat.flag & 0x00000010:
+    elif mat.flag & 0b00000010:
       # 地面影
       pass
-    elif mat.flag & 0x00000100:
+    elif mat.flag & 0b00000100:
       # セルフ影マツ
       pass
-    elif mat.flag & 0x00001000:
+    elif mat.flag & 0b00001000:
       # セルフ影
       pass
-    elif mat.flag & 0x00010000:
+    elif mat.flag & 0b00010000:
       # 輪郭有效
       pass
 
@@ -323,7 +323,7 @@ def loadPmxBody(pmx_model, alpha=True):
   matIndex = 0
   for mat in pmx_model.materials:
     prim = GeomTriangles(Geom.UHDynamic)
-    log(u'Loading Node : %s' % mat.name)
+    log(u'Loading Node %03d: %s' % (matIndex, mat.name))
     for idx in xrange(vIndex, vIndex+mat.vertex_count, 3):
       # flip trig-face for inverted axis-y/axis-z
       prim.addVertices(pmx_model.indices[idx+2], pmx_model.indices[idx+1], pmx_model.indices[idx+0])
@@ -355,7 +355,11 @@ def loadPmxBody(pmx_model, alpha=True):
     if mat.texture_index >= 0 and textures[mat.texture_index] and textures[mat.texture_index].hasRamImage():
       # print('Texture %s : Main %03d' % (mat.name, mat.texture_index))
       texMain = textures[mat.texture_index]
-      texMain.setBorderColor(VBase4(mat.edge_color.r, mat.edge_color.g, mat.edge_color.b, mat.edge_color.a))
+
+      if mat.flag & 0b00010000:
+        # 輪郭有效
+        texMain.setBorderColor(VBase4(mat.edge_color.r, mat.edge_color.g, mat.edge_color.b, mat.edge_color.a))
+        pass
 
       # ts_main = TextureStage.getDefault()
       ts_main = TextureStage('%3d_%s_main' % (matIndex, mat.name))
@@ -366,14 +370,24 @@ def loadPmxBody(pmx_model, alpha=True):
 
       if mat.sphere_texture_index < 0:
         ts_main.setMode(TextureStage.MReplace)
-      if texMain.getFormat() in [Texture.FRgba, Texture.FRgbm, Texture.FRgba4, Texture.FRgba5, Texture.FRgba8, Texture.FRgba12, Texture.FRgba16, Texture.FRgba32]: #, Texture.FSrgbAlpha]:
-        # ts_main.setMode(TextureStage.MReplace)
+
+        if (mat.flag & 0b00000100) or (mat.flag & 0b00001000):
+          # セルフ影マツ or         # セルフ影
+          ts_main.setMode(TextureStage.MModulate)
+          pass
+
+      if mat.flag & 0b00000010:
+        # 地面影
+        pass
+
+      # if texMain.getFormat() in [Texture.FRgba, Texture.FRgbm, Texture.FRgba4, Texture.FRgba5, Texture.FRgba8, Texture.FRgba12, Texture.FRgba16, Texture.FRgba32]: #, Texture.FSrgbAlpha]:
+      if isAlpha(texMain):
         nodePath.setTransparency(TransparencyAttrib.MDual, matIndex)
 
       nodePath.setTexture(ts_main, texMain, matIndex)
       nodePath.setTexScale(ts_main, 1, -1, -1)
-    else:
-      print(u'Texture %s : Main %03d' % (mat.name, mat.texture_index))
+    # else:
+    #   print(u'Texture %s : Main %03d' % (mat.name, mat.texture_index))
 
     #
     # Set Sphere Texture
@@ -390,7 +404,7 @@ def loadPmxBody(pmx_model, alpha=True):
         elif mat.sphere_mode == 3:
           texMode = TextureStage.MReplace
         else:
-          texMode = TextureStage.MGloss
+          texMode = TextureStage.MModulate
 
         ts_sphere = TextureStage('%3d_%s_sphere' % (matIndex, mat.name))
 
@@ -404,6 +418,13 @@ def loadPmxBody(pmx_model, alpha=True):
         nodePath.setTexScale(ts_sphere, 1, -1, -1)
         # nodePath.setShaderAuto(matIndex)
 
+        if mat.texture_index < 0:
+          # if texSphere.getFormat() in [Texture.FRgba, Texture.FRgbm, Texture.FRgba4, Texture.FRgba5, Texture.FRgba8, Texture.FRgba12, Texture.FRgba16, Texture.FRgba32]: #, Texture.FSrgbAlpha]:
+          if isAlpha(texSphere):
+            nodePath.setTransparency(TransparencyAttrib.MDual, matIndex)
+            # nodePath.setTransparency(TransparencyAttrib.MAlpha, matIndex)
+            # nodePath.setAttrib(ColorBlendAttrib.make(ColorBlendAttrib.MAdd,
+            #                    ColorBlendAttrib.OIncomingAlpha, ColorBlendAttrib.OOne))
     #
     # Set Toon Texture
     #
@@ -443,7 +464,7 @@ def loadPmxBody(pmx_model, alpha=True):
     vIndex += mat.vertex_count
     modelBody.addChild(node)
     matIndex += 1
-    log(u'Loaded Node : %s' % mat.name, force=True)
+    log(u'Loaded Node %03d: %s' % (matIndex, mat.name), force=True)
 
   modelPath = NodePath(model)
   # modelPath.setShaderAuto()
@@ -500,7 +521,7 @@ def loadPmxBone(pmx_model):
   boneNode = PandaNode('Bones')
   boneIndex = 0
   for bone in pmx_model.bones:
-    log(u'Loading Bone : %s' % bone.name, force=True)
+    log(u'Loading Bone %03d: %s' % (boneIndex, bone.name), force=True)
 
     #
     # load vertices(vertex list)
@@ -628,7 +649,7 @@ def loadPmxMorph(pmx_model):
   morphNode = PandaNode('Morphs')
   morphIndex = 0
   for morph in pmx_model.morphs:
-    log(u'Loading Morph : %s' % morph.name, force=True)
+    log(u'Loading Morph %03d: %s' % (morphIndex, morph.name), force=True)
 
     #
     # load vertices(vertex list)
@@ -758,7 +779,7 @@ def loadPmxSlot(pmx_model):
   slotNode = PandaNode('Slots')
   slotIndex = 0
   for slot in pmx_model.display_slots:
-    log(u'Loading Slot : %s' % slot.name, force=True)
+    log(u'Loading Slot %03d: %s' % (slotIndex, slot.name), force=True)
     node = PandaNode(slot.name)
     node.setPythonTag('english_name', slot.english_name)
     node.setPythonTag('references', slot.references)
@@ -779,7 +800,7 @@ def loadPmxRigid(pmx_model):
   rigidNode = PandaNode('Rigid')
   rigidIndex = 0
   for rigid in pmx_model.rigidbodies:
-    log(u'Loading RigidBodies : %s' % rigid.name, force=True)
+    log(u'Loading RigidBodies %03d: %s' % (rigidIndex, rigid.name), force=True)
     node = PandaNode(rigid.name)
     node.setPythonTag('english_name', rigid.english_name)
     node.setPythonTag('bone_index', rigid.bone_index)
@@ -811,7 +832,7 @@ def loadPmxJoint(pmx_model):
   jointNode = PandaNode('Joints')
   jointIndex = 0
   for joint in pmx_model.joints:
-    log(u'Loading RigidBodies : %s' % joint.name, force=True)
+    log(u'Loading RigidBodies %03d: %s' % (jointIndex, joint.name), force=True)
     node = PandaNode(joint.name)
     node.setPythonTag('english_name', joint.english_name)
     node.setPythonTag('joint_type', joint.joint_type)
@@ -973,7 +994,7 @@ def loadPmxIK(pmx_model):
   ikNode = PandaNode('IK')
   ikIndex = 0
   for ik in pmx_model.iks:
-    log(u'Loading IK : %s' % ik.name, force=True)
+    log(u'Loading IK %03d: %s' % (ikIndex, ik.name), force=True)
     node = PandaNode(slot.name)
     node.setPythonTag('english_name', ik.english_name)
     node.setPythonTag('references', ik.references)
