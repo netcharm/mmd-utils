@@ -212,7 +212,7 @@ class Stage(object):
   @staticmethod
   def setStudioLight(render):
     lightsStage = u'./stages/default_lights.bam'
-    lightsStage = ''
+    # lightsStage = ''
     try:
       lights = loader.loadModel(lightsStage)
       lights = lights.getChild(0)

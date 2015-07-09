@@ -241,16 +241,16 @@ def loadPmxBody(pmx_model, alpha=True):
   for mat in pmx_model.materials:
     log(u'Loading Material : %s' % mat.name)
     material = Material(mat.name)
-    material.setAmbient(VBase4(mat.ambient_color.r, mat.ambient_color.g, mat.ambient_color.b, mat.alpha)) #Make this material blue
     material.setDiffuse(VBase4(mat.diffuse_color.r, mat.diffuse_color.g, mat.diffuse_color.b, mat.alpha))
-    material.setSpecular(VBase4(mat.specular_color.r, mat.specular_color.g, mat.specular_color.b, mat.alpha))
+    material.setSpecular(VBase4(mat.specular_color.r, mat.specular_color.g, mat.specular_color.b, 1)) #mat.alpha))
     material.setShininess(mat.specular_factor)
-    material.setEmission(VBase4(mat.edge_color.r, mat.edge_color.g, mat.edge_color.b, 0.33))
+    material.setAmbient(VBase4(mat.ambient_color.r, mat.ambient_color.g, mat.ambient_color.b, 1)) # mat.alpha))
+    material.setEmission(VBase4(mat.edge_color.r, mat.edge_color.g, mat.edge_color.b, mat.edge_color.a))
     # material.setEmission(VBase4(1, 1, 1, 0.67))
     # material.setEmission(VBase4(mat.edge_color.r, mat.edge_color.g, mat.edge_color.b, mat.alpha))
 
 
-    material.setLocal(False)
+    material.setLocal(True)
     material.setTwoside(False)
     if   mat.flag & 0x00000001:
       # 两面描画
@@ -340,7 +340,8 @@ def loadPmxBody(pmx_model, alpha=True):
     #
     # set polygon face material
     #
-    nodePath.setMaterial(materials.findMaterial(mat.name), 1) #Apply the material to this nodePath
+    # nodePath.setMaterial(materials.findMaterial(mat.name), 1) #Apply the material to this nodePath
+    nodePath.setMaterial(materials[matIndex], 1)
 
     nodePath.setPythonTag('edge_color', mat.edge_color)
     nodePath.setPythonTag('edge_size', mat.edge_size)
@@ -351,8 +352,8 @@ def loadPmxBody(pmx_model, alpha=True):
     #
     # set polygon face main textures
     #
-    if mat.texture_index >= 0 and textures[mat.texture_index]:
-      textures[mat.texture_index].setBorderColor(VBase4(mat.edge_color.r, mat.edge_color.g, mat.edge_color.b, mat.alpha))
+    if mat.texture_index >= 0 and textures[mat.texture_index] and textures[mat.texture_index].hasRamImage():
+      textures[mat.texture_index].setBorderColor(VBase4(mat.edge_color.r, mat.edge_color.g, mat.edge_color.b, mat.edge_color.a))
       # if setWrapU then some model may be error, such as not mirror symmetry texture.
       # textures[mat.texture_index].setWrapU(Texture.WM_clamp)
       # # textures[mat.texture_index].setWrapV(Texture.WM_clamp)
@@ -362,11 +363,12 @@ def loadPmxBody(pmx_model, alpha=True):
         nodePath.setTransparency(TransparencyAttrib.MDual, matIndex)
         # nodePath.setAttrib(ColorBlendAttrib.make(ColorBlendAttrib.MAdd,
         #                    ColorBlendAttrib.OIncomingAlpha, ColorBlendAttrib.OOne))
+        # nodePath.setAttrib(ColorBlendAttrib.make(ColorBlendAttrib.MAdd))
 
     #
     # Set Sphere Texture
     #
-    if mat.sphere_texture_index >=0 and textures[mat.sphere_texture_index]:
+    if mat.sphere_texture_index >=0 and textures[mat.sphere_texture_index] and textures[mat.sphere_texture_index].hasRamImage():
       if mat.sphere_mode > 0:
         if mat.sphere_mode == 1:
           texMode = TextureStage.MModulateGlow
@@ -378,7 +380,7 @@ def loadPmxBody(pmx_model, alpha=True):
           texMode = TextureStage.MGloss
 
         tex = textures[mat.sphere_texture_index]
-        tex.setWrapU(Texture.WM_clamp)
+        # tex.setWrapU(Texture.WM_clamp)
         # tex.setWrapV(Texture.WM_clamp)
 
         ts_sphere = TextureStage(mat.name+'_sphere')
@@ -396,11 +398,12 @@ def loadPmxBody(pmx_model, alpha=True):
     # Set Toon Texture
     #
     if mat.toon_texture_index>=0:
-      # texMode = TextureStage.MModulateGloss
-      texMode = TextureStage.MGlow
+      texMode = TextureStage.MModulateGloss
+      # texMode = TextureStage.MGlow
+      # texMode = TextureStage.MAdd
 
       ts_toon = TextureStage(mat.name+'_toon')
-      ts_toon.setColor(VBase4(1,1,1,.33))
+      # ts_toon.setColor(VBase4(1,1,1,.33))
       ts_toon.setMode(texMode)
       ts_toon.setSort(matIndex)
       ts_toon.setPriority(matIndex)
@@ -408,15 +411,18 @@ def loadPmxBody(pmx_model, alpha=True):
       if mat.toon_sharing_flag > 0:
         tex = loadTexture(u'toon/toon%02d.bmp' % (mat.toon_texture_index+1))
       elif (mat.toon_texture_index < 0) or (not textures[mat.toon_texture_index]):
-        tex = loadTexture(u'toon/toon0.bmp')
+        # tex = loadTexture(u'toon/toon0.bmp')
+        tex = Texture('NULL')
       else:
         tex = textures[mat.toon_texture_index]
-      tex.setWrapU(Texture.WM_clamp)
-      #tex.setWrapV(Texture.WM_clamp)
+      # tex.setWrapU(Texture.WM_clamp)
+      # tex.setWrapV(Texture.WM_clamp)
 
-      nodePath.setTexGen(ts_toon, TexGenAttrib.MEyeSphereMap, matIndex)
-      nodePath.setTexture(ts_toon, tex, matIndex)
-      nodePath.setTexScale(ts_toon, 1, -1, -1)
+      if tex.hasRamImage():
+        nodePath.setTexGen(ts_toon, TexGenAttrib.MEyeSphereMap, matIndex)
+        # nodePath.setTexGen(ts_toon, TexGenAttrib.MUnused, matIndex)
+        nodePath.setTexture(ts_toon, tex, matIndex)
+        nodePath.setTexScale(ts_toon, 1, -1, -1)
 
     nodePath.setAntialias(AntialiasAttrib.MAuto)
 

@@ -178,7 +178,7 @@ class BmpAlphaImageFile(ImageFile.ImageFile):
 
     self.size = (_i32(s[4:]), _i32(s[8:]))
     direction = -1
-    if s[11] == '\xff':
+    if s[11] == r'\xff':
       # upside-down storage
       self.size = self.size[0], 2**32 - self.size[1]
       direction = 0
@@ -189,6 +189,7 @@ class BmpAlphaImageFile(ImageFile.ImageFile):
     self.tile = [("raw", (0, 0) + self.size, offset, (rawmode, 0, direction))]
 
   pass
+
 
 def bmp2png(bmpfile):
   pngfile = bmpfile
@@ -203,6 +204,7 @@ def bmp2png(bmpfile):
     pngfile = u'%s.png' % name
     im.save(pngfile, 'PNG')
     log('Converted %s to %s' % (bmpfile, pngfile))
+
   return(pngfile)
 
 def loadTexture(tex_file, model_path=None):
@@ -219,12 +221,21 @@ def loadTexture(tex_file, model_path=None):
     tex_ext = os.path.splitext(tex_file)[1]
     if os.altsep:
       tex_file = tex_file.replace(os.path.sep, os.path.altsep)
-    if tex_ext.lower() in ['.spa', '.sph', '.bmp']:
+    if tex_ext.lower() in ['.dds']:
+      try:
+        with open(tex_file, 'rb') as f:
+          buf = f.read()
+          ts = StringStream(buf)       # turn into an istream
+          texture = Texture()               # create texture object
+          texture.readDds(ts, tex_file)     # load texture from dds ram image
+      except:
+        print('dds error!')
+    elif tex_ext.lower() in ['.spa', '.sph', '.bmp']:
       try:
         try:
-          im = BmpAlphaImageFile(tex_file)
-        except:
           im = Image.open(tex_file)
+        except:
+          im = BmpAlphaImageFile(tex_file)
         buf = StringIO.StringIO()
         im.save(buf, 'PNG')
 

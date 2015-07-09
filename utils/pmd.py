@@ -63,10 +63,10 @@ def pmdInfo(model, screen=False):
   if isinstance(model, pmd.Model):
     lines.append(u'path         : %s' % model.path)
     lines.append(u'version      : %s' % model.version)
-    lines.append(u'name(jpn)    : %s' % model.name.decode('shift_jis'))
-    lines.append(u'name(eng)    : %s' % model.english_name.decode('shift_jis').strip())
-    lines.append(u'comment(jpn) : \n{0}\n{1}\n{0}'.format('-'*80, model.comment.decode('shift_jis')))
-    lines.append(u'comment(eng) : \n{0}\n{1}\n{0}'.format('-'*80, model.english_comment.decode('shift_jis')))
+    lines.append(u'name(jpn)    : %s' % model.name.decode('shift_jis', errors='replace'))
+    lines.append(u'name(eng)    : %s' % model.english_name.decode('shift_jis', errors='replace').strip())
+    lines.append(u'comment(jpn) : \n{0}\n{1}\n{0}'.format('-'*80, model.comment.decode('shift_jis', errors='replace')))
+    lines.append(u'comment(eng) : \n{0}\n{1}\n{0}'.format('-'*80, model.english_comment.decode('shift_jis', errors='replace')))
     lines.append(u'='*80)
 
     lines.append(u'toon_textures: Total {1}.\n{0}'.format('-'*80, len(model.toon_textures)))
@@ -96,13 +96,13 @@ def pmdInfo(model, screen=False):
     for bone in model.bones:
       if idx != 0: lines.append('')
       idx += 1
-      lines.append(u'  name(jpn)    : %s' % bone.name.decode('shift_jis'))
-      lines.append(u'  name(eng)    : %s' % bone.english_name.decode('shift_jis'))
+      lines.append(u'  name(jpn)    : %s' % bone.name.decode('shift_jis', errors='replace'))
+      lines.append(u'  name(eng)    : %s' % bone.english_name.decode('shift_jis', errors='replace'))
       lines.append(u'  index        : %4d' % bone.index)
       lines.append(u'  type         : %4d' % bone.type)
       lines.append(u'  pos          : %s' % str(bone.pos.to_tuple()))
 
-      lines.append(u'  parent       : %4d, %s' % (bone.parent_index, (bone.parent.name.decode('shift_jis') if bone.parent else u'NULL')))
+      lines.append(u'  parent       : %4d, %s' % (bone.parent_index, (bone.parent.name.decode('shift_jis', errors='replace') if bone.parent else u'NULL')))
       lines.append(u'  tail         : %4d, %s' % (bone.tail_index, bone.tail))
       lines.append(u'  children     : %s' % bone.children[:5])
       lines.append(u'  ik_index     : %4d' % bone.ik_index)
@@ -126,8 +126,8 @@ def pmdInfo(model, screen=False):
     for morph in model.morphs:
       if idx != 0: lines.append('')
       idx += 1
-      lines.append(u'  name(jpn)    : %s' % morph.name.decode('shift_jis'))
-      lines.append(u'  name(eng)    : %s' % morph.english_name.decode('shift_jis'))
+      lines.append(u'  name(jpn)    : %s' % morph.name.decode('shift_jis', errors='replace'))
+      lines.append(u'  name(eng)    : %s' % morph.english_name.decode('shift_jis', errors='replace'))
       lines.append(u'  type         : %4d' % morph.type)
       lines.append(u'  pos_list     : %s' % str(morph.pos_list[:4]))
       lines.append(u'  vertex_count : %4d' % morph.vertex_count)
@@ -147,8 +147,8 @@ def pmdInfo(model, screen=False):
     for slot in model.bone_group_list:
       if idx != 0: lines.append('')
       idx += 1
-      lines.append(u'  name(jpn)    : %s' % slot.name.decode('shift_jis'))
-      lines.append(u'  name(eng)    : %s' % slot.english_name.decode('shift_jis'))
+      lines.append(u'  name(jpn)    : %s' % slot.name.decode('shift_jis', errors='replace'))
+      lines.append(u'  name(eng)    : %s' % slot.english_name.decode('shift_jis', errors='replace'))
     lines.append(u'='*80)
 
     lines.append(u'bone_display_list : Total {1}.\n{0}'.format('-'*80, len(model.bone_display_list)))
@@ -164,7 +164,7 @@ def pmdInfo(model, screen=False):
     for rigidbody in model.rigidbodies:
       if idx != 0: lines.append('')
       idx += 1
-      lines.append(u'  name(jpn)          : %s' % rigidbody.name.decode('shift_jis'))
+      lines.append(u'  name(jpn)          : %s' % rigidbody.name.decode('shift_jis', errors='replace'))
       lines.append(u'  bone_index         : %4d' % rigidbody.bone_index)
       lines.append(u'  collision_group    : %4d' % rigidbody.collision_group)
       lines.append(u'  no_collision_group : %4d' % rigidbody.no_collision_group)
@@ -178,7 +178,7 @@ def pmdInfo(model, screen=False):
     for joint in model.joints:
       if idx != 0: lines.append('')
       idx += 1
-      lines.append(u'  name(jpn)         : %s' % joint.name.decode('shift_jis'))
+      lines.append(u'  name(jpn)         : %s' % joint.name.decode('shift_jis', errors='replace'))
       lines.append(u'  rigidbody_index   : %4d, %4d' % (joint.rigidbody_index_a, joint.rigidbody_index_b))
       lines.append(u'  position          : %s' % str(joint.position.to_tuple()))
       lines.append(u'  rotation          : %s' % str(joint.rotation.to_tuple()))
@@ -192,8 +192,8 @@ def pmdInfo(model, screen=False):
     for bone in model.no_parent_bones:
       if idx != 0: lines.append('')
       idx += 1
-      lines.append(u'  name(jpn)    : %s' % bone.name.decode('shift_jis'))
-      lines.append(u'  name(eng)    : %s' % bone.english_name.decode('shift_jis'))
+      lines.append(u'  name(jpn)    : %s' % bone.name.decode('shift_jis', errors='replace'))
+      lines.append(u'  name(eng)    : %s' % bone.english_name.decode('shift_jis', errors='replace'))
     lines.append(u'='*80)
 
     lines.append(u'vertices     : Total {1}.\n{0}'.format('-'*80, len(model.vertices)))
@@ -257,17 +257,18 @@ def loadPmdBody(pmd_model, alpha=True):
     matName = u'mat_%04d' % matIndex
     log(u'Loading Material : %s' % matName)
     material = Material(matName)
-    material.setAmbient(VBase4(mat.ambient_color.r, mat.ambient_color.g, mat.ambient_color.b, mat.alpha)) #1))
     material.setDiffuse(VBase4(mat.diffuse_color.r, mat.diffuse_color.g, mat.diffuse_color.b, mat.alpha))
-    material.setSpecular(VBase4(mat.specular_color.r, mat.specular_color.g, mat.specular_color.b, mat.alpha)) #1))
+    material.setSpecular(VBase4(mat.specular_color.r, mat.specular_color.g, mat.specular_color.b, 1))#mat.alpha))
     material.setShininess(mat.specular_factor)
+    material.setAmbient(VBase4(mat.ambient_color.r, mat.ambient_color.g, mat.ambient_color.b, 1))#mat.alpha))
+
     material.setLocal(False)
     material.setTwoside(False)
     materials.addMaterial(material)
     matIndex += 1
-    log(u'Loaded Material : %s' % matName, force=True)
+    log(u'Loaded Material : %s' % (matName), force=True)
 
-  modelName = pmd_model.name.decode('shift_jis')
+  modelName = pmd_model.name.decode('shift_jis', errors='replace')
   #
   # load vertices(vertex list)
   #
@@ -318,6 +319,7 @@ def loadPmdBody(pmd_model, alpha=True):
   model.addChild(modelBody)
 
   matIndex = 0
+  texList = dict()
   for mat in pmd_model.materials:
     matName = u'mat_%04d' % matIndex
     prim = GeomTriangles(Geom.UHStatic)
@@ -335,15 +337,18 @@ def loadPmdBody(pmd_model, alpha=True):
     #
     # set polygon face material
     #
-    nodePath.setMaterial(materials.findMaterial(matName), 1) #Apply the material to this nodePath
+    # nodePath.setMaterial(materials.findMaterial(matName), 1) #Apply the material to this nodePath
+    nodePath.setMaterial(materials[matIndex], 1) #Apply the material to this nodePath
     nodePath.setPythonTag('material', materials.findMaterial(matName))
     nodePath.setPythonTag('pickableObjTag', 1)
 
     #
     # set polygon face textures
     #
+    texFileMain = None
+    texFileSphere = None
     if mat.texture_file and len(mat.texture_file) >= 0:
-      texName = mat.texture_file.decode('shift_jis')
+      texName = mat.texture_file.decode('shift_jis', errors='replace')
       tex_list = texName.split('*')
       if len(tex_list)==1:
         tex_list = texName.split('/')
@@ -359,31 +364,49 @@ def loadPmdBody(pmd_model, alpha=True):
           texFileMain = texName
           texFileSphere = None
 
-      texture = None
       if texFileMain:
-        texture = loadTexture(os.path.join(modelPath, texFileMain))
-      if texture:
-        # texture.setWrapU(Texture.WM_clamp)
-        nodePath.setTexture(texture, matIndex)
-        nodePath.setTexScale(TextureStage.getDefault(), 1, -1, -1)
+        if not texFileMain in texList:
+          texList[texFileMain] = loadTexture(os.path.join(modelPath, texFileMain))
+          if texList[texFileMain]:
+            log(u'Loaded Texture : %s' % texFileMain, force=True)
+            texList[texFileMain].setMagfilter(Texture.FTNearestMipmapNearest)
+            texList[texFileMain].setMinfilter(Texture.FTNearestMipmapNearest)
+            texList[texFileMain].setAnisotropicDegree(30)
+            texList[texFileMain].setWrapU(Texture.WM_clamp)
 
-        if texture.getFormat() in [Texture.FRgba, Texture.FRgbm, Texture.FRgba4, Texture.FRgba5, Texture.FRgba8, Texture.FRgba12, Texture.FRgba16, Texture.FRgba32]: #, Texture.FSrgbAlpha]:
-          nodePath.setTransparency(TransparencyAttrib.MDual, matIndex)
-          # nodePath.setTransparency(TransparencyAttrib.MAlpha, matIndex)
-          # nodePath.setAttrib(ColorBlendAttrib.make(ColorBlendAttrib.MAdd,
-          #                    ColorBlendAttrib.OIncomingAlpha, ColorBlendAttrib.OOne))
+        texMain = texList[texFileMain]
+        if texMain and texMain.hasRamImage():
+
+          #texMain.setWrapV(Texture.WM_clamp)
+          nodePath.setTexture(texMain)
+          nodePath.setTexScale(TextureStage.getDefault(), 1, -1, -1)
+
+          if texMain.getFormat() in [Texture.FRgba, Texture.FRgbm, Texture.FRgba4, Texture.FRgba5, Texture.FRgba8, Texture.FRgba12, Texture.FRgba16, Texture.FRgba32]: #, Texture.FSrgbAlpha]:
+            nodePath.setTransparency(TransparencyAttrib.MDual)
+            # nodePath.setTransparency(TransparencyAttrib.MAlpha, matIndex)
+            # nodePath.setAttrib(ColorBlendAttrib.make(ColorBlendAttrib.MAdd,
+            #                    ColorBlendAttrib.OIncomingAlpha, ColorBlendAttrib.OOne))
 
       if texFileSphere:
-        texMode = TextureStage.MModulateGloss
+        texMode = TextureStage.MReplace
         ext = os.path.splitext(texFileSphere)[1]
         if ext.lower() in ['.spa']:
           texMode = TextureStage.MAdd
         elif ext.lower() in ['.sph']:
           # texMode = TextureStage.MGlow
-          texMode = TextureStage.MModulateGlow
+          # texMode = TextureStage.MModulateGlow
+          texMode = TextureStage.MBlend
 
-        texSphere = loadTexture(os.path.join(modelPath, texFileSphere))
-        if texSphere:
+        # texMode = TextureStage.MBlend
+        if not texFileSphere in texList:
+          texList[texFileSphere] = loadTexture(os.path.join(modelPath, texFileSphere))
+
+        texSphere = texList[texFileSphere]
+        if texSphere and texSphere.hasRamImage():
+          log(u'Loaded Texture : %s' % texFileSphere, force=True)
+          texSphere.setMagfilter(Texture.FTNearestMipmapNearest)
+          texSphere.setMinfilter(Texture.FTNearestMipmapNearest)
+          texSphere.setAnisotropicDegree(30)
           texSphere.setWrapU(Texture.WM_clamp)
           # texSphere.setWrapV(Texture.WM_clamp)
 
@@ -396,39 +419,28 @@ def loadPmdBody(pmd_model, alpha=True):
           nodePath.setTexture(ts_sphere, texSphere, 1)
           nodePath.setTexScale(ts_sphere, 1, -1, -1)
 
-    if mat.toon_index>=0 and textures[mat.toon_index]:
+    if mat.toon_index>=0 and textures[mat.toon_index] and textures[mat.toon_index].hasRamImage():
       texMode = TextureStage.MModulateGlow
-      tex = textures[mat.toon_index]
-      tex.setMagfilter(Texture.FTNearestMipmapNearest)
-      tex.setMinfilter(Texture.FTNearestMipmapNearest)
-      tex.setAnisotropicDegree(30)
-      tex.setWrapU(Texture.WM_clamp)
+      # texMode = TextureStage.MModulateGloss
+      # texMode = TextureStage.MBlend
+      texToon = textures[mat.toon_index]
+      texToon.setMagfilter(Texture.FTNearestMipmapNearest)
+      texToon.setMinfilter(Texture.FTNearestMipmapNearest)
+      texToon.setAnisotropicDegree(30)
+      texToon.setWrapU(Texture.WM_clamp)
 
       ts_toon = TextureStage(matName+'_toon')
-      ts_toon.setColor(VBase4(1,1,1,.67))
+      # ts_toon.setColor(VBase4(1,1,1,.67))
       ts_toon.setMode(texMode)
       ts_toon.setSort(matIndex)
       ts_toon.setPriority(matIndex)
 
-      nodePath.setTexGen(ts_toon, TexGenAttrib.MEyeSphereMap)
-      nodePath.setTexture(ts_toon, tex, 1)
+      nodePath.setTexGen(ts_toon, TexGenAttrib.MEyeSphereMap, 2)
+      nodePath.setTexture(ts_toon, texToon, 1)
       nodePath.setTexScale(ts_toon, 1, -1, -1)
 
 
-    nodePath.setColorOff()
-    # nodePath.setShaderAuto(2)
-    # nodePath.setShaderAuto(BitMask32.bit(Shader.BitAutoShaderNormal) , 2)
     nodePath.setAntialias(AntialiasAttrib.MAuto)
-
-    if alpha:
-      #
-      # Here is not really to solve the tex alpha-transparency bug, only a other bug :(
-      #
-      # nodePath.setTransparency(True, 0)
-      # nodePath.setTransparency(True, 1)
-      # nodePath.setTransparency(TransparencyAttrib.MAlpha, 1)
-      # nodePath.setTransparency(TransparencyAttrib.MDual, 1)
-      pass
 
     vIndex += mat.vertex_count
     modelBody.addChild(node)
@@ -490,7 +502,7 @@ def loadPmdBone(pmd_model):
   boneNode = PandaNode('Bones')
   boneIndex = 0
   for bone in pmd_model.bones:
-    boneName = bone.name.decode('shift_jis')
+    boneName = bone.name.decode('shift_jis', errors='replace')
     log(u'Loading Bone : %s' % boneName, force=True)
 
     #
@@ -612,7 +624,7 @@ def loadPmdMorph(pmd_model):
   morphNode = PandaNode('Morphs')
   morphIndex = 0
   for morph in pmd_model.morphs:
-    morphName = morph.name.decode('shift_jis')
+    morphName = morph.name.decode('shift_jis', errors='replace')
     log(u'Loading Morph : %s' % morphName, force=True)
 
     #
@@ -693,7 +705,7 @@ def loadPmdSlot(pmd_model):
   slotNode = PandaNode('Slots')
   slotIndex = 0
   for slot in pmd_model.display_slots:
-    slotName = slot.name.decode('shift_jis')
+    slotName = slot.name.decode('shift_jis', errors='replace')
     log(u'Loading Slot : %s' % slotName, force=True)
     node = PandaNode(slotName)
     node.setPythonTag('english_name', slot.english_name)
@@ -715,7 +727,7 @@ def loadPmdRigid(pmd_model):
   rigidNode = PandaNode('Rigid')
   rigidIndex = 0
   for rigid in pmd_model.rigidbodies:
-    rigidName = rigid.name.decode('shift_jis')
+    rigidName = rigid.name.decode('shift_jis', errors='replace')
     log(u'Loading RigidBodies : %s' % rigidName, force=True)
     node = PandaNode(rigidName)
     node.setPythonTag('english_name', rigid.english_name)
@@ -748,7 +760,7 @@ def loadPmdJoint(pmd_model):
   jointNode = PandaNode('Joints')
   jointIndex = 0
   for joint in pmd_model.joints:
-    jointName = joint.name.decode('shift_jis')
+    jointName = joint.name.decode('shift_jis', errors='replace')
     log(u'Loading RigidBodies : %s' % jointName, force=True)
     node = PandaNode(jointName)
     node.setPythonTag('english_name', joint.english_name)
