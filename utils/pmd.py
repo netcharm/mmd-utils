@@ -339,6 +339,7 @@ def loadPmdBody(pmd_model, alpha=True):
     #
     # nodePath.setMaterial(materials.findMaterial(matName), 1) #Apply the material to this nodePath
     nodePath.setMaterial(materials[matIndex], 1) #Apply the material to this nodePath
+    nodePath.setTwoSided(True)
     nodePath.setPythonTag('material', materials[matIndex])
     nodePath.setPythonTag('pickableObjTag', 1)
 

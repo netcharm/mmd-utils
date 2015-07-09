@@ -70,6 +70,7 @@ loadPrcFileData('', 'coordinate-system zup-right')
 loadPrcFileData('', 'clock-mode limited')
 loadPrcFileData('', 'clock-frame-rate 60')
 loadPrcFileData('', 'show-frame-rate-meter 1')
+loadPrcFileData('', 'egg-emulate-bface 1')
 
 # loadPrcFileData('', 'notify-level warning')
 # loadPrcFileData('', 'default-directnotify-level warning')

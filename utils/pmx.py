@@ -250,22 +250,25 @@ def loadPmxBody(pmx_model, alpha=True):
     material.setAmbient(VBase4(mat.ambient_color.r, mat.ambient_color.g, mat.ambient_color.b, 1))
     # material.setEmission(VBase4(mat.edge_color.r, mat.edge_color.g, mat.edge_color.b, mat.edge_color.a))
     material.setLocal(False)
-    material.setTwoside(False)
-    if   mat.flag & 0b00000001:
+    if mat.flag & 0b00000001:
       # 两面描画
       material.setTwoside(True)
-    elif mat.flag & 0b00000010:
+    else:
+      material.setTwoside(False)
+
+    if mat.flag & 0b00000010:
       # 地面影
       pass
-    elif mat.flag & 0b00000100:
+    if mat.flag & 0b00000100:
       # セルフ影マツ
       pass
-    elif mat.flag & 0b00001000:
+    if mat.flag & 0b00001000:
       # セルフ影
       pass
-    elif mat.flag & 0b00010000:
+    if mat.flag & 0b00010000:
       # 輪郭有效
       pass
+    # print(mat.flag, material.getTwoside() )
 
     materials.addMaterial(material)
     log(u'Loaded Material %03d: %s' % (matIndex, mat.name), force=True)
@@ -343,6 +346,8 @@ def loadPmxBody(pmx_model, alpha=True):
     # Apply the material to this nodePath
     nodePath.setMaterial(materials[matIndex], 1)
 
+    nodePath.setTwoSided(materials[matIndex].getTwoside())
+
     nodePath.setPythonTag('edge_color', mat.edge_color)
     nodePath.setPythonTag('edge_size', mat.edge_size)
     nodePath.setPythonTag('material_index', matIndex)
@@ -361,7 +366,6 @@ def loadPmxBody(pmx_model, alpha=True):
         texMain.setBorderColor(VBase4(mat.edge_color.r, mat.edge_color.g, mat.edge_color.b, mat.edge_color.a))
         pass
 
-      # ts_main = TextureStage.getDefault()
       ts_main = TextureStage('%3d_%s_main' % (matIndex, mat.name))
       # ts_main.setColor(VBase4(mat.ambient_color.r, mat.ambient_color.g, mat.ambient_color.b, mat.alpha))
       ts_main.setColor(VBase4(mat.ambient_color.r, mat.ambient_color.g, mat.ambient_color.b, 1))
@@ -370,8 +374,7 @@ def loadPmxBody(pmx_model, alpha=True):
 
       if mat.sphere_texture_index < 0:
         ts_main.setMode(TextureStage.MReplace)
-
-        if (mat.flag & 0b00000100) or (mat.flag & 0b00001000):
+        if (mat.flag & 0b00000100) and (mat.flag & 0b00001000) and (mat.flag & 0b00000001):
           # セルフ影マツ or         # セルフ影
           ts_main.setMode(TextureStage.MModulate)
           pass
@@ -380,19 +383,16 @@ def loadPmxBody(pmx_model, alpha=True):
         # 地面影
         pass
 
-      # if texMain.getFormat() in [Texture.FRgba, Texture.FRgbm, Texture.FRgba4, Texture.FRgba5, Texture.FRgba8, Texture.FRgba12, Texture.FRgba16, Texture.FRgba32]: #, Texture.FSrgbAlpha]:
       if isAlpha(texMain):
         nodePath.setTransparency(TransparencyAttrib.MDual, matIndex)
 
       nodePath.setTexture(ts_main, texMain, matIndex)
       nodePath.setTexScale(ts_main, 1, -1, -1)
-    # else:
-    #   print(u'Texture %s : Main %03d' % (mat.name, mat.texture_index))
 
     #
     # Set Sphere Texture
     #
-    if mat.sphere_texture_index >=0 and textures[mat.sphere_texture_index] and textures[mat.sphere_texture_index].hasRamImage():
+    if mat.sphere_texture_index >= 0 and textures[mat.sphere_texture_index] and textures[mat.sphere_texture_index].hasRamImage():
       # print('Texture %s : Sphere %03d' % (mat.name, mat.sphere_texture_index))
       if mat.sphere_mode > 0:
         texSphere = textures[mat.sphere_texture_index]
@@ -419,7 +419,6 @@ def loadPmxBody(pmx_model, alpha=True):
         # nodePath.setShaderAuto(matIndex)
 
         if mat.texture_index < 0:
-          # if texSphere.getFormat() in [Texture.FRgba, Texture.FRgbm, Texture.FRgba4, Texture.FRgba5, Texture.FRgba8, Texture.FRgba12, Texture.FRgba16, Texture.FRgba32]: #, Texture.FSrgbAlpha]:
           if isAlpha(texSphere):
             nodePath.setTransparency(TransparencyAttrib.MDual, matIndex)
             # nodePath.setTransparency(TransparencyAttrib.MAlpha, matIndex)
