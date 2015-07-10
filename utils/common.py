@@ -63,6 +63,23 @@ colorBone = LVector4f(0.12, 1, 0.44, 1)
 
 
 JIS2GBK = dict({
+  u'\xab': u'《', # «
+  u'\xaf': u'￣', # ¯
+  u'\xbb': u'》', # »
+  u'\xbc': u'°',
+  u'\xba': u'°', # º
+  u'\xcc': u'Ì',
+  u'\x8f\xe3': u'ã',
+  u'\u017d': u'Ž',
+  u'\u02dc': u'~',
+  u'\u2018': u'‘',
+  u'\u201a': u',',
+  u'\u201b': u'’',
+  u'\u201c': u'“',
+  u'\u201d': u'”',
+  u'\u2030': u'‰',
+  u'\u226a': u'《', # ≪
+  u'\u226b': u'》', # ≫
   u'\u30bf\uff9e': u'ダ',
   u'\u30db\uff9e': u'ボ',
   u'\u30f3\uff9e': u'ゾ',

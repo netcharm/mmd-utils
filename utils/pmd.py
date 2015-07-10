@@ -636,9 +636,15 @@ def loadPmdMorph(pmd_model):
 
   morphNode = PandaNode('Morphs')
   morphIndex = 0
+  morphBase = None
   for morph in pmd_model.morphs:
     morphName = morph.name.decode('shift_jis', errors='replace')
     log(u'Loading Morph : %s' % morphName, force=True)
+
+    if morphIndex==0 and morphName == 'base':
+      morphBase = morph
+      morphIndex += 1
+      continue
 
     #
     # load vertices(vertex list)
@@ -668,9 +674,10 @@ def loadPmdMorph(pmd_model):
     prim = GeomPoints(Geom.UHDynamic)
     vdata.setNumRows(len(morph.pos_list))
     for idx in xrange(len(morph.pos_list)):
-      v = V2V(pmd_model.vertices[morph.indices[idx]].pos)
+      i = morphBase.indices[morph.indices[idx]]
+      v = V2V(pmd_model.vertices[i].pos)
       o = V2V(morph.pos_list[idx])
-      i = morph.indices[idx]
+
       vertex.addData3f(v)
       vindex.addData1i(i)
       vmorph.addData3f(o)
