@@ -218,6 +218,7 @@ class Stage(object):
       lights = loader.loadModel(lightsStage)
       lights = lights.getChild(0)
     except:
+      print(' Gen Lights...')
       lights = NodePath(PandaNode('StageLights'))
 
       alight = AmbientLight('alight')
@@ -259,7 +260,7 @@ class Stage(object):
       dlens.setFilmSize(41, 21)
       # dlens.setNearFar(50, 75)
       # dlnp_front.node().setAttenuation( Vec3( 0., 0., 0.00043 ) )
-      dlnp_front.node().setAttenuation( Vec3( 0., 0., 0.0007 ) )
+      dlnp_front.node().setAttenuation( Vec3( 0., 0., 0.0006 ) )
       dlnp_front.setHpr(0, -10, 0)
       if SHOW_LIGHT_POS:
         dlnp_front.node().showFrustum()

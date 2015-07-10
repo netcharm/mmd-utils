@@ -258,12 +258,16 @@ def loadPmdBody(pmd_model, alpha=True):
     log(u'Loading Material : %s' % matName)
     material = Material(matName)
     material.setDiffuse(VBase4(mat.diffuse_color.r, mat.diffuse_color.g, mat.diffuse_color.b, mat.alpha))
-    material.setSpecular(VBase4(mat.specular_color.r, mat.specular_color.g, mat.specular_color.b, 1))#mat.alpha))
-    material.setShininess(mat.specular_factor)
-    material.setAmbient(VBase4(mat.ambient_color.r, mat.ambient_color.g, mat.ambient_color.b, 1))#mat.alpha))
+    if mat.specular_factor > 0 or (mat.specular_color.r != 1 and mat.specular_color.g != 1 and mat.specular_color.b != 1):
+      material.setSpecular(VBase4(mat.specular_color.r, mat.specular_color.g, mat.specular_color.b, 1))
+      material.setShininess(mat.specular_factor)
+    else:
+      material.setSpecular(VBase4(mat.ambient_color.r, mat.ambient_color.g, mat.ambient_color.b, 0.01))
+      material.setShininess(0)
+    material.setAmbient(VBase4(mat.ambient_color.r, mat.ambient_color.g, mat.ambient_color.b, 1))
 
-    material.setLocal(False)
-    material.setTwoside(False)
+    material.setLocal(True)
+    # material.setTwoside(True)
     materials.addMaterial(material)
     matIndex += 1
     log(u'Loaded Material : %s' % (matName), force=True)
@@ -337,9 +341,9 @@ def loadPmdBody(pmd_model, alpha=True):
     #
     # set polygon face material
     #
-    # nodePath.setMaterial(materials.findMaterial(matName), 1) #Apply the material to this nodePath
     nodePath.setMaterial(materials[matIndex], 1) #Apply the material to this nodePath
-    nodePath.setTwoSided(True)
+    nodePath.setTwoSided(materials[matIndex].getTwoside())
+
     nodePath.setPythonTag('material', materials[matIndex])
     nodePath.setPythonTag('pickableObjTag', 1)
 
@@ -348,6 +352,7 @@ def loadPmdBody(pmd_model, alpha=True):
     #
     texFileMain = None
     texFileSphere = None
+
     if mat.texture_file and len(mat.texture_file) >= 0:
       texName = mat.texture_file.decode('shift_jis', errors='replace')
       tex_list = texName.split('*')
@@ -370,10 +375,14 @@ def loadPmdBody(pmd_model, alpha=True):
           texList[texFileMain] = loadTexture(os.path.join(modelPath, texFileMain))
           if texList[texFileMain]:
             log(u'Loaded Texture : %s' % texFileMain, force=True)
-            texList[texFileMain].setWrapU(Texture.WM_clamp)
+            # texList[texFileMain].setWrapU(Texture.WM_clamp)
 
         texMain = texList[texFileMain]
         if texMain and texMain.hasRamImage():
+          if mat.edge_flag:
+            # 輪郭有效
+            texMain.setBorderColor(VBase4(mat.diffuse_color.r, mat.diffuse_color.g, mat.diffuse_color.b, 1))
+          pass
 
           ts_main = TextureStage('%s_%3d_main' % (matName, matIndex))
           ts_main.setColor(VBase4(mat.ambient_color.r, mat.ambient_color.g, mat.ambient_color.b, 1))
@@ -383,7 +392,7 @@ def loadPmdBody(pmd_model, alpha=True):
           if not texFileSphere:
             ts_main.setMode(TextureStage.MReplace)
 
-          if texMain.getFormat() in [Texture.FRgba, Texture.FRgbm, Texture.FRgba4, Texture.FRgba5, Texture.FRgba8, Texture.FRgba12, Texture.FRgba16, Texture.FRgba32]: #, Texture.FSrgbAlpha]:
+          if isAlpha(texMain):
             nodePath.setTransparency(TransparencyAttrib.MDual, matIndex)
 
           nodePath.setTexture(ts_main, texMain)
@@ -396,8 +405,8 @@ def loadPmdBody(pmd_model, alpha=True):
           texMode = TextureStage.MAdd
         elif ext.lower() in ['.sph']:
           # texMode = TextureStage.MGlow
-          # texMode = TextureStage.MModulateGlow
-          texMode = TextureStage.MBlend
+          texMode = TextureStage.MModulateGlow
+          # texMode = TextureStage.MBlend
 
         # texMode = TextureStage.MBlend
         if not texFileSphere in texList:
@@ -419,7 +428,7 @@ def loadPmdBody(pmd_model, alpha=True):
           nodePath.setTexScale(ts_sphere, 1, -1, -1)
 
           if not texFileMain:
-            if texSphere.getFormat() in [Texture.FRgba, Texture.FRgbm, Texture.FRgba4, Texture.FRgba5, Texture.FRgba8, Texture.FRgba12, Texture.FRgba16, Texture.FRgba32]: #, Texture.FSrgbAlpha]:
+            if isAlpha(texSphere):
               nodePath.setTransparency(TransparencyAttrib.MDual, matIndex)
 
 

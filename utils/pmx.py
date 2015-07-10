@@ -245,11 +245,18 @@ def loadPmxBody(pmx_model, alpha=True):
     log(u'Loading Material %03d: %s' % (matIndex, mat.name))
     material = Material(mat.name)
     material.setDiffuse(VBase4(mat.diffuse_color.r, mat.diffuse_color.g, mat.diffuse_color.b, mat.alpha))
-    material.setSpecular(VBase4(mat.specular_color.r, mat.specular_color.g, mat.specular_color.b, 1))
-    material.setShininess(mat.specular_factor)
+    if mat.specular_factor > 0 or (mat.specular_color.r != 1 and mat.specular_color.g != 1 and mat.specular_color.b != 1):
+      material.setSpecular(VBase4(mat.specular_color.r, mat.specular_color.g, mat.specular_color.b, 1))
+      material.setShininess(mat.specular_factor)
+    else:
+      # material.setSpecular(VBase4(mat.specular_color.r, mat.specular_color.g, mat.specular_color.b, 0.01))
+      material.setSpecular(VBase4(mat.ambient_color.r, mat.ambient_color.g, mat.ambient_color.b, 0.01))
+      material.setShininess(0)
+
     material.setAmbient(VBase4(mat.ambient_color.r, mat.ambient_color.g, mat.ambient_color.b, 1))
     # material.setEmission(VBase4(mat.edge_color.r, mat.edge_color.g, mat.edge_color.b, mat.edge_color.a))
-    material.setLocal(False)
+    # material.setLocal(False)
+    material.setLocal(True)
     if mat.flag & 0b00000001:
       # 两面描画
       material.setTwoside(True)
@@ -345,7 +352,6 @@ def loadPmxBody(pmx_model, alpha=True):
     #
     # Apply the material to this nodePath
     nodePath.setMaterial(materials[matIndex], 1)
-
     nodePath.setTwoSided(materials[matIndex].getTwoside())
 
     nodePath.setPythonTag('edge_color', mat.edge_color)
@@ -375,7 +381,7 @@ def loadPmxBody(pmx_model, alpha=True):
       if mat.sphere_texture_index < 0:
         ts_main.setMode(TextureStage.MReplace)
         if (mat.flag & 0b00000100) and (mat.flag & 0b00001000) and (mat.flag & 0b00000001):
-          # セルフ影マツ or         # セルフ影
+            # セルフ影マツ or           # セルフ影                  # Twoside
           ts_main.setMode(TextureStage.MModulate)
           pass
 

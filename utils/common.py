@@ -75,16 +75,19 @@ JIS2GBK = dict({
   u'\u309d': u'ゝ',
   u'\u309e': u'ゞ',
   u'\u309f': u'より',
+  u'\u30ad': u'キ',
   u'\u30af': u'ク',
   u'\u30b3': u'コ',
+  u'\u30b7': u'シ',
   u'\u30bf': u'タ',
+  u'\u30df': u'ミ',
   u'\u30f3': u'ン',
   u'\u30f7': u'ぁ',
-  u'\u30f8': u'ヰ゛',
-  u'\u30f9': u'ヱ゛',
-  u'\u30fa': u'ヲ゛',
+  u'\u30f8': u'ヰ゛', # ヴぃ / ヴィ
+  u'\u30f9': u'ヱ゛', # ヴぇ / ヴェ
+  u'\u30fa': u'ヲ゛', # ヴぉ / ヴォ
   u'\u30fb': u'·',
-  u'\u8ffd': u'追',
+  # u'\u8ffd': u'追',
   u'\ufeff': u'',
   u'\uff11': u'1',
   u'\uff12': u'2',
@@ -93,6 +96,7 @@ JIS2GBK = dict({
   u'\uff29': u'I',
   u'\uff2b': u'K',
   u'\uff68': u'イ',
+  u'\uff6c': u'ヤ', #ャ
   u'\uff6d': u'ユ', #ュ
   u'\uff6f': u'シ',
   u'\uff70': u'-',
@@ -104,9 +108,13 @@ JIS2GBK = dict({
   u'\uff76': u'カ',
   u'\uff77': u'キ', # ｷ
   u'\uff78': u'ク',
+  u'\uff7a': u'コ',
+  u'\uff7c': u'シ',
   u'\uff7d': u'ス',
   u'\uff80': u'タ',
+  u'\uff81': u'チ',
   u'\uff84': u'ト',
+  u'\uff85': u'ナ',
   u'\uff88': u'ネ',
   u'\uff89': u'ノ',
   u'\uff8a': u'ハ',
@@ -119,7 +127,6 @@ JIS2GBK = dict({
   u'\uff97': u'ラ',
   u'\uff98': u'リ',
   u'\uff9d': u'ン',
-  # u'\uff9e': u'\uff9e',
   u'\uff9e': u'゛',
 
 })
