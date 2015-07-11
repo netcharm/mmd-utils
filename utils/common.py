@@ -271,9 +271,9 @@ def loadTexture(tex_file, model_path=None):
     elif tex_ext.lower() in ['.spa', '.sph', '.bmp']:
       try:
         try:
-          im = Image.open(tex_file)
-        except:
           im = BmpAlphaImageFile(tex_file)
+        except:
+          im = Image.open(tex_file)
         buf = StringIO.StringIO()
         im.save(buf, 'PNG')
 
