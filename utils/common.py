@@ -63,14 +63,17 @@ colorBone = LVector4f(0.12, 1, 0.44, 1)
 
 
 JIS2GBK = dict({
+  u'\x8f\xe3': u'a', # ã
+  # u'\x8f': u'a', # 
   u'\xab': u'《', # «
   u'\xaf': u'￣', # ¯
+  u'\xb0': u'°', # º¼
   u'\xbb': u'》', # »
   u'\xbc': u'°',
   u'\xba': u'°', # º
-  u'\xcc': u'Ì',
-  u'\x8f\xe3': u'ã',
-  u'\u017d': u'Ž',
+  u'\xcc': u'I', # Ì
+  # u'\xe3': u'a', # ã
+  u'\u017d': u'Z', # Ž,
   u'\u02dc': u'~',
   u'\u2018': u'‘',
   u'\u201a': u',',
@@ -84,6 +87,7 @@ JIS2GBK = dict({
   u'\u30db\uff9e': u'ボ',
   u'\u30f3\uff9e': u'ゾ',
   u'\uff77\uff9e': u'ギ',
+  u'\u300b': u'》',
   u'\u3095': u'か',
   u'\u3096': u'け',
   u'\u3099': u'゛',
@@ -96,7 +100,10 @@ JIS2GBK = dict({
   u'\u30af': u'ク',
   u'\u30b3': u'コ',
   u'\u30b7': u'シ',
+  u'\u30b9': u'ス',
   u'\u30bf': u'タ',
+  u'\u30d2': u'ヒ',
+  u'\u30d5': u'フ',
   u'\u30df': u'ミ',
   u'\u30f3': u'ン',
   u'\u30f7': u'ぁ',
@@ -113,8 +120,11 @@ JIS2GBK = dict({
   u'\uff29': u'I',
   u'\uff2b': u'K',
   u'\uff68': u'イ',
+  u'\uff6a': u'エ',
+  u'\uff6b': u'オ',
   u'\uff6c': u'ヤ', #ャ
   u'\uff6d': u'ユ', #ュ
+  u'\uff6e': u'ヨ',
   u'\uff6f': u'シ',
   u'\uff70': u'-',
   u'\uff71': u'ア',
@@ -141,6 +151,7 @@ JIS2GBK = dict({
   u'\uff8e': u'ホ',
   u'\uff8f': u'マ',
   u'\uff90': u'ミ',
+  u'\uff92': u'メ',
   u'\uff97': u'ラ',
   u'\uff98': u'リ',
   u'\uff9d': u'ン',
@@ -160,9 +171,9 @@ def log(info, force=False):
     # print(repr(info))
     # print(info)
     try:
-      print(info)
+      print(info.strip())
     except:
-      print(repr(info))
+      print(repr(info.strip()))
 
 _i16, _i32 = BmpImagePlugin.i16, BmpImagePlugin.i32
 
@@ -283,12 +294,9 @@ def loadTexture(tex_file, model_path=None):
       texture.load(pnm)
 
     texture.setFilename(tex_file)
-    texture.setCompression(Texture.CMOn)
-
-    # texture.generateRamMipmapImages()
-    # texture.setMagfilter(Texture.FTNearestMipmapNearest)
-    # texture.setMinfilter(Texture.FTNearestMipmapNearest)
-    # texture.setAnisotropicDegree(30)
+    # texture.setCompression(Texture.CMOn)
+    texture.compressRamImage()
+    texture.setMatchFramebufferFormat(True)
   return(texture)
   pass
 

@@ -71,6 +71,7 @@ loadPrcFileData('', 'clock-mode limited')
 loadPrcFileData('', 'clock-frame-rate 60')
 loadPrcFileData('', 'show-frame-rate-meter 1')
 loadPrcFileData('', 'egg-emulate-bface 1')
+loadPrcFileData('', 'model-cache-compressed-textures true')
 
 # loadPrcFileData('', 'notify-level warning')
 # loadPrcFileData('', 'default-directnotify-level warning')
@@ -138,6 +139,8 @@ lastModel = None
 ID_GRIDPLANE  = 20000
 ID_RECENTFILES = 21000
 ID_EXPRESSION = 30000
+
+CurrentApp = None
 
 class TestFrame(wx.Frame):
   def __init__(self, *args, **kwargs):
@@ -432,10 +435,12 @@ class Utils(object):
       p3dnode = loadPmdModel(modelname)
     else:
       p3dnode = loader.loadModel(Filename.fromOsSpecific(modelname))
+      p3dnode.setPythonTag('name', modelname)
 
     if p3dnode:
       p3dnode.reparentTo(render)
       render.setPythonTag('lastModel', p3dnode)
+      app.SetTitle(p3dnode.getPythonTag('name'))
 
     return(p3dnode)
 
@@ -701,6 +706,7 @@ class MmdViewerApp(ShowBase):
   wp = None
   modelidx = 0
   appConfig = dict()
+  title = None
 
   def __init__(self):
     self.loadConfig()
@@ -733,6 +739,7 @@ class MmdViewerApp(ShowBase):
     # icon = wx.Icon('viewpmx.ico', wx.BITMAP_TYPE_ICO)
     icon = wx.Icon('mmdviewer.png', wx.BITMAP_TYPE_ANY)
     self.frame.SetIcon(icon)
+    self.title = self.frame.GetTitle()
     # self.frame.SetTopWindow(self.frame)
     self.frame.Show(True)
     pass
@@ -973,6 +980,17 @@ class MmdViewerApp(ShowBase):
     # self.worldNP.flattenStrong()
     print('World Setup')
     # render.ls()
+    pass
+
+  def SetTitle(self, title=None):
+    if title:
+      self.frame.SetTitle('%s - %s' % (self.title, title))
+    else:
+      self.frame.SetTitle('%s' % (self.title))
+    pass
+
+  def SetStatus(self, state):
+
     pass
 
   def toggleDebug(self):
@@ -1295,7 +1313,7 @@ class MmdViewerApp(ShowBase):
     #
     idlist_expression = [30000, 31000]
     model = render.getPythonTag('lastModel')
-    if model:
+    if model and menu:
       expressionList = Utils.getExpressionList(model)
       for item in menu.GetMenuItems():
         text = item.GetText()
@@ -1390,4 +1408,5 @@ class MmdViewerApp(ShowBase):
 
 if __name__ == '__main__':
   app = MmdViewerApp()
+  CurrentApp = app
   app.run()

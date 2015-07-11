@@ -245,9 +245,22 @@ def loadPmxBody(pmx_model, alpha=True):
     log(u'Loading Material %03d: %s' % (matIndex, mat.name))
     material = Material(mat.name)
     material.setDiffuse(VBase4(mat.diffuse_color.r, mat.diffuse_color.g, mat.diffuse_color.b, mat.alpha))
+    # material.setSpecular(VBase4(mat.specular_color.r, mat.specular_color.g, mat.specular_color.b, 1))
+    # if mat.specular_factor == 0 and (
+    #   (mat.specular_color.r == 1 and mat.specular_color.g == 1 and mat.specular_color.b == 1) and mat.texture_index < 0):
+    #   material.setSpecular(VBase4(mat.ambient_color.r, mat.ambient_color.g, mat.ambient_color.b, 0.01))
+    # else: # mat.specular_factor > 0 or (mat.specular_color.r != 1 and mat.specular_color.g != 1 and mat.specular_color.b != 1):
+    #   material.setSpecular(VBase4(mat.specular_color.r, mat.specular_color.g, mat.specular_color.b, 1))
+    # material.setShininess(mat.specular_factor)
     if mat.specular_factor > 0 or (mat.specular_color.r != 1 and mat.specular_color.g != 1 and mat.specular_color.b != 1):
       material.setSpecular(VBase4(mat.specular_color.r, mat.specular_color.g, mat.specular_color.b, 1))
-      material.setShininess(mat.specular_factor)
+      # if 0 < mat.specular_factor < 1:
+      #   material.setShininess(mat.specular_factor*10)
+      # elif 1 <= mat.specular_factor < 25:
+      #   material.setShininess(mat.specular_factor+25)
+      # else:
+      #   material.setShininess(mat.specular_factor)
+      material.setShininess(mat.specular_factor*128)
     else:
       # material.setSpecular(VBase4(mat.specular_color.r, mat.specular_color.g, mat.specular_color.b, 0.01))
       material.setSpecular(VBase4(mat.ambient_color.r, mat.ambient_color.g, mat.ambient_color.b, 0.01))
@@ -322,7 +335,7 @@ def loadPmxBody(pmx_model, alpha=True):
   model = Character(modelName)
   model.setPythonTag('path', pmx_model.path)
   model.setPythonTag('version', str(pmx_model.version))
-  model.setPythonTag('name', pmx_model.name)
+  model.setPythonTag('name', modelName)
   model.setPythonTag('english_name', pmx_model.english_name)
   model.setPythonTag('comment', pmx_model.comment)
   model.setPythonTag('english_comment', pmx_model.english_comment)
@@ -374,7 +387,10 @@ def loadPmxBody(pmx_model, alpha=True):
 
       ts_main = TextureStage('%3d_%s_main' % (matIndex, mat.name))
       # ts_main.setColor(VBase4(mat.ambient_color.r, mat.ambient_color.g, mat.ambient_color.b, mat.alpha))
+      # ts_main.setColor(VBase4(mat.diffuse_color.r, mat.diffuse_color.g, mat.diffuse_color.b, mat.alpha))
+      # ts_main.setColor(VBase4(mat.specular_color.r, mat.specular_color.g, mat.specular_color.b, 1))
       ts_main.setColor(VBase4(mat.ambient_color.r, mat.ambient_color.g, mat.ambient_color.b, 1))
+
       ts_main.setSort(matIndex)
       ts_main.setPriority(matIndex)
 
@@ -415,7 +431,7 @@ def loadPmxBody(pmx_model, alpha=True):
         ts_sphere = TextureStage('%3d_%s_sphere' % (matIndex, mat.name))
 
         ts_sphere.setMode(texMode)
-
+        ts_sphere.setColor(VBase4(mat.specular_color.r, mat.specular_color.g, mat.specular_color.b, 1))
         ts_sphere.setSort(matIndex)
         ts_sphere.setPriority(matIndex)
 
