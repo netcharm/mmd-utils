@@ -129,7 +129,7 @@ SHOW_LIGHT_POS = True
 SHOW_LIGHT_POS = False
 
 SHOW_SHADOW = True
-SHOW_SHADOW = False
+# SHOW_SHADOW = False
 
 SHOW_AXIS = True
 # SHOW_AXIS = False
@@ -217,26 +217,30 @@ class Stage(object):
   def setStudioLight(render):
     lightsStage = u'./stages/default_lights.bam'
     # lightsStage = ''
-    try:
+    if os.path.isfile(os.path.abspath(lightsStage)):
+    # try:
       lights = loader.loadModel(lightsStage)
       lights = lights.getChild(0)
-    except:
-      print(' Gen Lights...')
+    # except:
+    else:
+      print('--> Gen Lights...')
       lights = NodePath(PandaNode('StageLights'))
 
       alight = AmbientLight('alight')
       # alight.setColor(VBase4(0.33, 0.33, 0.33, .2))
-      alight.setColor(VBase4(0.33, 0.33, 0.33, 0.67))
+      # alight.setColor(VBase4(0.33, 0.33, 0.33, 0.67))
+      alight.setColor(VBase4(1, 1, 1, 0.67))
       alnp = render.attachNewNode(alight)
       alnp.reparentTo(lights)
 
       dlight_top = PointLight('top dlight')
+      # dlight_top = DirectionalLight('top dlight')
       dlnp_top = render.attachNewNode(dlight_top)
-      dlnp_top.setX(-5)
+      dlnp_top.setX(0)
+      dlnp_top.setY(0)
       dlnp_top.setZ(45)
-      dlnp_top.setY(-5)
       # dlnp_top.node().setAttenuation( Vec3( 0., 0., 0.005 ) )
-      dlnp_top.node().setAttenuation( Vec3( 0., 0., 0.008 ) )
+      dlnp_top.node().setAttenuation( Vec3( 0., 0., 0.005 ) )
       dlnp_top.setHpr(0, -180, 0)
       if SHOW_LIGHT_POS:
         dlnp_top.node().showFrustum()
@@ -245,8 +249,8 @@ class Stage(object):
       dlight_back = PointLight('back dlight')
       dlnp_back = render.attachNewNode(dlight_back)
       dlnp_back.setX(0)
-      dlnp_back.setZ(25)
       dlnp_back.setY(+55)
+      dlnp_back.setZ(25)
       # dlnp_back.node().setAttenuation( Vec3( 0., 0., 0.0003 ) )
       dlnp_back.node().setAttenuation( Vec3( 0., 0., 0.0008 ) )
       dlnp_back.setHpr(0, -168, 0)
@@ -257,55 +261,65 @@ class Stage(object):
       dlight_front = PointLight('front dlight')
       dlnp_front = render.attachNewNode(dlight_front)
       dlnp_front.setX(0)
-      dlnp_front.setY(-36)
-      dlnp_front.setZ(15)
+      dlnp_front.setY(-56)
+      dlnp_front.setZ(0)
       dlens = dlnp_front.node().getLens()
       dlens.setFilmSize(41, 21)
       # dlens.setNearFar(50, 75)
-      # dlnp_front.node().setAttenuation( Vec3( 0., 0., 0.00043 ) )
-      dlnp_front.node().setAttenuation( Vec3( 0., 0., 0.0006 ) )
-      dlnp_front.setHpr(0, -10, 0)
+      dlnp_front.node().setAttenuation( Vec3( 0., 0., 0.00043 ) )
+      # dlnp_front.node().setAttenuation( Vec3( 0., 0., 0.0006 ) )
+      dlnp_front.node().setAttenuation( Vec3( 0., 0., 0.0005 ) )
+      dlnp_front.setHpr(0, -45, 0)
       if SHOW_LIGHT_POS:
         dlnp_front.node().showFrustum()
       dlnp_front.reparentTo(lights)
 
-      dlight_left = Spotlight('left dlight')
+      # dlight_left = Spotlight('left dlight')
+      dlight_left = PointLight('left dlight')
       dlnp_left = render.attachNewNode(dlight_left)
-      dlnp_left.setX(-46)
-      dlnp_left.setY(+36)
-      dlnp_left.setZ(27)
+      dlnp_left.setX(-50)
+      dlnp_left.setY(+40)
+      dlnp_left.setZ(15)
       dlens = dlnp_left.node().getLens()
       dlens.setFilmSize(41, 21)
       # dlens.setNearFar(50, 75)
-      dlnp_left.node().setAttenuation( Vec3( 0, 0, 0.00045 ) )
-      # dlnp_left.node().setAttenuation( Vec3( 0, 0, 0.0009 ) )
-      dlnp_left.setHpr(-130, -15, 0)
+      # dlnp_left.node().setAttenuation( Vec3( 0, 0, 0.00045 ) )
+      dlnp_left.node().setAttenuation( Vec3( 0, 0, 0.0002 ) )
+      dlnp_left.setHpr(-130, -5, 0)
       if SHOW_LIGHT_POS:
         dlnp_left.node().showFrustum()
       dlnp_left.reparentTo(lights)
 
-      dlight_right = Spotlight('right dlight')
+      # dlight_right = Spotlight('right dlight')
+      dlight_right = PointLight('right dlight')
       dlnp_right = render.attachNewNode(dlight_right)
       dlnp_right.setX(+50)
       dlnp_right.setY(+40)
-      dlnp_right.setZ(30)
+      dlnp_right.setZ(15)
       dlens = dlnp_right.node().getLens()
       dlens.setFilmSize(41, 21)
       # dlens.setNearFar(50, 75)
-      dlnp_right.node().setAttenuation( Vec3( 0, 0, 0.00055 ) )
-      # dlnp_right.node().setAttenuation( Vec3( 0, 0, 0.0011 ) )
+      # dlnp_right.node().setAttenuation( Vec3( 0, 0, 0.00055 ) )
+      dlnp_right.node().setAttenuation( Vec3( 0, 0, 0.0002 ) )
       dlnp_right.setHpr(130, -15, 0)
       if SHOW_LIGHT_POS:
         dlnp_right.node().showFrustum()
       dlnp_right.reparentTo(lights)
 
       if SHOW_SHADOW:
-        lights.setShaderAuto()
-        lights.setShadowCaster(True, 512, 512)
+        # lights.setShaderAuto()
+        # lights.setShadowCaster(True, 512, 512)
+        for lnp in lights.getChildren():
+          light = lnp.node()
+          lnp.setShaderAuto()
+          if not light.isAmbientLight():
+            light.setShadowCaster(True, 512, 512)
 
-      lights.writeBamFile(lightsStage)
+      if not os.path.exists(os.path.abspath(lightsStage)):
+        lights.writeBamFile(lightsStage)
 
-    # lights.reparentTo(render)
+    if SHOW_LIGHT_POS:
+      lights.reparentTo(render)
     Stage.lights = lights
     return(lights)
     pass
@@ -316,6 +330,9 @@ class Stage(object):
         return
     if not node:
       for light in lights.getChildren():
+        # if light.node().isAmbientLight():
+        #   render.setLight(light)
+        #   continue
         if on:
           render.setLight(light)
         else:
@@ -325,6 +342,9 @@ class Stage(object):
     elif isinstance(node, NodePathCollection):
       for np in node:
         for light in lights.getChildren():
+          # if light.node().isAmbientLight():
+          #   np.setLight(light)
+          #   continue
           if on:
             np.setLight(light)
           else:
@@ -333,6 +353,9 @@ class Stage(object):
       lights.setPythonTag('On', on)
     elif isinstance(node, NodePath):
       for light in lights.getChildren():
+        # if light.node().isAmbientLight():
+        #   node.setLight(light)
+        #   continue
         try:
           if on:
             node.setLight(light)

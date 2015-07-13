@@ -353,6 +353,9 @@ def loadPmdBody(pmd_model, alpha=True):
     texFileMain = None
     texFileSphere = None
 
+    if (not mat.texture_file) and mat.toon_index < 0:
+      nodePath.setTransparency(TransparencyAttrib.MDual, matIndex)
+
     if mat.texture_file and len(mat.texture_file) >= 0:
       texName = mat.texture_file.decode('shift_jis', errors='replace')
       tex_list = texName.split('*')
