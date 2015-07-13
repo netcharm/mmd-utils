@@ -258,15 +258,18 @@ def loadPmdBody(pmd_model, alpha=True):
     log(u'Loading Material : %s' % matName)
     material = Material(matName)
     material.setDiffuse(VBase4(mat.diffuse_color.r, mat.diffuse_color.g, mat.diffuse_color.b, mat.alpha))
+
+    # material.setSpecular(VBase4(mat.specular_color.r, mat.specular_color.g, mat.specular_color.b, 1))
     if mat.specular_factor > 0 or (mat.specular_color.r != 1 and mat.specular_color.g != 1 and mat.specular_color.b != 1):
       material.setSpecular(VBase4(mat.specular_color.r, mat.specular_color.g, mat.specular_color.b, 1))
       material.setShininess(mat.specular_factor*10)
     else:
       material.setSpecular(VBase4(mat.ambient_color.r, mat.ambient_color.g, mat.ambient_color.b, 0.01))
       material.setShininess(0)
+
     material.setAmbient(VBase4(mat.ambient_color.r, mat.ambient_color.g, mat.ambient_color.b, 1))
 
-    material.setLocal(True)
+    material.setLocal(False)
     # material.setTwoside(True)
     materials.addMaterial(material)
     matIndex += 1

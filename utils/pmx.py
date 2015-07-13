@@ -246,6 +246,7 @@ def loadPmxBody(pmx_model, alpha=True):
     material = Material(mat.name)
     material.setDiffuse(VBase4(mat.diffuse_color.r, mat.diffuse_color.g, mat.diffuse_color.b, mat.alpha))
 
+    # material.setSpecular(VBase4(mat.specular_color.r, mat.specular_color.g, mat.specular_color.b, 1))
     if mat.specular_factor > 0 or (mat.specular_color.r != 1 and mat.specular_color.g != 1 and mat.specular_color.b != 1):
       material.setSpecular(VBase4(mat.specular_color.r, mat.specular_color.g, mat.specular_color.b, 1))
       # if 0 < mat.specular_factor < 1:
@@ -447,7 +448,7 @@ def loadPmxBody(pmx_model, alpha=True):
       # texMode = TextureStage.MDecal
       # texMode = TextureStage.MGloss
       # texMode = TextureStage.MAdd
-      texMode = TextureStage.MModulateGlow
+      texMode = TextureStage.MModulate #Glow
 
       ts_toon = TextureStage('%3d_%s_toon' % (matIndex, mat.name))
       ts_toon.setColor(VBase4(0,0,0,.33))
