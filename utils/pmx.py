@@ -244,7 +244,7 @@ def loadPmxBody(pmx_model, alpha=True):
   for mat in pmx_model.materials:
     log(u'Loading Material %03d: %s' % (matIndex, mat.name))
     material = Material(mat.name)
-    material.setDiffuse(VBase4(mat.diffuse_color.r, mat.diffuse_color.g, mat.diffuse_color.b, 1-mat.alpha))
+    material.setDiffuse(VBase4(mat.diffuse_color.r, mat.diffuse_color.g, mat.diffuse_color.b, mat.alpha))
 
     if mat.specular_factor > 0 or (mat.specular_color.r != 1 and mat.specular_color.g != 1 and mat.specular_color.b != 1):
       material.setSpecular(VBase4(mat.specular_color.r, mat.specular_color.g, mat.specular_color.b, 1))
