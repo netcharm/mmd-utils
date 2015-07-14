@@ -291,9 +291,21 @@ def loadTexture(tex_file, model_path=None):
     else:
       texFile = Filename.fromOsSpecific(tex_file)
       Filename.makeCanonical(texFile)
-      pnm = PNMImage(texFile)
-      texture = Texture(tex_file)
-      texture.load(pnm)
+      try:
+        pnm = PNMImage(texFile)
+        texture = Texture(tex_file)
+        texture.load(pnm)
+      except:
+        im = Image.open(tex_file)
+        buf = StringIO.StringIO()
+        im.save(buf, 'PNG')
+
+        pnm = PNMImage()
+        pnm.read(StringStream(buf.getvalue()))
+        buf.close()
+
+        texture = Texture(tex_file)
+        texture.load(pnm)
 
     texture.setFilename(tex_file)
     # texture.setCompression(Texture.CMOn)

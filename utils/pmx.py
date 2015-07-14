@@ -365,25 +365,22 @@ def loadPmxBody(pmx_model, alpha=True):
     # set polygon face material
     #
     # Apply the material to this nodePath
-    nodePath.setMaterial(materials[matIndex], 1)
-    nodePath.setTwoSided(materials[matIndex].getTwoside())
+    nodePath.setMaterial(material, 1)
+    nodePath.setTwoSided(material.getTwoside())
 
     nodePath.setPythonTag('edge_color', mat.edge_color)
     nodePath.setPythonTag('edge_size', mat.edge_size)
     nodePath.setPythonTag('material_index', matIndex)
-    nodePath.setPythonTag('material', materials[matIndex])
+    nodePath.setPythonTag('material', material)
     nodePath.setPythonTag('pickableObjTag', 1)
-
-    # matflag_twoside      = bool(mat.flag & 0b00000001) # 两面描画
-    # matflag_shadowfloor  = bool(mat.flag & 0b00000010) # 地面影
-    # matflag_shadowself0  = bool(mat.flag & 0b00000100) # セルフ影マツ
-    # matflag_shadowself1  = bool(mat.flag & 0b00001000) # セルフ影
-    # matflag_outline      = bool(mat.flag & 0b00010000) # 輪郭有效
 
     if mat.texture_index < 0 and mat.sphere_texture_index < 0 and mat.toon_texture_index < 0:
       nodePath.setTransparency(TransparencyAttrib.MDual, matIndex)
     else:
       nodePath.setTransparency(TransparencyAttrib.MNone, matIndex)
+
+    # if mat.alpha<1:
+    #   nodePath.setTransparency(TransparencyAttrib.MAlpha, matIndex)
 
     #
     # set polygon face main textures
@@ -407,6 +404,8 @@ def loadPmxBody(pmx_model, alpha=True):
           if matflag_shadowself0 and matflag_shadowself1 and matflag_twoside:
              # セルフ影マツ or       # セルフ影              # Twoside
             ts_main.setMode(TextureStage.MModulate)
+          else:
+            nodePath.setTransparency(TransparencyAttrib.MAlpha, matIndex)
             pass
 
         if matflag_shadowfloor:
@@ -415,12 +414,17 @@ def loadPmxBody(pmx_model, alpha=True):
 
         if isAlpha(texMain) and not matflag_outline:
           nodePath.setTransparency(TransparencyAttrib.MDual, matIndex)
-        else:
-          # nodePath.setTransparency(TransparencyAttrib.MAlpha, matIndex)
-          nodePath.setTransparency(TransparencyAttrib.MNone, matIndex)
+        elif isAlpha(texMain) and matIndex==0:
+          nodePath.setTransparency(TransparencyAttrib.MAlpha, matIndex)
+        # elif not isAlpha(texMain):
+        #   nodePath.setTransparency(TransparencyAttrib.MNone, matIndex)
 
         nodePath.setTexture(ts_main, texMain, matIndex)
         nodePath.setTexScale(ts_main, 1, -1, -1)
+      else:
+        if mat.alpha<1:
+          nodePath.setTransparency(TransparencyAttrib.MAlpha, matIndex)
+
 
     #
     # Set Sphere Texture
@@ -489,8 +493,10 @@ def loadPmxBody(pmx_model, alpha=True):
 
     # nodePath.setBin("unsorted", matIndex)
     nodePath.setAntialias(AntialiasAttrib.MAuto)
-    if nodePath.getTransparency() == TransparencyAttrib.MNone:
+    if not nodePath.getTransparency() in [TransparencyAttrib.MDual, TransparencyAttrib.MAlpha]:
       nodePath.setTwoSided(True)
+    else:
+      nodePath.setTwoSided(False)
 
     vIndex += mat.vertex_count
     modelBody.addChild(node)
