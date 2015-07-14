@@ -41,7 +41,7 @@ import codecs
 from PIL import Image, ImageFile, BmpImagePlugin
 
 
-from pandac.PandaModules import *
+from panda3d.core import *
 
 
 DEBUG = True

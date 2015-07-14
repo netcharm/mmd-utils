@@ -33,7 +33,8 @@ import StringIO
 
 import codecs
 
-from pandac.PandaModules import *
+from panda3d.core import *
+from panda3d.egg import *
 
 from panda3d.bullet import ZUp
 from panda3d.bullet import BulletWorld
@@ -387,91 +388,80 @@ def loadPmxBody(pmx_model, alpha=True):
     #
     # set polygon face main textures
     #
-    if mat.texture_index >= 0 and textures[mat.texture_index] and textures[mat.texture_index].hasRamImage():
+    if mat.texture_index >= 0:
       # print('Texture %s : Main %03d' % (mat.name, mat.texture_index))
       texMain = textures[mat.texture_index]
-
-      if matflag_outline:
-        # 輪郭有效
-        texMain.setBorderColor(VBase4(mat.edge_color.r, mat.edge_color.g, mat.edge_color.b, mat.edge_color.a))
-        pass
-
-      ts_main = TextureStage('%3d_%s_main' % (matIndex, mat.name))
-      ts_main.setColor(VBase4(mat.ambient_color.r, mat.ambient_color.g, mat.ambient_color.b, 1))
-      ts_main.setSort(matIndex)
-      ts_main.setPriority(matIndex)
-
-      if mat.sphere_texture_index < 0:
-        ts_main.setMode(TextureStage.MReplace)
-        if matflag_shadowself0 and matflag_shadowself1 and matflag_twoside:
-           # セルフ影マツ or       # セルフ影              # Twoside
-          ts_main.setMode(TextureStage.MModulate)
+      if  texMain and texMain.hasRamImage():
+        if matflag_outline:
+          # 輪郭有效
+          texMain.setBorderColor(VBase4(mat.edge_color.r, mat.edge_color.g, mat.edge_color.b, mat.edge_color.a))
           pass
 
-      if matflag_shadowfloor:
-        # 地面影
-        pass
+        ts_main = TextureStage('%3d_%s_main' % (matIndex, mat.name))
+        ts_main.setColor(VBase4(mat.ambient_color.r, mat.ambient_color.g, mat.ambient_color.b, 1))
+        ts_main.setSort(matIndex)
+        ts_main.setPriority(matIndex)
 
-      if isAlpha(texMain) and not matflag_outline:
-        nodePath.setTransparency(TransparencyAttrib.MDual, matIndex)
-      else:
-        # nodePath.setTransparency(TransparencyAttrib.MAlpha, matIndex)
-        nodePath.setTransparency(TransparencyAttrib.MNone, matIndex)
+        if mat.sphere_texture_index < 0:
+          ts_main.setMode(TextureStage.MReplace)
+          if matflag_shadowself0 and matflag_shadowself1 and matflag_twoside:
+             # セルフ影マツ or       # セルフ影              # Twoside
+            ts_main.setMode(TextureStage.MModulate)
+            pass
 
-      nodePath.setTexture(ts_main, texMain, matIndex)
-      nodePath.setTexScale(ts_main, 1, -1, -1)
+        if matflag_shadowfloor:
+          # 地面影
+          pass
+
+        if isAlpha(texMain) and not matflag_outline:
+          nodePath.setTransparency(TransparencyAttrib.MDual, matIndex)
+        else:
+          # nodePath.setTransparency(TransparencyAttrib.MAlpha, matIndex)
+          nodePath.setTransparency(TransparencyAttrib.MNone, matIndex)
+
+        nodePath.setTexture(ts_main, texMain, matIndex)
+        nodePath.setTexScale(ts_main, 1, -1, -1)
 
     #
     # Set Sphere Texture
     #
-    if mat.sphere_texture_index >= 0 and textures[mat.sphere_texture_index] and textures[mat.sphere_texture_index].hasRamImage():
+    if mat.sphere_texture_index >= 0:
       # print('Texture %s : Sphere %03d' % (mat.name, mat.sphere_texture_index))
       if mat.sphere_mode > 0:
         texSphere = textures[mat.sphere_texture_index]
-
-        if mat.sphere_mode == 1:
-          texMode = TextureStage.MModulateGloss
-        elif mat.sphere_mode == 2:
-          texMode = TextureStage.MAdd
-        elif mat.sphere_mode == 3:
-          texMode = TextureStage.MReplace
-        else:
-          texMode = TextureStage.MModulate
-
-        ts_sphere = TextureStage('%3d_%s_sphere' % (matIndex, mat.name))
-
-        ts_sphere.setMode(texMode)
-        ts_sphere.setColor(VBase4(mat.specular_color.r, mat.specular_color.g, mat.specular_color.b, 1))
-        ts_sphere.setSort(matIndex)
-        ts_sphere.setPriority(matIndex)
-
-        nodePath.setTexGen(ts_sphere, TexGenAttrib.MEyeSphereMap, matIndex)
-        nodePath.setTexture(ts_sphere, texSphere, matIndex)
-        nodePath.setTexScale(ts_sphere, 1, -1, -1)
-        # nodePath.setShaderAuto(matIndex)
-
-        if mat.texture_index < 0:
-          if isAlpha(texSphere):
-            nodePath.setTransparency(TransparencyAttrib.MDual, matIndex)
+        if texSphere and texSphere.hasRamImage():
+          if mat.sphere_mode == 1:
+            texMode = TextureStage.MModulateGloss
+          elif mat.sphere_mode == 2:
+            texMode = TextureStage.MAdd
+          elif mat.sphere_mode == 3:
+            texMode = TextureStage.MReplace
           else:
-            nodePath.setTransparency(TransparencyAttrib.MNone, matIndex)
+            texMode = TextureStage.MModulate
+
+          ts_sphere = TextureStage('%3d_%s_sphere' % (matIndex, mat.name))
+
+          ts_sphere.setMode(texMode)
+          ts_sphere.setColor(VBase4(mat.specular_color.r, mat.specular_color.g, mat.specular_color.b, 1))
+          ts_sphere.setSort(matIndex)
+          ts_sphere.setPriority(matIndex)
+
+          nodePath.setTexGen(ts_sphere, TexGenAttrib.MEyeSphereMap, matIndex)
+          nodePath.setTexture(ts_sphere, texSphere, matIndex)
+          nodePath.setTexScale(ts_sphere, 1, -1, -1)
+          # nodePath.setShaderAuto(matIndex)
+
+          if mat.texture_index < 0:
+            if isAlpha(texSphere):
+              nodePath.setTransparency(TransparencyAttrib.MDual, matIndex)
+            else:
+              nodePath.setTransparency(TransparencyAttrib.MNone, matIndex)
 
     #
     # Set Toon Texture
     #
     if mat.toon_texture_index>=0:
       # print('Texture %s : Toon %03d' % (mat.name, mat.toon_texture_index))
-
-      # texMode = TextureStage.MDecal
-      # texMode = TextureStage.MGloss
-      # texMode = TextureStage.MAdd
-      texMode = TextureStage.MModulate #Glow
-
-      ts_toon = TextureStage('%3d_%s_toon' % (matIndex, mat.name))
-      ts_toon.setColor(VBase4(0,0,0,.33))
-      ts_toon.setMode(texMode)
-      ts_toon.setSort(matIndex)
-      ts_toon.setPriority(matIndex)
 
       if mat.toon_sharing_flag > 0:
         texToon = loadTexture(u'toon/toon%02d.bmp' % (mat.toon_texture_index+1))
@@ -480,7 +470,18 @@ def loadPmxBody(pmx_model, alpha=True):
       else:
         texToon = textures[mat.toon_texture_index]
 
-      if texToon.hasRamImage():
+      if texToon and texToon.hasRamImage():
+        # texMode = TextureStage.MDecal
+        # texMode = TextureStage.MGloss
+        # texMode = TextureStage.MAdd
+        texMode = TextureStage.MModulate #Glow
+
+        ts_toon = TextureStage('%3d_%s_toon' % (matIndex, mat.name))
+        ts_toon.setColor(VBase4(0,0,0,.33))
+        ts_toon.setMode(texMode)
+        ts_toon.setSort(matIndex)
+        ts_toon.setPriority(matIndex)
+
         nodePath.setTexGen(ts_toon, TexGenAttrib.MEyeSphereMap, matIndex)
         nodePath.setTexture(ts_toon, texToon, matIndex)
         nodePath.setTexScale(ts_toon, 1, -1, -1)
@@ -1090,20 +1091,22 @@ def testPMX(pmx):
   if pmxModel:
     displayPmxModelInfo(pmxModel)
 
-    import direct.directbase.DirectStart
-    p3dnode = pmx2p3d(pmxModel)
-    p3dnode.reparentTo(render)
+    from direct.showbase.ShowBase import ShowBase
+    base = ShowBase()
 
-    run()
+    p3dnode = pmx2p3d(pmxModel)
+    p3dnode.reparentTo(base.render)
+
+    base.run()
     pass
   pass
 
 if __name__ == '__main__':
   pmxFile = u'../models/meiko/meiko.pmx'
   pmxFile = u'../models/apimiku/Miku long hair.pmx'
-  # pmxFile = u'../models/cupidmiku/Cupid Miku.pmx'
+  pmxFile = u'../models/cupidmiku/Cupid Miku.pmx'
 
-  pmxFile = u'../models/alice/alice.pmd'
+  # pmxFile = u'../models/alice/alice.pmd'
 
   if len(sys.argv) > 1:
     if len(sys.argv[1]) > 0:

@@ -33,12 +33,14 @@ import StringIO
 
 import codecs
 
+from panda3d.core import *
+from panda3d.egg import *
+
 from common import *
 
 from pymeshio import pmd
 from pymeshio.pmd import reader as pmdReader
 
-from pandac.PandaModules import *
 
 DEBUG = True
 DEBUG = False
@@ -827,11 +829,13 @@ def testPMD(pmd):
     print(pmdModel.path)
     displayPmdModelInfo(pmdModel)
 
-    import direct.directbase.DirectStart
-    p3dnode = pmd2p3d(pmdModel)
-    p3dnode.reparentTo(render)
+    from direct.showbase.ShowBase import ShowBase
+    base = ShowBase()
 
-    run()
+    p3dnode = pmd2p3d(pmdModel)
+    p3dnode.reparentTo(base.render)
+
+    base.run()
     pass
   pass
 

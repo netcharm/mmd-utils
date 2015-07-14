@@ -60,7 +60,7 @@ from __future__ import division
 import sys
 import os
 
-from pandac.PandaModules import *
+from panda3d.core import *
 
 
 DEBUG = True
@@ -526,10 +526,11 @@ class ThreeAxisGrid:
 
 
 if __name__ == '__main__':
-   import direct.directbase.DirectStart
+   from direct.showbase.ShowBase import ShowBase
+   base = ShowBase()
 
    grid = ThreeAxisGrid()
    gridnodepath = grid.create()
-   gridnodepath.reparentTo(render)
+   gridnodepath.reparentTo(base.render)
 
-   run()
+   base.run()
