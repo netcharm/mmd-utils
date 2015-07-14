@@ -111,6 +111,7 @@ JIS2GBK = dict({
   u'\u30f9': u'ヱ゛', # ヴぇ / ヴェ
   u'\u30fa': u'ヲ゛', # ヴぉ / ヴォ
   u'\u30fb': u'·',
+  # u'\u5148': u'·',
   # u'\u8ffd': u'追',
   u'\ufeff': u'',
   u'\uff11': u'1',
@@ -138,6 +139,7 @@ JIS2GBK = dict({
   u'\uff7a': u'コ',
   u'\uff7c': u'シ',
   u'\uff7d': u'ス',
+  u'\uff7e': u'セ',
   u'\uff80': u'タ',
   u'\uff81': u'チ',
   u'\uff84': u'ト',

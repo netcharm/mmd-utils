@@ -460,6 +460,8 @@ def loadPmdBody(pmd_model, alpha=True):
 
 
     nodePath.setAntialias(AntialiasAttrib.MAuto)
+    if nodePath.getTransparency() == TransparencyAttrib.MNone:
+      nodePath.setTwoSided(True)
 
     vIndex += mat.vertex_count
     modelBody.addChild(node)

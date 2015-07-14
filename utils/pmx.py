@@ -236,57 +236,6 @@ def loadPmxBody(pmx_model, alpha=True):
       log(u'Texture Failed %03d: %s' % (texIndex, tex), force=True)
     texIndex += 1
 
-  #
-  # load materials
-  #
-  matIndex = 0
-  materials = MaterialCollection()
-  for mat in pmx_model.materials:
-    log(u'Loading Material %03d: %s' % (matIndex, mat.name))
-    material = Material(mat.name)
-    material.setDiffuse(VBase4(mat.diffuse_color.r, mat.diffuse_color.g, mat.diffuse_color.b, mat.alpha))
-
-    # material.setSpecular(VBase4(mat.specular_color.r, mat.specular_color.g, mat.specular_color.b, 1))
-    if mat.specular_factor > 0 or (mat.specular_color.r != 1 and mat.specular_color.g != 1 and mat.specular_color.b != 1):
-      material.setSpecular(VBase4(mat.specular_color.r, mat.specular_color.g, mat.specular_color.b, 1))
-      # if 0 < mat.specular_factor < 1:
-      #   material.setShininess(mat.specular_factor*10)
-      # elif 1 <= mat.specular_factor < 25:
-      #   material.setShininess(mat.specular_factor+25)
-      # else:
-      #   material.setShininess(mat.specular_factor)
-      # material.setShininess(mat.specular_factor)
-      material.setShininess(mat.specular_factor*10)
-    else:
-      material.setSpecular(VBase4(mat.ambient_color.r, mat.ambient_color.g, mat.ambient_color.b, 0.01))
-      material.setShininess(0)
-
-    material.setAmbient(VBase4(mat.ambient_color.r, mat.ambient_color.g, mat.ambient_color.b, 1))
-    # material.setLocal(False)
-    material.setLocal(True)
-    if mat.flag & 0b00000001:
-      # 两面描画
-      material.setTwoside(True)
-    else:
-      material.setTwoside(False)
-
-    if mat.flag & 0b00000010:
-      # 地面影
-      pass
-    if mat.flag & 0b00000100:
-      # セルフ影マツ
-      pass
-    if mat.flag & 0b00001000:
-      # セルフ影
-      pass
-    if mat.flag & 0b00010000:
-      # 輪郭有效
-      pass
-    # print(mat.flag, material.getTwoside() )
-
-    materials.addMaterial(material)
-    log(u'Loaded Material %03d: %s' % (matIndex, mat.name), force=True)
-    matIndex += 1
 
   modelName = pmx_model.name
   #
@@ -337,8 +286,65 @@ def loadPmxBody(pmx_model, alpha=True):
   modelBody = ModelRoot('Body')
   model.addChild(modelBody)
 
+  materials = MaterialCollection()
   matIndex = 0
   for mat in pmx_model.materials:
+    #
+    # load materials
+    #
+    log(u'Loading Material %03d: %s' % (matIndex, mat.name))
+    material = Material(mat.name)
+    material.setDiffuse(VBase4(mat.diffuse_color.r, mat.diffuse_color.g, mat.diffuse_color.b, mat.alpha))
+
+    matflag_twoside      = bool(mat.flag & 0b00000001) # 两面描画
+    matflag_shadowfloor  = bool(mat.flag & 0b00000010) # 地面影
+    matflag_shadowself0  = bool(mat.flag & 0b00000100) # セルフ影マツ
+    matflag_shadowself1  = bool(mat.flag & 0b00001000) # セルフ影
+    matflag_outline      = bool(mat.flag & 0b00010000) # 輪郭有效
+
+    # material.setSpecular(VBase4(mat.specular_color.r, mat.specular_color.g, mat.specular_color.b, 1))
+    if mat.specular_factor > 0 or (mat.specular_color.r != 1 and mat.specular_color.g != 1 and mat.specular_color.b != 1):
+      material.setSpecular(VBase4(mat.specular_color.r, mat.specular_color.g, mat.specular_color.b, 1))
+      # if 0 < mat.specular_factor < 1:
+      #   material.setShininess(mat.specular_factor*10)
+      # elif 1 <= mat.specular_factor < 25:
+      #   material.setShininess(mat.specular_factor+25)
+      # else:
+      #   material.setShininess(mat.specular_factor)
+      # material.setShininess(mat.specular_factor)
+      material.setShininess(mat.specular_factor*10)
+    else:
+      material.setSpecular(VBase4(mat.ambient_color.r, mat.ambient_color.g, mat.ambient_color.b, 0.01))
+      material.setShininess(0)
+
+    material.setAmbient(VBase4(mat.ambient_color.r, mat.ambient_color.g, mat.ambient_color.b, 1))
+    # material.setLocal(False)
+    material.setLocal(True)
+    if matflag_twoside:
+      # 两面描画
+      material.setTwoside(True)
+    else:
+      material.setTwoside(False)
+
+    if matflag_shadowfloor:
+      # 地面影
+      pass
+    if matflag_shadowself0:
+      # セルフ影マツ
+      pass
+    if matflag_shadowself1:
+      # セルフ影
+      pass
+    if matflag_outline:
+      # 輪郭有效
+      pass
+
+    materials.addMaterial(material)
+    log(u'Loaded Material %03d: %s' % (matIndex, mat.name), force=True)
+
+    #
+    # Load vertex for every material/polygon face
+    #
     prim = GeomTriangles(Geom.UHDynamic)
     log(u'Loading Node %03d: %s' % (matIndex, mat.name))
     for idx in xrange(vIndex, vIndex+mat.vertex_count, 3):
@@ -367,8 +373,16 @@ def loadPmxBody(pmx_model, alpha=True):
     nodePath.setPythonTag('material', materials[matIndex])
     nodePath.setPythonTag('pickableObjTag', 1)
 
+    # matflag_twoside      = bool(mat.flag & 0b00000001) # 两面描画
+    # matflag_shadowfloor  = bool(mat.flag & 0b00000010) # 地面影
+    # matflag_shadowself0  = bool(mat.flag & 0b00000100) # セルフ影マツ
+    # matflag_shadowself1  = bool(mat.flag & 0b00001000) # セルフ影
+    # matflag_outline      = bool(mat.flag & 0b00010000) # 輪郭有效
+
     if mat.texture_index < 0 and mat.sphere_texture_index < 0 and mat.toon_texture_index < 0:
       nodePath.setTransparency(TransparencyAttrib.MDual, matIndex)
+    else:
+      nodePath.setTransparency(TransparencyAttrib.MNone, matIndex)
 
     #
     # set polygon face main textures
@@ -377,7 +391,7 @@ def loadPmxBody(pmx_model, alpha=True):
       # print('Texture %s : Main %03d' % (mat.name, mat.texture_index))
       texMain = textures[mat.texture_index]
 
-      if mat.flag & 0b00010000:
+      if matflag_outline:
         # 輪郭有效
         texMain.setBorderColor(VBase4(mat.edge_color.r, mat.edge_color.g, mat.edge_color.b, mat.edge_color.a))
         pass
@@ -389,17 +403,20 @@ def loadPmxBody(pmx_model, alpha=True):
 
       if mat.sphere_texture_index < 0:
         ts_main.setMode(TextureStage.MReplace)
-        if (mat.flag & 0b00000100) and (mat.flag & 0b00001000) and (mat.flag & 0b00000001):
-            # セルフ影マツ or           # セルフ影                  # Twoside
+        if matflag_shadowself0 and matflag_shadowself1 and matflag_twoside:
+           # セルフ影マツ or       # セルフ影              # Twoside
           ts_main.setMode(TextureStage.MModulate)
           pass
 
-      if mat.flag & 0b00000010:
+      if matflag_shadowfloor:
         # 地面影
         pass
 
-      if isAlpha(texMain):
+      if isAlpha(texMain) and not matflag_outline:
         nodePath.setTransparency(TransparencyAttrib.MDual, matIndex)
+      else:
+        # nodePath.setTransparency(TransparencyAttrib.MAlpha, matIndex)
+        nodePath.setTransparency(TransparencyAttrib.MNone, matIndex)
 
       nodePath.setTexture(ts_main, texMain, matIndex)
       nodePath.setTexScale(ts_main, 1, -1, -1)
@@ -436,9 +453,9 @@ def loadPmxBody(pmx_model, alpha=True):
         if mat.texture_index < 0:
           if isAlpha(texSphere):
             nodePath.setTransparency(TransparencyAttrib.MDual, matIndex)
-            # nodePath.setTransparency(TransparencyAttrib.MAlpha, matIndex)
-            # nodePath.setAttrib(ColorBlendAttrib.make(ColorBlendAttrib.MAdd,
-            #                    ColorBlendAttrib.OIncomingAlpha, ColorBlendAttrib.OOne))
+          else:
+            nodePath.setTransparency(TransparencyAttrib.MNone, matIndex)
+
     #
     # Set Toon Texture
     #
@@ -459,26 +476,25 @@ def loadPmxBody(pmx_model, alpha=True):
       if mat.toon_sharing_flag > 0:
         texToon = loadTexture(u'toon/toon%02d.bmp' % (mat.toon_texture_index+1))
       elif (mat.toon_texture_index < 0) or (not textures[mat.toon_texture_index]):
-        # tex = loadTexture(u'toon/toon0.bmp')
         texToon = Texture('NULL')
       else:
         texToon = textures[mat.toon_texture_index]
-      # texToon.setWrapU(Texture.WM_clamp)
-      # texToon.setWrapV(Texture.WM_clamp)
 
       if texToon.hasRamImage():
-        # nodePath.setTexGen(ts_toon, TexGenAttrib.MUnused, matIndex)
         nodePath.setTexGen(ts_toon, TexGenAttrib.MEyeSphereMap, matIndex)
         nodePath.setTexture(ts_toon, texToon, matIndex)
         nodePath.setTexScale(ts_toon, 1, -1, -1)
         pass
 
+    # nodePath.setBin("unsorted", matIndex)
     nodePath.setAntialias(AntialiasAttrib.MAuto)
+    if nodePath.getTransparency() == TransparencyAttrib.MNone:
+      nodePath.setTwoSided(True)
 
     vIndex += mat.vertex_count
     modelBody.addChild(node)
+    log(u'Loaded Polygons %03d: %s' % (matIndex, mat.name), force=True)
     matIndex += 1
-    log(u'Loaded Node %03d: %s' % (matIndex, mat.name), force=True)
 
   modelPath = NodePath(model)
   # modelPath.setShaderAuto()
@@ -1058,10 +1074,10 @@ def loadPmxModel(modelfile):
       slots = loadPmxSlot(mmdModel)
       if slots:
         slots.reparentTo(p3dnode)
-      # rigids = loadPmxRigid(mmdModel)
-      # rigids.reparentTo(p3dnode)
-      # joints = loadPmxJoint(mmdModel)
-      # joints.reparentTo(p3dnode)
+      rigids = loadPmxRigid(mmdModel)
+      rigids.reparentTo(p3dnode)
+      joints = loadPmxJoint(mmdModel)
+      joints.reparentTo(p3dnode)
       bullet = loadPmxBullet(mmdModel)
       if bullet:
         bullet.reparentTo(p3dnode)
