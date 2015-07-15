@@ -314,7 +314,7 @@ def loadTexture(tex_file, model_path=None):
   return(texture)
   pass
 
-def isAlpha(texture):
+def hasAlpha(texture):
   return(texture.getFormat() in [Texture.FRgba, Texture.FRgbm, Texture.FRgba4, Texture.FRgba5, Texture.FRgba8, Texture.FRgba12, Texture.FRgba16, Texture.FRgba32])
 
 def loadJ2ETable(j2e_file):

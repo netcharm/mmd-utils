@@ -289,6 +289,7 @@ def loadPmxBody(pmx_model, alpha=True):
 
   materials = MaterialCollection()
   matIndex = 0
+  matCount = len(pmx_model.materials)
   for mat in pmx_model.materials:
     #
     # load materials
@@ -385,6 +386,7 @@ def loadPmxBody(pmx_model, alpha=True):
     #
     # set polygon face main textures
     #
+    tsID = matCount - matIndex
     if mat.texture_index >= 0:
       # print('Texture %s : Main %03d' % (mat.name, mat.texture_index))
       texMain = textures[mat.texture_index]
@@ -396,8 +398,8 @@ def loadPmxBody(pmx_model, alpha=True):
 
         ts_main = TextureStage('%3d_%s_main' % (matIndex, mat.name))
         ts_main.setColor(VBase4(mat.ambient_color.r, mat.ambient_color.g, mat.ambient_color.b, 1))
-        ts_main.setSort(matIndex)
-        ts_main.setPriority(matIndex)
+        ts_main.setSort(tsID)
+        ts_main.setPriority(tsID)
 
         if mat.sphere_texture_index < 0:
           ts_main.setMode(TextureStage.MReplace)
@@ -405,25 +407,68 @@ def loadPmxBody(pmx_model, alpha=True):
              # セルフ影マツ or       # セルフ影              # Twoside
             ts_main.setMode(TextureStage.MModulate)
           else:
-            nodePath.setTransparency(TransparencyAttrib.MAlpha, matIndex)
+            nodePath.setTransparency(TransparencyAttrib.MAlpha, tsID)
             pass
+
+        if hasAlpha(texMain):
+          if nodePath.getTransparency() != TransparencyAttrib.MNone:
+            pass
+
+          #
+          # it's a stupid method for setTransparency, but now i can not found another effected method
+          #
+          if not matflag_outline:
+            nodePath.setTransparency(TransparencyAttrib.MDual, tsID)
+          elif matflag_outline and mat.edge_color.a != 1:
+            nodePath.setTransparency(TransparencyAttrib.MMultisample, tsID)
+          elif mat.edge_color.a == 1:
+            nodePath.setTransparency(TransparencyAttrib.MDual, tsID)
+          elif mat.sphere_texture_index < 0:
+            nodePath.setTransparency(TransparencyAttrib.MAlpha, tsID)
+          else:
+            # nodePath.setTransparency(TransparencyAttrib.MAlpha, tsID)
+            nodePath.setTransparency(TransparencyAttrib.MMultisample, tsID)
+            # print('setting alpha except')
+            pass
+
+          #
+          # it's a stupid method for setTransparency, but now i can not found another effected method
+          #
+          if mat.alpha == 1 and matflag_twoside and mat.specular_factor > 100:
+            nodePath.setTransparency(TransparencyAttrib.MDual, tsID)
+          elif mat.alpha == 1 and not matflag_twoside and mat.specular_factor > 20:
+            nodePath.setTransparency(TransparencyAttrib.MNone, tsID)
+          elif mat.alpha == 1 and matflag_twoside and mat.specular_factor > 20:
+            nodePath.setTransparency(TransparencyAttrib.MAlpha, tsID)
+          elif mat.alpha == 1 and matflag_twoside and mat.specular_factor > 10:
+            pass
+          elif mat.alpha == 1 and matflag_twoside and mat.specular_factor > 5:
+            pass
+          elif mat.alpha == 1 and matflag_twoside and mat.specular_factor > 1:
+            nodePath.setTransparency(TransparencyAttrib.MNone, tsID)
+          elif mat.sphere_texture_index < 0 and mat.specular_factor > 0:
+            nodePath.setTransparency(TransparencyAttrib.MAlpha, tsID)
+          elif mat.sphere_texture_index < 0 and not matflag_twoside and mat.specular_factor > 20:
+            nodePath.setTransparency(TransparencyAttrib.MNone, tsID)
+
+
+        else:
+          nodePath.setTransparency(TransparencyAttrib.MDual, tsID)
+          # nodePath.setTransparency(TransparencyAttrib.MBinary, tsID)
+
+          pass
+
+        # print(nodePath.getTransparency())
 
         if matflag_shadowfloor:
           # 地面影
           pass
 
-        if isAlpha(texMain) and not matflag_outline:
-          nodePath.setTransparency(TransparencyAttrib.MDual, matIndex)
-        elif isAlpha(texMain) and matIndex==0:
-          nodePath.setTransparency(TransparencyAttrib.MAlpha, matIndex)
-        # elif not isAlpha(texMain):
-        #   nodePath.setTransparency(TransparencyAttrib.MNone, matIndex)
-
-        nodePath.setTexture(ts_main, texMain, matIndex)
+        nodePath.setTexture(ts_main, texMain, tsID)
         nodePath.setTexScale(ts_main, 1, -1, -1)
       else:
         if mat.alpha<1:
-          nodePath.setTransparency(TransparencyAttrib.MAlpha, matIndex)
+          nodePath.setTransparency(TransparencyAttrib.MAlpha, tsID)
 
 
     #
@@ -447,19 +492,19 @@ def loadPmxBody(pmx_model, alpha=True):
 
           ts_sphere.setMode(texMode)
           ts_sphere.setColor(VBase4(mat.specular_color.r, mat.specular_color.g, mat.specular_color.b, 1))
-          ts_sphere.setSort(matIndex)
-          ts_sphere.setPriority(matIndex)
+          ts_sphere.setSort(tsID)
+          ts_sphere.setPriority(tsID)
 
-          nodePath.setTexGen(ts_sphere, TexGenAttrib.MEyeSphereMap, matIndex)
-          nodePath.setTexture(ts_sphere, texSphere, matIndex)
+          nodePath.setTexGen(ts_sphere, TexGenAttrib.MEyeSphereMap, tsID)
+          nodePath.setTexture(ts_sphere, texSphere, tsID)
           nodePath.setTexScale(ts_sphere, 1, -1, -1)
           # nodePath.setShaderAuto(matIndex)
 
           if mat.texture_index < 0:
-            if isAlpha(texSphere):
-              nodePath.setTransparency(TransparencyAttrib.MDual, matIndex)
-            else:
-              nodePath.setTransparency(TransparencyAttrib.MNone, matIndex)
+            if hasAlpha(texSphere):
+              nodePath.setTransparency(TransparencyAttrib.MDual, tsID)
+            # else:
+            #   nodePath.setTransparency(TransparencyAttrib.MNone, tsID)
 
     #
     # Set Toon Texture
@@ -483,11 +528,11 @@ def loadPmxBody(pmx_model, alpha=True):
         ts_toon = TextureStage('%3d_%s_toon' % (matIndex, mat.name))
         ts_toon.setColor(VBase4(0,0,0,.33))
         ts_toon.setMode(texMode)
-        ts_toon.setSort(matIndex)
-        ts_toon.setPriority(matIndex)
+        ts_toon.setSort(tsID)
+        ts_toon.setPriority(tsID)
 
-        nodePath.setTexGen(ts_toon, TexGenAttrib.MEyeSphereMap, matIndex)
-        nodePath.setTexture(ts_toon, texToon, matIndex)
+        nodePath.setTexGen(ts_toon, TexGenAttrib.MEyeSphereMap, tsID)
+        nodePath.setTexture(ts_toon, texToon, tsID)
         nodePath.setTexScale(ts_toon, 1, -1, -1)
         pass
 
@@ -497,6 +542,8 @@ def loadPmxBody(pmx_model, alpha=True):
       nodePath.setTwoSided(True)
     else:
       nodePath.setTwoSided(False)
+    # print(nodePath.getTransparency(), TransparencyAttrib.MNone, TransparencyAttrib.MDual, TransparencyAttrib.MAlpha)
+    # nodePath.setTwoSided(False)
 
     vIndex += mat.vertex_count
     modelBody.addChild(node)

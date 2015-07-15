@@ -403,7 +403,7 @@ def loadPmdBody(pmd_model, alpha=True):
           if not texFileSphere:
             ts_main.setMode(TextureStage.MReplace)
 
-          if isAlpha(texMain):
+          if hasAlpha(texMain):
             nodePath.setTransparency(TransparencyAttrib.MDual, matIndex)
 
           nodePath.setTexture(ts_main, texMain)
@@ -439,7 +439,7 @@ def loadPmdBody(pmd_model, alpha=True):
           nodePath.setTexScale(ts_sphere, 1, -1, -1)
 
           if not texFileMain:
-            if isAlpha(texSphere):
+            if hasAlpha(texSphere):
               nodePath.setTransparency(TransparencyAttrib.MDual, matIndex)
 
 
