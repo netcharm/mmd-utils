@@ -71,7 +71,11 @@ loadPrcFileData('', 'clock-mode limited')
 loadPrcFileData('', 'clock-frame-rate 60')
 loadPrcFileData('', 'show-frame-rate-meter 1')
 loadPrcFileData('', 'egg-emulate-bface 1')
+loadPrcFileData('', 'graphics-memory-limit 67108864')
+# loadPrcFileData('', 'texture-scale 0.5')
+# loadPrcFileData('', 'compressed-textures 1')
 loadPrcFileData('', 'model-cache-compressed-textures true')
+
 
 # loadPrcFileData('', 'notify-level warning')
 # loadPrcFileData('', 'default-directnotify-level warning')
@@ -369,10 +373,10 @@ class Stage(object):
     pass
 
   @staticmethod
-  def setCamera(x=0, y=0, z=0, h=0, p=0, r=0, oobe=False):
+  def setCamera(x=0, y=0, z=0, h=0, p=0, r=0, fov=46.8, focal=50, oobe=False):
     base.camLens.setNearFar(0.1, 5500.0)
-    base.camLens.setFov(45.0)
-    base.camLens.setFocalLength(50)
+    base.camLens.setFov(fov)
+    base.camLens.setFocalLength(focal)
 
     # base.trackball.node().setPos(0, 20, -20)
     base.trackball.node().setHpr(h, p, r)
@@ -387,31 +391,43 @@ class Stage(object):
   @staticmethod
   def resetCamera(model=None):
     WIN_SIZE = (500, 500)
+    node_fov = 50
     if model:
       lens = base.camLens
 
       fov_old = render.getPythonTag('lensFov')
       fov_new = lens.getFov()
-      aspect = lens.getAspectRatio()
-      scale_x = fov_new.getX() / fov_old.getX()
-      scale_y = fov_new.getY() / fov_old.getY()
-      # print('Scale : x=%.4f, y=%.4f' % (scale_x, scale_y))
+      minFov_old = min(fov_old.getX(), fov_old.getY())
+      maxFov_old = max(fov_old.getX(), fov_old.getY())
+      minFov_new = min(fov_new.getX(), fov_new.getY())
+      maxFov_new = max(fov_new.getX(), fov_new.getY())
+      scaleFOV = minFov_new / maxFov_old
 
       min_point = LPoint3f()
       max_point = LPoint3f()
-      model.calcTightBounds(min_point, max_point)
+      body = model.find('**/Body')
+      if body:
+        body.calcTightBounds(min_point, max_point)
+      else:
+        model.calcTightBounds(min_point, max_point)
+
       node_size = LPoint3f(max_point.x-min_point.x, max_point.y-min_point.y, max_point.z-min_point.z)
-      # print(node_size)
+      # node_fov = max(node_size.x, node_size.z)
+      # scaleModel = fov_new.getY() / node_fov
+      # print(node_size, node_fov, scaleModel, scaleFOV)
 
       camPosX = 0
-      camPosY = 1.6*node_size.z/scale_y
-      camPosZ = 0.5*node_size.z #/scale_y
+      camPosY = 1.5 * node_size.z / scaleFOV
+      # camPosY = 7/5*node_size.z/(scaleFOV*scaleModel)
+      camPosZ = 0.5*node_size.z
 
     else:
       camPosX = 0
       camPosY = 100
       camPosZ = 20
-    Stage.setCamera(x=camPosX, y=camPosY, z=camPosZ, p=10, oobe=False)
+
+    # Stage.setCamera(x=camPosX, y=camPosY, z=camPosZ, p=10, oobe=False)
+    Stage.setCamera(x=camPosX, y=camPosY, z=camPosZ, oobe=False)
     pass
 
   pass
@@ -814,7 +830,7 @@ class MmdViewerApp(ShowBase):
 
     if os.path.altsep and 'lastModel' in self.appConfig:
       self.appConfig['lastModel'] = self.appConfig['lastModel'].replace(os.path.sep, os.path.altsep)
-    self.appConfig['recent'] = self.appConfig['recent'][:10]
+    self.appConfig['recent'] = self.appConfig['recent'][:20]
     for idx in xrange(len(self.appConfig['recent'])):
       if os.path.altsep:
         self.appConfig['recent'][idx] = self.appConfig['recent'][idx].replace(os.path.sep, os.path.altsep)
