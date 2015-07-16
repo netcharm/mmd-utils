@@ -243,10 +243,16 @@ def loadPmxBody(pmx_model, alpha=True):
   # load vertices(vertex list)
   #
   formatArray = GeomVertexArrayFormat()
+  # formatArray.addColumn(InternalName.make(str("vertex")),   3, Geom.NTFloat32, Geom.C_vector)
+  # formatArray.addColumn(InternalName.make(str("normal")),   3, Geom.NTFloat32, Geom.C_vector)
+  # formatArray.addColumn(InternalName.make(str("color")),    4, Geom.NTFloat32, Geom.C_color)
+  # formatArray.addColumn(InternalName.make(str("texcoord")), 2, Geom.NTFloat32, Geom.C_texcoord)
+
   formatArray.addColumn(InternalName.make(str("edge_factor")), 1, Geom.NTFloat32, Geom.COther)
   formatArray.addColumn(InternalName.make(str("drawFlag")), 1, Geom.NTUint8, Geom.COther)
   formatArray.addColumn(InternalName.make(str("index")), 1, Geom.NTUint32, Geom.CIndex)
   # formatArray.addColumn(InternalName.make(str("morph")), 1, Geom.NTFloat32, Geom.CMorphDelta)
+  # print(formatArray)
 
   format = GeomVertexFormat(GeomVertexFormat.getV3n3cpt2())
   format.addArray(formatArray)
@@ -255,7 +261,7 @@ def loadPmxBody(pmx_model, alpha=True):
   vdata = GeomVertexData(modelName, format, Geom.UHDynamic)
   vdata.setNumRows(len(pmx_model.vertices))
 
-  vertex = GeomVertexWriter(vdata, 'vertex')
+  vertex = GeomVertexWriter(vdata, str('vertex'))
   normal = GeomVertexWriter(vdata, 'normal')
   color = GeomVertexWriter(vdata, 'color')
   texcoord = GeomVertexWriter(vdata, 'texcoord')
