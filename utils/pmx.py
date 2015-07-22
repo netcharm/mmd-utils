@@ -539,10 +539,17 @@ def loadPmxBody(pmx_model, alpha=True):
           nodePath.setTransparency(TransparencyAttrib.MDual, tsid_main)
         elif mat.name in ['肌', '顔', '髪影', 'レース']:
           nodePath.setTransparency(TransparencyAttrib.MDual, tsid_main)
-        elif mat.name in ['スカート', '瞳']:
+        elif mat.name in ['スカート']:
           nodePath.setTransparency(TransparencyAttrib.MDual, tsid_main)
+        elif mat.name in ['瞳']:
+          nodePath.setTransparency(TransparencyAttrib.MAlpha, tsid_main)
+        elif mat.name.find('瞳') >= 0:
+          # ts_main.setMode(TextureStage.MModulateGloss)
+          nodePath.setTransparency(TransparencyAttrib.MAlpha, tsid_main)
         elif mat.name in ['頬']:
-          ts_main.setMode(TextureStage.MGloss)
+          ts_main.setMode(TextureStage.MModulateGloss)
+          nodePath.setTransparency(TransparencyAttrib.MDual, tsid_main)
+        elif mat.name.find('頬') >= 0:
           nodePath.setTransparency(TransparencyAttrib.MDual, tsid_main)
         elif mat.name in ['白目']:
           nodePath.setTransparency(TransparencyAttrib.MDual, tsid_main)
@@ -554,6 +561,8 @@ def loadPmxBody(pmx_model, alpha=True):
           nodePath.setTransparency(TransparencyAttrib.MDual, tsid_main)
         elif mat.name.find('透過') >= 0 and (0 < mat.alpha < 1):
           nodePath.setTransparency(TransparencyAttrib.MMultisample, tsid_main)
+        elif mat.name.find('hair') >= 0:
+          nodePath.setTransparency(TransparencyAttrib.MAlpha, tsid_main)
 
 
 
