@@ -87,6 +87,8 @@ from panda3d.core import Filename
 from panda3d.core import Material
 from panda3d.core import VBase4
 
+from panda3d.ode import *
+
 from panda3d.bullet import ZUp
 from panda3d.bullet import BulletWorld
 from panda3d.bullet import BulletDebugNode
@@ -419,7 +421,7 @@ class Stage(object):
       camPosX = 0
       camPosY = 1.5 * node_size.z / scaleFOV
       # camPosY = 7/5*node_size.z/(scaleFOV*scaleModel)
-      camPosZ = 0.5*node_size.z
+      camPosZ = 0.5*node_size.z+min_point.z
 
     else:
       camPosX = 0
@@ -435,9 +437,10 @@ class Stage(object):
 
 class Utils(object):
   @staticmethod
-  def loadMmdModel(modelname, world=None):
+  def loadMmdModel(modelname):
     p3dnode = None
-
+    world = render.getPythonTag('World')
+    engine = render.getPythonTag('Engine')
     lastModel = render.getPythonTag('lastModel')
     if lastModel:
       node = lastModel.find('**/+ModelRoot')
@@ -466,7 +469,7 @@ class Utils(object):
       modelname = modelname.replace(os.path.sep, os.path.altsep)
       # modelname = modelname.replace('\\', os.path.altsep)
     if ext in ['.pmx']:
-      p3dnode = loadPmxModel(modelname)
+      p3dnode = loadPmxModel(modelname, world, engine)
     elif ext in ['.pmd']:
       p3dnode = loadPmdModel(modelname)
     else:
@@ -983,37 +986,67 @@ class MmdViewerApp(ShowBase):
 
     self.do.accept('control-mouse1', self.OnMouseLeftClick)
 
-  def setupWorld(self):
-    # Task
-    taskMgr.add(self.updateWorld, 'updateWorld')
+  def setupWorld(self, engine='bullet'):
+    self.engine = engine
+    if engine.lower() == 'ode':
+      # World
+      self.worldNP = render.attachNewNode('World')
 
-    # World
-    self.worldNP = render.attachNewNode('World')
+      # Setup our physics world
+      self.world = OdeWorld()
+      self.world.setGravity(0, 0, -9.81)
 
-    self.debugNP = self.worldNP.attachNewNode(BulletDebugNode('Debug'))
-    # self.debugNP.show()
-    self.debugNP.node().showWireframe(True)
-    self.debugNP.node().showConstraints(False)
-    self.debugNP.node().showBoundingBoxes(False)
-    self.debugNP.node().showNormals(False)
+      # groundMass = OdeMass()
+      # groundMass.setBoxTotal(0.00001, 100, 100, 1)
 
-    self.world = BulletWorld()
-    self.world.setGravity(Vec3(0, 0, -9.81))
-    self.world.setDebugNode(self.debugNP.node())
+      # groundBody = OdeBody(self.world)
+      # groundBody.setMass(groundMass)
+      # groundBody.setPosition(0, 0, -1)
 
-    # Ground (static)
-    shape = BulletPlaneShape(Vec3(0, 0, 1), 1)
+      # self.groundNP.setCollideMask(BitMask32.allOn())
+      render.setPythonTag('World', self.world)
+      render.setPythonTag('Engine', 'ode')
 
-    self.groundNP = self.worldNP.attachNewNode(BulletRigidBodyNode('Ground'))
-    self.groundNP.node().addShape(shape)
-    self.groundNP.setPos(0, 0, -1)
-    self.groundNP.setCollideMask(BitMask32.allOn())
+      self.deltaTimeAccumulator = 0.0
+      self.stepSize = 1.0 / 90.0
+      taskMgr.doMethodLater(1.0, self.updateWorld, "Physics Simulation")
 
-    self.world.attachRigidBody(self.groundNP.node())
+    elif engine.lower() == 'bullet':
+      # Task
+      taskMgr.add(self.updateWorld, 'updateWorld')
 
-    self.FirstUpdateWorld = False
-    self.UpdateCount = 0
-    # self.worldNP.flattenStrong()
+      # World
+      self.worldNP = render.attachNewNode('World')
+
+      self.debugNP = self.worldNP.attachNewNode(BulletDebugNode('Debug'))
+      # self.debugNP.show()
+      self.debugNP.node().showWireframe(True)
+      self.debugNP.node().showConstraints(False)
+      self.debugNP.node().showBoundingBoxes(False)
+      self.debugNP.node().showNormals(False)
+
+      self.world = BulletWorld()
+      self.world.setGravity(Vec3(0, 0, -9.81))
+      self.world.setDebugNode(self.debugNP.node())
+
+      # Ground (static)
+      shape = BulletPlaneShape(Vec3(0, 0, 1), 1)
+
+      self.groundNP = self.worldNP.attachNewNode(BulletRigidBodyNode('Ground'))
+      self.groundNP.node().addShape(shape)
+      self.groundNP.setPos(0, 0, -1)
+      self.groundNP.setCollideMask(BitMask32.allOn())
+
+      self.world.attachRigidBody(self.groundNP.node())
+
+      self.FirstUpdateWorld = False
+      self.UpdateCount = 0
+      # self.worldNP.flattenStrong()
+      #
+
+      render.setPythonTag('World', self.world)
+      render.setPythonTag('Engine', 'bullet')
+
     print('World Setup')
     # render.ls()
     pass
@@ -1030,33 +1063,47 @@ class MmdViewerApp(ShowBase):
     pass
 
   def toggleDebug(self):
-    if self.debugNP.isHidden():
-      self.debugNP.show()
-      print('--> Bullet Debug On')
-    else:
-      self.debugNP.hide()
-      print('--> Bullet Debug Off')
-      print(self.UpdateCount)
+    if self.engine.lower() == 'bullet':
+      if self.debugNP.isHidden():
+        base.enableParticles()
+        self.debugNP.show()
+        print('--> Bullet Debug On')
+      else:
+        base.disableParticles()
+        self.debugNP.hide()
+        print('--> Bullet Debug Off')
+        print(self.UpdateCount)
 
   def updateWorld(self, task):
-    dt = globalClock.getDt()
+    if self.engine.lower() == 'ode':
+      # Add the deltaTime for the task to the accumulator
+      self.deltaTimeAccumulator += globalClock.getDt()
+      while self.deltaTimeAccumulator > self.stepSize:
+        # Remove a stepSize from the accumulator until
+        # the accumulated time is less than the stepsize
+        self.deltaTimeAccumulator -= self.stepSize
+        # Step the simulation
+        self.world.quickStep(self.stepSize)
+      return task.cont
+    elif self.engine.lower() == 'bullet':
+      dt = globalClock.getDt()
 
-    # self.processInput(dt)
-    self.world.doPhysics(dt, 5, 1.0/180.0)
-    # self.world.doPhysics(dt)
+      # self.processInput(dt)
+      self.world.doPhysics(dt, 5, 1.0/180.0)
+      # self.world.doPhysics(dt)
 
-    # if not self.FirstUpdateWorld or self.UpdateCount<100:
-    #   self.world.doPhysics(dt, 10, 1.0/180.0)
-    #   self.FirstUpdateWorld = True
-    #   self.UpdateCount += 1
+      # if not self.FirstUpdateWorld or self.UpdateCount<100:
+      #   self.world.doPhysics(dt, 10, 1.0/180.0)
+      #   self.FirstUpdateWorld = True
+      #   self.UpdateCount += 1
 
-    self.cTrav.clearRecorder()
-    self.collHandler.clearEntries()
+      self.cTrav.clearRecorder()
+      self.collHandler.clearEntries()
 
-    wx.GetApp().Yield()
-    return task.cont
+      wx.GetApp().Yield()
+      return task.cont
 
-  def testFunc(self):
+  def testFuncBam(self):
     lastModel = render.getPythonTag('lastModel')
     if lastModel:
       bamfile = lastModel.getPythonTag('path') if lastModel.getPythonTag('path') else 'bam_test.bam'
@@ -1078,6 +1125,43 @@ class MmdViewerApp(ShowBase):
       # print(morphs)
       # actor = Actor(lastModel, morphs)
       # print(actor)
+    pass
+
+  def testFunc(self):
+    lastModel = render.getPythonTag('lastModel')
+    if lastModel:
+      physics = lastModel.find('**/Physics').getPythonTag('Rigids')
+      joints = lastModel.find('**/Physics').getPythonTag('Joints')
+      skins = lastModel.find('**/Body').getPythonTag('Skins')
+      for skin in skins:
+        if skin == u'首':
+          vlist = skins[skin]
+          print(len(vlist))
+
+          # body.setQuaternion(Quat(0.004637, 0.079780, 0.000060, 0.996801))
+          # setPosQuat
+
+          break
+
+      for rigid in physics:
+        body = rigid.getPythonTag('body')
+        geom = rigid.getPythonTag('geom')
+        name = rigid.getPythonTag('name')
+        if name == u'首':
+          # body.setQuaternion(Quat(0.996801, VBase3(0.004637, 0.079780, 0.000060))
+          # body.setQuaternion(Quat(0.004637, 0.079780, 0.000060, 0.996801))
+          # setPosQuat
+          pos = body.getPosition()
+          quat = body.getQuaternion()
+          print(geom)
+          print(pos, quat)
+          geom.setQuaternion(Quat(0.004637, 0.079780, 0.000060, 0.996801))
+          # print(geom.calcTightBounds())
+
+
+          print(u'--> Rigid : %s, %s' % (name, body))
+          break
+      pass
     pass
 
   def toggleLight(self):
@@ -1156,7 +1240,7 @@ class MmdViewerApp(ShowBase):
     if modelname == None:
       modelname = 'panda'
 
-    p3dnode = Utils.loadMmdModel(modelname, world=self.world)
+    p3dnode = Utils.loadMmdModel(modelname)
 
     if p3dnode:
       Stage.lightAtNode(p3dnode, lights=Stage.lights)
@@ -1169,15 +1253,17 @@ class MmdViewerApp(ShowBase):
       #
       # Bullet Test
       #
-      bulletBody = p3dnode.find('**/Bullet')
-      if bulletBody:
-        for np in bulletBody.getChildren():
-          node = np.node()
-          if isinstance(node, BulletRigidBodyNode):
-            self.worldNP.attachNewNode(node)
-            self.world.attachRigidBody(node)
-        for cs in bulletBody.getPythonTag('Joints'):
-          self.world.attachConstraint(cs)
+      physicsBody = p3dnode.find('**/Physics')
+      if physicsBody:
+        # print(render.getPythonTag('Engine'))
+        if render.getPythonTag('Engine').lower() == 'bullet':
+          for np in physicsBody.getChildren():
+            node = np.node()
+            if isinstance(node, BulletRigidBodyNode):
+              self.worldNP.attachNewNode(node)
+              self.world.attachRigidBody(node)
+          for cs in physicsBody.getPythonTag('Joints'):
+            self.world.attachConstraint(cs)
 
       # p3dnode.writeBamFile('lastModel.bam')
 

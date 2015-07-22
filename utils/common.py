@@ -32,6 +32,11 @@ import sys
 import math
 import cmath
 
+import unicodedata as unidata
+import romkan
+
+from jTransliterate import JapaneseTransliterator
+
 import urllib
 
 import StringIO
@@ -61,6 +66,34 @@ print(u'Loading shader, Vertex: %s, Fragment: %s' % (shader_v, shader_f))
 colorSelected = LVector4f(1, 0.95, 0, 1)
 colorBone = LVector4f(0.12, 1, 0.44, 1)
 
+JIS_NAME = dict({
+  'KATAKANA LETTER HA': 'ハ',
+  'KATAKANA LETTER HE': 'ヘ',
+  'KATAKANA LETTER I': 'イ',
+  'KATAKANA LETTER TI': 'チ',
+  'KATAKANA LETTER YU': 'ユ',
+  'KATAKANA LETTER TO': 'ト',
+  'KATAKANA LETTER SE': 'セ',
+  'KATAKANA LETTER ZI': 'ジ',
+  'KATAKANA LETTER YA': 'ヤ',
+  'KATAKANA LETTER TO': 'ト',
+  'HIRAGANA DIGRAPH YORI': 'より',
+  'HALFWIDTH KATAKANA SEMI-VOICED SOUND MARK': '°',
+  'HALFWIDTH KATAKANA LETTER NI': 'ニ',
+  'HALFWIDTH KATAKANA LETTER NU': 'ヌ',
+  'HALFWIDTH KATAKANA LETTER SO': 'ソ',
+  'HALFWIDTH KATAKANA LETTER RU': 'ル',
+  'HALFWIDTH KATAKANA LETTER TU': 'ツ',
+  'HALFWIDTH KATAKANA LETTER TE': 'テ',
+  'HALFWIDTH KATAKANA LETTER MO': 'モ',
+  'HALFWIDTH KATAKANA LETTER YA': 'ヤ',
+  'HALFWIDTH KATAKANA LETTER YU': 'ユ',
+  'HALFWIDTH KATAKANA LETTER YO': 'ヨ',
+  'HALFWIDTH KATAKANA LETTER RE': 'レ',
+  'HALFWIDTH KATAKANA LETTER RO': 'ロ',
+  'HALFWIDTH KATAKANA LETTER WA': 'ワ',
+
+})
 
 JIS2GBK = dict({
   u'\x8f\xe3': u'a', # ã
@@ -96,15 +129,25 @@ JIS2GBK = dict({
   u'\u309d': u'ゝ',
   u'\u309e': u'ゞ',
   u'\u309f': u'より',
+  u'\u30a4': u'イ',
   u'\u30ad': u'キ',
   u'\u30af': u'ク',
   u'\u30b3': u'コ',
   u'\u30b7': u'シ',
+  u'\u30b8': u'ジ',
   u'\u30b9': u'ス',
+  u'\u30bb': u'セ',
   u'\u30bf': u'タ',
+  u'\u30c8': u'ト',
+  u'\u30cf': u'ハ',
   u'\u30d2': u'ヒ',
   u'\u30d5': u'フ',
+  u'\u30d8': u'ヘ',
   u'\u30df': u'ミ',
+  u'\u30c1': u'チ',
+  u'\u30c8': u'ト',
+  u'\u30e4': u'ヤ',
+  u'\u30e6': u'ユ',
   u'\u30f3': u'ン',
   u'\u30f7': u'ぁ',
   u'\u30f8': u'ヰ゛', # ヴぃ / ヴィ
@@ -140,10 +183,15 @@ JIS2GBK = dict({
   u'\uff7c': u'シ',
   u'\uff7d': u'ス',
   u'\uff7e': u'セ',
+  u'\uff7f': u'ソ',
   u'\uff80': u'タ',
   u'\uff81': u'チ',
+  u'\uff82': u'ツ',
+  u'\uff83': u'テ',
   u'\uff84': u'ト',
   u'\uff85': u'ナ',
+  u'\uff86': u'ニ',
+  u'\uff87': u'ヌ',
   u'\uff88': u'ネ',
   u'\uff89': u'ノ',
   u'\uff8a': u'ハ',
@@ -154,10 +202,19 @@ JIS2GBK = dict({
   u'\uff8f': u'マ',
   u'\uff90': u'ミ',
   u'\uff92': u'メ',
+  u'\uff93': u'モ',
+  u'\uff94': u'ヤ',
+  u'\uff95': u'ユ',
+  u'\uff96': u'ヨ',
   u'\uff97': u'ラ',
   u'\uff98': u'リ',
+  u'\uff99': u'ル',
+  u'\uff9a': u'レ',
+  u'\uff9b': u'ロ',
+  u'\uff9c': u'ワ',
   u'\uff9d': u'ン',
   u'\uff9e': u'゛',
+  u'\uff9f': u'°',
 
 })
 
@@ -168,8 +225,26 @@ def encode(url):
 def log(info, force=False):
   if DEBUG or force:
     # print(repr(info))
+    # info_j = ''
+    # for c in info:
+    #   # HIRAGANA: [0x3040 : 0x309f]
+    #   # KATAKANA: [0x30a0 : 0x30ff]
+    #   # KANJI   : [0x4e00 : 0x9faf]
+    #   if (0x3040 <= ord(c) <= 0x309f) or (0xff00 <= ord(c) <= 0xffff) :
+    #     b = JapaneseTransliterator(c)
+    #     info_j += b.transliterate_from_halfwidth_to_fullwidth()
+    #   else:
+    #     info_j += c
+    # try:
+    #   print info_j
+    # except:
+    #   pass
+
     for k in JIS2GBK:
       info = info.replace(k, JIS2GBK[k])
+      # info = info_j.replace(k, JIS2GBK[k])
+
+    # info = info_j
     # print(repr(info))
     # print(info)
     try:

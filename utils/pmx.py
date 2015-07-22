@@ -36,6 +36,8 @@ import codecs
 from panda3d.core import *
 from panda3d.egg import *
 
+from panda3d.ode import *
+
 from panda3d.bullet import ZUp
 from panda3d.bullet import BulletWorld
 from panda3d.bullet import BulletDebugNode
@@ -228,11 +230,11 @@ def loadPmxBody(pmx_model, alpha=True):
   for tex in pmx_model.textures:
     tex_path = os.path.normpath(os.path.join(os.path.dirname(pmx_model.path), tex))
     tex_path = os.path.normcase(tex_path)
-    log(u'Loading Texture %03d: %s' % (texIndex, os.path.dirname(tex)))
+    log(u'Loading Texture %03d: %s' % (texIndex, tex), force=True)
     texture = loadTexture(tex_path, model_path=modelPath)
     textures.append(texture)
     if texture:
-      log(u'Loaded Texture %03d: %s' % (texIndex, tex), force=True)
+      log(u'Loaded Texture %03d: %s' % (texIndex, tex))
     else:
       log(u'Texture Failed %03d: %s' % (texIndex, tex), force=True)
     texIndex += 1
@@ -269,6 +271,8 @@ def loadPmxBody(pmx_model, alpha=True):
   index = GeomVertexWriter(vdata, 'index')
 
   idx = 0
+  skins = dict()
+  log(u'Loading Vertices : %d' % (len(pmx_model.vertices)), force=True)
   for v in pmx_model.vertices:
     vertex.addData3f(V2V(v.position))
     normal.addData3f(V2V(v.normal))
@@ -277,6 +281,55 @@ def loadPmxBody(pmx_model, alpha=True):
     edge.addData1f(v.edge_factor)
     index.addData1i(idx)
     idx += 1
+
+    #
+    # bind vertex to bone
+    #
+    deform = v.deform
+    if isinstance(deform, pmx.Bdef1):
+      bone0 = pmx_model.bones[deform.index0]
+      if not bone0.name in skins:
+        skins[bone0.name] = []
+      skins[bone0.name].append(v)
+      pass
+    elif isinstance(deform, pmx.Bdef2):
+      bone0 = pmx_model.bones[deform.index0]
+      bone1 = pmx_model.bones[deform.index1]
+      if not bone0.name in skins:
+        skins[bone0.name] = []
+      skins[bone0.name].append((idx, v))
+      if not bone1.name in skins:
+        skins[bone1.name] = []
+      skins[bone1.name].append((idx, v))
+      pass
+    elif isinstance(deform, pmx.Bdef4):
+      bone0 = pmx_model.bones[deform.index0]
+      bone1 = pmx_model.bones[deform.index1]
+      bone2 = pmx_model.bones[deform.index2]
+      bone3 = pmx_model.bones[deform.index3]
+      if not bone0.name in skins:
+        skins[bone0.name] = []
+      skins[bone0.name].append((idx, v))
+      if not bone1.name in skins:
+        skins[bone1.name] = []
+      skins[bone1.name].append((idx, v))
+      if not bone2.name in skins:
+        skins[bone2.name] = []
+      skins[bone2.name].append((idx, v))
+      if not bone3.name in skins:
+        skins[bone3.name] = []
+      skins[bone3.name].append((idx, v))
+      pass
+    elif isinstance(deform, pmx.Sdef):
+      bone0 = pmx_model.bones[deform.index0]
+      bone1 = pmx_model.bones[deform.index1]
+      if not bone0.name in skins:
+        skins[bone0.name] = []
+      skins[bone0.name].append((idx, v))
+      if not bone1.name in skins:
+        skins[bone1.name] = []
+      skins[bone1.name].append((idx, v))
+      pass
 
   #
   # load polygons face
@@ -292,6 +345,7 @@ def loadPmxBody(pmx_model, alpha=True):
   modelPath = NodePath(model)
 
   modelBody = ModelRoot('Body')
+  modelBody.setPythonTag('Skins', skins)
   bodyPath = NodePath(modelBody)
   bodyPath.reparentTo(modelPath)
 
@@ -302,9 +356,18 @@ def loadPmxBody(pmx_model, alpha=True):
     #
     # load materials
     #
-    log(u'Loading Material %03d: %s' % (matIndex, mat.name))
+    log(u'Loading Material %03d: %s' % (matIndex, mat.name), force=True)
     material = Material(mat.name)
     material.setDiffuse(VBase4(mat.diffuse_color.r, mat.diffuse_color.g, mat.diffuse_color.b, mat.alpha))
+    if mat.specular_factor > 0 or (mat.specular_color.r != 1 and mat.specular_color.g != 1 and mat.specular_color.b != 1):
+      material.setSpecular(VBase4(mat.specular_color.r, mat.specular_color.g, mat.specular_color.b, 1))
+      material.setShininess(mat.specular_factor*10)
+    else:
+      material.setSpecular(VBase4(mat.ambient_color.r, mat.ambient_color.g, mat.ambient_color.b, 0.01))
+      material.setShininess(0)
+
+    material.setAmbient(VBase4(mat.ambient_color.r, mat.ambient_color.g, mat.ambient_color.b, 1))
+    material.setEmission(VBase4(0, 0, 0, 1))
 
     matflag_twoside      = bool(mat.flag & 0b00000001) # 两面描画
     matflag_shadowfloor  = bool(mat.flag & 0b00000010) # 地面影
@@ -312,22 +375,6 @@ def loadPmxBody(pmx_model, alpha=True):
     matflag_shadowself1  = bool(mat.flag & 0b00001000) # セルフ影
     matflag_outline      = bool(mat.flag & 0b00010000) # 輪郭有效
 
-    # material.setSpecular(VBase4(mat.specular_color.r, mat.specular_color.g, mat.specular_color.b, 1))
-    if mat.specular_factor > 0 or (mat.specular_color.r != 1 and mat.specular_color.g != 1 and mat.specular_color.b != 1):
-      material.setSpecular(VBase4(mat.specular_color.r, mat.specular_color.g, mat.specular_color.b, 1))
-      # if 0 < mat.specular_factor < 1:
-      #   material.setShininess(mat.specular_factor*10)
-      # elif 1 <= mat.specular_factor < 25:
-      #   material.setShininess(mat.specular_factor+25)
-      # else:
-      #   material.setShininess(mat.specular_factor)
-      # material.setShininess(mat.specular_factor)
-      material.setShininess(mat.specular_factor*10)
-    else:
-      material.setSpecular(VBase4(mat.ambient_color.r, mat.ambient_color.g, mat.ambient_color.b, 0.01))
-      material.setShininess(0)
-
-    material.setAmbient(VBase4(mat.ambient_color.r, mat.ambient_color.g, mat.ambient_color.b, 1))
     # material.setLocal(False)
     material.setLocal(True)
     if matflag_twoside:
@@ -350,13 +397,13 @@ def loadPmxBody(pmx_model, alpha=True):
       pass
 
     materials.addMaterial(material)
-    log(u'Loaded Material %03d: %s' % (matIndex, mat.name), force=True)
+    log(u'Loaded Material %03d: %s' % (matIndex, mat.name))
 
     #
     # Load vertex for every material/polygon face
     #
     prim = GeomTriangles(Geom.UHDynamic)
-    log(u'Loading Node %03d: %s' % (matIndex, mat.name))
+    log(u'Loading Polygons %03d: %s' % (matIndex, mat.name), force=True)
     for idx in xrange(vIndex, vIndex+mat.vertex_count, 3):
       # flip trig-face for inverted axis-y/axis-z
       prim.addVertices(pmx_model.indices[idx+2], pmx_model.indices[idx+1], pmx_model.indices[idx+0])
@@ -374,19 +421,31 @@ def loadPmxBody(pmx_model, alpha=True):
     # set polygon face material
     #
     # Apply the material to this nodePath
-    nodePath.setMaterial(material, 1)
+    tsid = matCount - matIndex
+    tsid_main   =  tsid
+    tsid_sphere =  tsid
+    tsid_toon   =  tsid
+    # tsid_main   = 1
+    # tsid_sphere = 2
+    # tsid_toon   = 3
+    nodePath.setMaterial(material, tsid_main)
     nodePath.setTwoSided(material.getTwoside())
 
     nodePath.setPythonTag('edge_color', mat.edge_color)
     nodePath.setPythonTag('edge_size', mat.edge_size)
     nodePath.setPythonTag('material_index', matIndex)
     nodePath.setPythonTag('material', material)
+    nodePath.setPythonTag('vIndex', vIndex)
+    nodePath.setPythonTag('vCount', mat.vertex_count)
     nodePath.setPythonTag('pickableObjTag', 1)
 
     if mat.texture_index < 0 and mat.sphere_texture_index < 0 and mat.toon_texture_index < 0:
       nodePath.setTransparency(TransparencyAttrib.MDual, matIndex)
     else:
-      nodePath.setTransparency(TransparencyAttrib.MNone, matIndex)
+      if mat.alpha == 1:
+        nodePath.setTransparency(TransparencyAttrib.MNone, matIndex)
+      else:
+        nodePath.setTransparency(TransparencyAttrib.MAlpha, matIndex)
 
     # if mat.alpha<1:
     #   nodePath.setTransparency(TransparencyAttrib.MAlpha, matIndex)
@@ -394,13 +453,6 @@ def loadPmxBody(pmx_model, alpha=True):
     #
     # set polygon face main textures
     #
-    tsid = matCount - matIndex
-    tsid_main   =  tsid
-    tsid_sphere =  tsid
-    tsid_toon   =  tsid
-    # tsid_main   = 1 # tsid
-    # tsid_sphere = 2 # tsid
-    # tsid_toon   = 3 # tsid
     if mat.texture_index >= 0:
       # print('Texture %s : Main %03d' % (mat.name, mat.texture_index))
       texMain = textures[mat.texture_index]
@@ -410,6 +462,8 @@ def loadPmxBody(pmx_model, alpha=True):
           texMain.setBorderColor(VBase4(mat.edge_color.r, mat.edge_color.g, mat.edge_color.b, mat.edge_color.a))
           pass
 
+        # texMain.setWrapU(Texture.WMClamp)
+
         ts_main = TextureStage('%3d_%s_main' % (matIndex, mat.name))
         ts_main.setColor(VBase4(mat.ambient_color.r, mat.ambient_color.g, mat.ambient_color.b, 1))
         ts_main.setSort(tsid_main)
@@ -417,6 +471,7 @@ def loadPmxBody(pmx_model, alpha=True):
 
         if mat.sphere_texture_index < 0:
           ts_main.setMode(TextureStage.MReplace)
+          # ts_main.setMode(TextureStage.MGloss)
           if matflag_shadowself0 and matflag_shadowself1 and matflag_twoside:
              # セルフ影マツ or       # セルフ影              # Twoside
             ts_main.setMode(TextureStage.MModulate)
@@ -425,8 +480,8 @@ def loadPmxBody(pmx_model, alpha=True):
             pass
 
         if hasAlpha(texMain):
-          if nodePath.getTransparency() != TransparencyAttrib.MNone:
-            pass
+          # if nodePath.getTransparency() != TransparencyAttrib.MNone:
+          #   pass
 
           #
           # it's a stupid method for setTransparency, but now i can not found another effected method
@@ -461,6 +516,8 @@ def loadPmxBody(pmx_model, alpha=True):
             elif matflag_twoside and 2 < mat.specular_factor <= 10:
               nodePath.setTransparency(TransparencyAttrib.MNone, tsid_main)
               pass
+            elif matflag_twoside and mat.specular_factor >= 5:
+              nodePath.setTransparency(TransparencyAttrib.MAlpha, tsid_main)
             elif matflag_twoside and mat.specular_factor > 1:
               nodePath.setTransparency(TransparencyAttrib.MNone, tsid_main)
           elif mat.alpha == 0:
@@ -474,7 +531,7 @@ def loadPmxBody(pmx_model, alpha=True):
           nodePath.setTransparency(TransparencyAttrib.MDual, tsid_main)
           # nodePath.setTransparency(TransparencyAttrib.MBinary, tsid_main)
 
-        if mat.name.lower() in ['hairshadow', 'other']:
+        if mat.name.lower() in ['hairshadow', 'other', 'body']:
           nodePath.setTransparency(TransparencyAttrib.MDual, tsid_main)
         elif mat.name.lower()[:4] in ['face']:
           nodePath.setTransparency(TransparencyAttrib.MDual, tsid_main)
@@ -482,10 +539,27 @@ def loadPmxBody(pmx_model, alpha=True):
           nodePath.setTransparency(TransparencyAttrib.MDual, tsid_main)
         elif mat.name in ['肌', '顔', '髪影', 'レース']:
           nodePath.setTransparency(TransparencyAttrib.MDual, tsid_main)
+        elif mat.name in ['スカート', '瞳']:
+          nodePath.setTransparency(TransparencyAttrib.MDual, tsid_main)
+        elif mat.name in ['頬']:
+          ts_main.setMode(TextureStage.MGloss)
+          nodePath.setTransparency(TransparencyAttrib.MDual, tsid_main)
+        elif mat.name in ['白目']:
+          nodePath.setTransparency(TransparencyAttrib.MDual, tsid_main)
+        elif mat.name.find('ﾏｰｸ') >= 0:
+          nodePath.setTransparency(TransparencyAttrib.MDual, tsid_main)
+        elif mat.name.find('ｸﾞﾚｲ') >= 0:
+          nodePath.setTransparency(TransparencyAttrib.MAlpha, tsid_main)
+        elif mat.name.find('マーク') >= 0:
+          nodePath.setTransparency(TransparencyAttrib.MDual, tsid_main)
+        elif mat.name.find('透過') >= 0 and (0 < mat.alpha < 1):
+          nodePath.setTransparency(TransparencyAttrib.MMultisample, tsid_main)
+
+
 
           pass
 
-        print(nodePath.getTransparency())
+        # print(nodePath.getTransparency())
         if matflag_shadowfloor:
           # 地面影
           pass
@@ -496,7 +570,20 @@ def loadPmxBody(pmx_model, alpha=True):
       else:
         if 0 < mat.alpha < 1:
           nodePath.setTransparency(TransparencyAttrib.MAlpha, tsid_main)
-
+    else:
+      if mat.name.lower() in ['hairshadow', 'other']:
+        nodePath.setTransparency(TransparencyAttrib.MDual, tsid_main)
+      elif mat.name.lower()[:4] in ['face']:
+        nodePath.setTransparency(TransparencyAttrib.MDual, tsid_main)
+      elif mat.name.lower()[:3] in ['eye']:
+        nodePath.setTransparency(TransparencyAttrib.MDual, tsid_main)
+      elif mat.name in ['肌', '顔', '髪影', 'レース']:
+        nodePath.setTransparency(TransparencyAttrib.MDual, tsid_main)
+      elif mat.name in ['スカート', '瞳']:
+        nodePath.setTransparency(TransparencyAttrib.MDual, tsid_main)
+      elif mat.name in ['白目']:
+        nodePath.setTransparency(TransparencyAttrib.MDual, tsid_main)
+      pass
 
     #
     # Set Sphere Texture
@@ -553,7 +640,7 @@ def loadPmxBody(pmx_model, alpha=True):
         texMode = TextureStage.MModulate #Glow
 
         ts_toon = TextureStage('%3d_%s_toon' % (matIndex, mat.name))
-        ts_toon.setColor(VBase4(0,0,0,.33))
+        ts_toon.setColor(VBase4(0,0,0, .18))
         ts_toon.setMode(texMode)
         ts_toon.setSort(tsid_toon)
         ts_toon.setPriority(tsid_toon)
@@ -566,19 +653,12 @@ def loadPmxBody(pmx_model, alpha=True):
     # nodePath.setBin("unsorted", matIndex)
     nodePath.setAntialias(AntialiasAttrib.MAuto)
 
-    # # if not nodePath.getTransparency() in [TransparencyAttrib.MDual, TransparencyAttrib.MAlpha]:
-    # if nodePath.getTransparency() in [TransparencyAttrib.MNone]:
-    #   nodePath.setTwoSided(True)
-    # else:
-    #   nodePath.setTwoSided(False)
-    # # print(nodePath.getTransparency(), TransparencyAttrib.MNone, TransparencyAttrib.MDual, TransparencyAttrib.MAlpha)
-    # # nodePath.setTwoSided(False)
-
+    # print(nodePath.getTransparency())
     vIndex += mat.vertex_count
 
     # modelBody.addChild(node)
     nodePath.reparentTo(bodyPath)
-    log(u'Loaded Polygons %03d: %s' % (matIndex, mat.name), force=True)
+    log(u'Loaded Polygons %03d: %s' % (matIndex, mat.name))
     matIndex += 1
 
   # modelPath = NodePath(model)
@@ -915,7 +995,7 @@ def loadPmxRigid(pmx_model):
   rigidNode = PandaNode('Rigid')
   rigidIndex = 0
   for rigid in pmx_model.rigidbodies:
-    log(u'Loading RigidBodies %03d: %s' % (rigidIndex, rigid.name), force=True)
+    log(u'Loading Rigid %03d: %s' % (rigidIndex, rigid.name), force=True)
     node = PandaNode(rigid.name)
     node.setPythonTag('english_name', rigid.english_name)
     node.setPythonTag('bone_index', rigid.bone_index)
@@ -947,7 +1027,7 @@ def loadPmxJoint(pmx_model):
   jointNode = PandaNode('Joints')
   jointIndex = 0
   for joint in pmx_model.joints:
-    log(u'Loading RigidBodies %03d: %s' % (jointIndex, joint.name), force=True)
+    log(u'Loading Joint %03d: %s' % (jointIndex, joint.name), force=True)
     node = PandaNode(joint.name)
     node.setPythonTag('english_name', joint.english_name)
     node.setPythonTag('joint_type', joint.joint_type)
@@ -974,18 +1054,116 @@ def loadPmxActor(pmx_model):
   model = loadPmxModel(pmx_model)
   pass
 
-def loadPmxBullet(pmx_model):
-  # body = BulletRigidBodyNode('Bullet')
-  bodyNP = NodePath('Bullet')
+def loadPmxOde(pmx_model, world):
+  bodyNP = NodePath('Physics')
 
-  # boxBody = BulletRigidBodyNode('Box')
-  # height = 1.75
-  # radius = 0.4
-  # shape = BulletCapsuleShape(radius, height - 2*radius, ZUp)
-  # boxBody.addShape(shape)
-  # boxBodyNP = NodePath(boxBody)
-  # boxBodyNP.setPos(0, 0, 1.0001)
-  # boxBodyNP.reparentTo(bodyNP)
+  if not world:
+    return None
+
+  rigidIndex = 0
+  rigidList = []
+  for rigid in pmx_model.rigidbodies:
+    shape_size = V2V(rigid.shape_size)
+    shape_pos = V2V(rigid.shape_position)
+    shape_rot = R2DV(rigid.shape_rotation)
+
+    log(u'%03d: s%s, p%s, r%s'% (len(rigidList), str(shape_size), str(shape_pos), str(shape_rot)))
+
+    if rigid.bone_index==-1:
+      bone = pmx_model.bones[0]
+    else:
+      bone = pmx_model.bones[rigid.bone_index]
+
+    rigidBody = OdeBody(world)
+    rigidMass = OdeMass()
+    mass = rigid.param.mass
+    if mass <= 0:
+      mass = 0.01
+    if rigid.shape_type == 0:
+      rigidMass.setSphereTotal(mass, shape_size.x)
+      rigidGeom = OdeSphereGeom(shape_size.x)
+    elif rigid.shape_type == 1:
+      rigidMass.setBoxTotal(mass, shape_size)
+      rigidGeom = OdeBoxGeom(shape_size.x, shape_size.y, shape_size.z)
+    elif rigid.shape_type == 2:
+      rigidMass.setCapsuleTotal(mass, 1, shape_size.x, shape_size.z)
+      rigidGeom = OdeCappedCylinderGeom(shape_size.x, shape_size.z)
+    rigidGeom.setBody(rigidBody)
+    rigidBody.setMass(rigidMass)
+    rigidBody.setPosition(shape_pos)
+    rigidBody.setQuaternion(Quat(1, shape_rot))
+
+    world.applyDampening(rigid.param.linear_damping, rigidBody)
+
+    # rigidBody.setLinearDamping(rigid.param.linear_damping)
+    # rigidBody.setAngularDamping(rigid.param.angular_damping)
+    # rigidBody.setRestitution(rigid.param.restitution)
+    # rigidBody.setFriction(rigid.param.friction)
+
+    rigidNode = PandaNode(rigid.name)
+    rigidNode.setPythonTag('body', rigidBody)
+    rigidNode.setPythonTag('geom', rigidGeom)
+    rigidNode.setPythonTag('name', rigid.name)
+    rigidNode.setPythonTag('index', rigidIndex)
+    rigidNode.setPythonTag('mode', rigid.mode)
+    rigidNode.setPythonTag('bone_index', rigid.bone_index)
+    rigidNode.setPythonTag('rotation', shape_rot)
+    rigidNode.setPythonTag('collision_group', rigid.collision_group)
+    rigidNode.setPythonTag('no_collision_group', rigid.no_collision_group)
+    rigidNode.setPythonTag('pickableObjTag', 1)
+
+    rigidList.append(rigidNode)
+    rigidIndex += 1
+
+  csList = OdeJointCollection()
+  for joint in pmx_model.joints:
+    rigidIndexA = joint.rigidbody_index_a
+    rigidIndexB = joint.rigidbody_index_b
+    translimit_min = V2V(joint.translation_limit_min)
+    translimit_max = V2V(joint.translation_limit_max)
+    rotlimit_min = R2DV(joint.rotation_limit_min)
+    rotlimit_max = R2DV(joint.rotation_limit_max)
+    springTrans = V2V(joint.spring_constant_translation)
+    springRot = R2DV(joint.spring_constant_rotation)
+
+    rigidNodeA = rigidList[rigidIndexA]
+    ragidBodyA = rigidNodeA.getPythonTag('body')
+    rigidNodeB = rigidList[rigidIndexB]
+    ragidBodyB = rigidNodeB.getPythonTag('body')
+
+    cs = OdeBallJoint(world)
+    cs.attach(ragidBodyA, ragidBodyB)
+    # cs.setAnchor()
+    # cs.setAnchor2()
+
+    rot_limit = rotlimit_max - rotlimit_min
+    twist  = rot_limit.x # degrees
+    swing1 = rot_limit.y # degrees
+    swing2 = rot_limit.z # degrees
+
+    # cs.flexLimit = swing1
+    # cs.twistLimit = twist
+
+    csList.addJoint(cs)
+    log(u'%03d: %s <-> %s' % (len(csList)-1, rigidNodeA.getPythonTag('name'), rigidNodeB.getPythonTag('name')))
+
+  # geomList = []
+  # for bone  in
+  # bodyNP.ls()
+
+  bodyNP.setPythonTag('Engine', 'ode')
+  bodyNP.setPythonTag('Joints', csList)
+  bodyNP.setPythonTag('Rigids', rigidList)
+  bodyNP.setPythonTag('Bones', pmx_model.bones)
+
+  # ofs = OFileStream('jointlist.txt', 3)
+  # bodyNP.ls(ofs, 2)
+  # bodyNP.ls()
+  return(bodyNP)
+  pass
+
+def loadPmxBullet(pmx_model):
+  bodyNP = NodePath('Physics')
 
   rigidIndex = 0
   rigidList = []
@@ -1013,7 +1191,8 @@ def loadPmxBullet(pmx_model):
 
     rigidBody = BulletRigidBodyNode(rigid.name)
     rigidBody.addShape(shape)
-    if rigid.param.mass != 1:
+    # if rigid.param.mass != 1:
+    if rigid.param.mass > 0:
       rigidBody.setMass(rigid.param.mass)
       rigidBody.setStatic(False)
     else:
@@ -1080,7 +1259,7 @@ def loadPmxBullet(pmx_model):
     # swing2 = 36 # degrees
     # twist = 120 # degrees
     rot_limit = rotlimit_max - rotlimit_min
-    twist = rot_limit.x # degrees
+    twist  = rot_limit.x # degrees
     swing1 = rot_limit.y # degrees
     swing2 = rot_limit.z # degrees
 
@@ -1094,6 +1273,8 @@ def loadPmxBullet(pmx_model):
     log(u'%03d: %s <-> %s' % (len(csList)-1, ragidBodyA.getName(), ragidBodyB.getName()))
 
   # bodyNP.ls()
+  bodyNP.setPythonTag('Engine', 'bullet')
+  bodyNP.setPythonTag('Rigids', rigidList)
   bodyNP.setPythonTag('Joints', csList)
   bodyNP.setPythonTag('Bones', pmx_model.bones)
   # ofs = OFileStream('jointlist.txt', 3)
@@ -1135,7 +1316,7 @@ def pmx2model(pmx):
   p3dmodel = pmx2p3d(pmxModel)
   return(p3dmodel)
 
-def loadPmxModel(modelfile):
+def loadPmxModel(modelfile, world=None, engine='bullet'):
   p3dnode = None
   try:
     mmdFile = os.path.relpath(modelfile)
@@ -1163,9 +1344,15 @@ def loadPmxModel(modelfile):
       rigids.reparentTo(p3dnode)
       joints = loadPmxJoint(mmdModel)
       joints.reparentTo(p3dnode)
-      bullet = loadPmxBullet(mmdModel)
-      if bullet:
-        bullet.reparentTo(p3dnode)
+      if engine.lower() == 'bullet':
+        physics = loadPmxBullet(mmdModel)
+      elif engine.lower() == 'ode':
+        physics = loadPmxOde(mmdModel, world)
+      if physics:
+        physics.reparentTo(p3dnode)
+        # p3dnode.setPythonTag('Physics', physics)
+        pass
+
   elif ext in ['', '.egg', '.pz', '.bam']:
     return(p3dnode)
   return(p3dnode)

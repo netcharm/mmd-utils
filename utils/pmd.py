@@ -271,7 +271,7 @@ def loadPmdBody(pmd_model, alpha=True):
 
     material.setAmbient(VBase4(mat.ambient_color.r, mat.ambient_color.g, mat.ambient_color.b, 1))
 
-    material.setLocal(False)
+    material.setLocal(True)
     # material.setTwoside(True)
     materials.addMaterial(material)
     matIndex += 1
@@ -466,6 +466,10 @@ def loadPmdBody(pmd_model, alpha=True):
 
     nodePath.setAntialias(AntialiasAttrib.MAuto)
     if nodePath.getTransparency() == TransparencyAttrib.MNone:
+      nodePath.setTwoSided(True)
+    if mat.edge_flag:
+      nodePath.setTwoSided(True)
+    if mat.alpha < 1:
       nodePath.setTwoSided(True)
 
     vIndex += mat.vertex_count
