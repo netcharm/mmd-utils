@@ -5,7 +5,7 @@ these utils is used for downloaded MMD model.
 features
 ========
 1. view pmx/pmd model
-2. solved the shift_jis display a unknown string in ms-windows(maybe chinese windows only).
+2. solved most of the shift_jis display a unknown string in ms-windows(maybe chinese windows only).
 
 requirement
 ===========
@@ -14,8 +14,8 @@ requirement
 3. latest fbx-python from autodesk inc.
 4. chardet
 5. latest PIL/Pillow
-6. panda3d 1.8.x+
-7. pymeshio
+6. panda3d 1.8.1
+7. pymeshio lastest
 8. wxPython 3.0.2
 
 

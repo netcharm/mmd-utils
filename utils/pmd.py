@@ -402,9 +402,24 @@ def loadPmdBody(pmd_model, alpha=True):
 
           if not texFileSphere:
             ts_main.setMode(TextureStage.MReplace)
+          else:
+            ts_main.setMode(TextureStage.MModulateGloss)
+            # ts_main.setMode(TextureStage.MModulateGlow)
 
           if hasAlpha(texMain):
             nodePath.setTransparency(TransparencyAttrib.MDual, matIndex)
+
+            texImage = texMain.getRamImageAs('RGB')
+            pixel_LT = texImage.getData()[0:3]
+            if pixel_LT[0] == chr(0xff) and pixel_LT[1] == chr(0xff) and pixel_LT[2] == chr(0xff):
+              print('--> Left-Top Pixel is WHITE')
+              nodePath.setTransparency(TransparencyAttrib.MAlpha, matIndex)
+            elif pixel_LT[0] == chr(0x00) and pixel_LT[1] == chr(0x00) and pixel_LT[2] == chr(0x00):
+              print('--> Left-Top Pixel is BLACK')
+              nodePath.setTransparency(TransparencyAttrib.MAlpha, matIndex)
+
+          else:
+            nodePath.setTransparency(TransparencyAttrib.MMultisample, matIndex)
 
           nodePath.setTexture(ts_main, texMain)
           nodePath.setTexScale(ts_main, 1, -1, -1)
@@ -463,7 +478,7 @@ def loadPmdBody(pmd_model, alpha=True):
       nodePath.setTexture(ts_toon, texToon, 1)
       nodePath.setTexScale(ts_toon, 1, -1, -1)
 
-
+    # print(nodePath.getTransparency())
     nodePath.setAntialias(AntialiasAttrib.MAuto)
     if nodePath.getTransparency() == TransparencyAttrib.MNone:
       nodePath.setTwoSided(True)

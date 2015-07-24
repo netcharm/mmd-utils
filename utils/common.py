@@ -38,6 +38,7 @@ import romkan
 from jTransliterate import JapaneseTransliterator
 
 import urllib
+import json
 
 import StringIO
 
@@ -66,34 +67,14 @@ print(u'Loading shader, Vertex: %s, Fragment: %s' % (shader_v, shader_f))
 colorSelected = LVector4f(1, 0.95, 0, 1)
 colorBone = LVector4f(0.12, 1, 0.44, 1)
 
-JIS_NAME = dict({
-  'KATAKANA LETTER HA': 'ハ',
-  'KATAKANA LETTER HE': 'ヘ',
-  'KATAKANA LETTER I': 'イ',
-  'KATAKANA LETTER TI': 'チ',
-  'KATAKANA LETTER YU': 'ユ',
-  'KATAKANA LETTER TO': 'ト',
-  'KATAKANA LETTER SE': 'セ',
-  'KATAKANA LETTER ZI': 'ジ',
-  'KATAKANA LETTER YA': 'ヤ',
-  'KATAKANA LETTER TO': 'ト',
-  'HIRAGANA DIGRAPH YORI': 'より',
-  'HALFWIDTH KATAKANA SEMI-VOICED SOUND MARK': '°',
-  'HALFWIDTH KATAKANA LETTER NI': 'ニ',
-  'HALFWIDTH KATAKANA LETTER NU': 'ヌ',
-  'HALFWIDTH KATAKANA LETTER SO': 'ソ',
-  'HALFWIDTH KATAKANA LETTER RU': 'ル',
-  'HALFWIDTH KATAKANA LETTER TU': 'ツ',
-  'HALFWIDTH KATAKANA LETTER TE': 'テ',
-  'HALFWIDTH KATAKANA LETTER MO': 'モ',
-  'HALFWIDTH KATAKANA LETTER YA': 'ヤ',
-  'HALFWIDTH KATAKANA LETTER YU': 'ユ',
-  'HALFWIDTH KATAKANA LETTER YO': 'ヨ',
-  'HALFWIDTH KATAKANA LETTER RE': 'レ',
-  'HALFWIDTH KATAKANA LETTER RO': 'ロ',
-  'HALFWIDTH KATAKANA LETTER WA': 'ワ',
 
-})
+JIS_KATAKANA_H2F = dict()
+jis_katakana_h2f_file = os.path.join(CWD, 'utils', 'jis_katakana_h2f.json')
+if os.path.isfile(jis_katakana_h2f_file):
+  with open(jis_katakana_h2f_file, 'rt') as f:
+    JIS_KATAKANA_H2F = json.load(f)
+else:
+  print(u'File is not exists : %s' % jis_katakana_h2f_file)
 
 JIS2GBK = dict({
   u'\x8f\xe3': u'a', # ã
@@ -154,8 +135,6 @@ JIS2GBK = dict({
   u'\u30f9': u'ヱ゛', # ヴぇ / ヴェ
   u'\u30fa': u'ヲ゛', # ヴぉ / ヴォ
   u'\u30fb': u'·',
-  # u'\u5148': u'·',
-  # u'\u8ffd': u'追',
   u'\ufeff': u'',
   u'\uff11': u'1',
   u'\uff12': u'2',
@@ -222,36 +201,32 @@ def encode(url):
   url_e = url.replace(r' ', '%20')
   return(url_e)
 
+def toGBK(text):
+  gbk = ''
+  for c in text:
+    # gbk += JIS2GBK[c] if c in JIS2GBK else c;
+    if c in JIS_KATAKANA_H2F:
+      gbk += JIS_KATAKANA_H2F[c]
+    elif c in JIS2GBK:
+      gbk += JIS2GBK[c]
+    else:
+      gbk += c
+
+  return(gbk)
+
+
 def log(info, force=False):
   if DEBUG or force:
-    # print(repr(info))
-    # info_j = ''
-    # for c in info:
-    #   # HIRAGANA: [0x3040 : 0x309f]
-    #   # KATAKANA: [0x30a0 : 0x30ff]
-    #   # KANJI   : [0x4e00 : 0x9faf]
-    #   if (0x3040 <= ord(c) <= 0x309f) or (0xff00 <= ord(c) <= 0xffff) :
-    #     b = JapaneseTransliterator(c)
-    #     info_j += b.transliterate_from_halfwidth_to_fullwidth()
-    #   else:
-    #     info_j += c
-    # try:
-    #   print info_j
-    # except:
-    #   pass
-
-    for k in JIS2GBK:
-      info = info.replace(k, JIS2GBK[k])
-      # info = info_j.replace(k, JIS2GBK[k])
-
-    # info = info_j
-    # print(repr(info))
-    # print(info)
+    info = toGBK(info)
     try:
       print(info.strip())
     except:
       print(repr(info.strip()))
 
+
+#
+# 32bits RGBA Bitmap support
+#
 _i16, _i32 = BmpImagePlugin.i16, BmpImagePlugin.i32
 
 class BmpAlphaImageFile(ImageFile.ImageFile):

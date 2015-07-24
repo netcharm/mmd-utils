@@ -375,14 +375,29 @@ class Stage(object):
     pass
 
   @staticmethod
-  def setCamera(x=0, y=0, z=0, h=0, p=0, r=0, fov=46.8, focal=50, oobe=False):
-    base.camLens.setNearFar(0.1, 5500.0)
+  def getCamera():
+    pos = base.trackball.node().getPos()
+    hpr = base.trackball.node().getHpr()
+    return(pos, hpr)
+
+  @staticmethod
+  # def setCamera(x=0, y=0, z=0, h=0, p=0, r=0, fov=46.8, focal=50, oobe=False):
+  def setCamera(x=None, y=None, z=None, h=None, p=None, r=None, fov=46.8, focal=50, oobe=False):
+    base.camLens.setNearFar(0.1, 11000.0)
     base.camLens.setFov(fov)
     base.camLens.setFocalLength(focal)
 
-    # base.trackball.node().setPos(0, 20, -20)
+    old_pos = base.trackball.node().getPos()
+    old_hpr = base.trackball.node().getHpr()
+    if x is None: x = old_pos.x
+    if y is None: y = old_pos.y
+    if z is None: z = old_pos.z
+    if h is None: h = old_hpr.x
+    if p is None: p = old_hpr.y
+    if r is None: r = old_hpr.z
+
+    base.trackball.node().setPos(x, y, z)
     base.trackball.node().setHpr(h, p, r)
-    base.trackball.node().setPos(x, y, -z)
 
     # base.useDrive()
     if oobe:
@@ -405,31 +420,41 @@ class Stage(object):
       maxFov_new = max(fov_new.getX(), fov_new.getY())
       scaleFOV = minFov_new / maxFov_old
 
-      min_point = LPoint3f()
-      max_point = LPoint3f()
+      body_min_point = LPoint3f()
+      body_max_point = LPoint3f()
       body = model.find('**/Body')
       if body:
-        body.calcTightBounds(min_point, max_point)
+        body.calcTightBounds(body_min_point, body_max_point)
       else:
-        model.calcTightBounds(min_point, max_point)
+        model.calcTightBounds(body_min_point, body_max_point)
 
-      node_size = LPoint3f(max_point.x-min_point.x, max_point.y-min_point.y, max_point.z-min_point.z)
-      # node_fov = max(node_size.x, node_size.z)
-      # scaleModel = fov_new.getY() / node_fov
-      # print(node_size, node_fov, scaleModel, scaleFOV)
+      body_size = LPoint3f(body_max_point.x-body_min_point.x, body_max_point.y-body_min_point.y, body_max_point.z-body_min_point.z)
+
+      model_min_point = LPoint3f()
+      model_max_point = LPoint3f()
+      model.calcTightBounds(model_min_point, model_max_point)
+      model_size = LPoint3f(model_max_point.x-model_min_point.x, model_max_point.y-model_min_point.y, model_max_point.z-model_min_point.z)
+
+      if model_size.z - body_size.z > 10:
+        node_size = model_size
+        min_point = model_min_point
+        max_point = model_max_point
+      else:
+        node_size = body_size
+        min_point = body_min_point
+        max_point = body_max_point
 
       camPosX = 0
-      camPosY = 1.5 * node_size.z / scaleFOV
+      camPosY = 1.5 * max(node_size.z, node_size.x) / scaleFOV + ((min_point.x + max_point.x)/2)
       # camPosY = 7/5*node_size.z/(scaleFOV*scaleModel)
-      camPosZ = 0.5*node_size.z+min_point.z
+      camPosZ = 0.5*node_size.z + min_point.z
 
     else:
       camPosX = 0
-      camPosY = 100
+      camPosY = 68
       camPosZ = 20
 
-    # Stage.setCamera(x=camPosX, y=camPosY, z=camPosZ, p=10, oobe=False)
-    Stage.setCamera(x=camPosX, y=camPosY, z=camPosZ, oobe=False)
+    Stage.setCamera(x=camPosX, y=camPosY, z=-camPosZ, h=0, p=0, r=0, oobe=False)
     pass
 
   pass
@@ -480,6 +505,23 @@ class Utils(object):
       p3dnode.reparentTo(render)
       render.setPythonTag('lastModel', p3dnode)
       app.SetTitle(p3dnode.getPythonTag('name'))
+
+      Stage.lightAtNode(p3dnode, Stage.lights)
+      Stage.resetCamera(model=p3dnode)
+      app.addExpressionMenu(Utils.getExpressionList(p3dnode))
+      app.updateConfig(modelname)
+
+      physicsBody = p3dnode.find('**/Physics')
+      if physicsBody:
+        if render.getPythonTag('Engine').lower() == 'bullet':
+          for np in physicsBody.getChildren():
+            node = np.node()
+            if isinstance(node, BulletRigidBodyNode):
+              # app.worldNP.attachNewNode(node)
+              app.debugNP.attachNewNode(node)
+              app.world.attachRigidBody(node)
+          for cs in physicsBody.getPythonTag('Joints'):
+            app.world.attachConstraint(cs)
 
     return(p3dnode)
 
@@ -732,12 +774,6 @@ class MyFileDropTarget(wx.FileDropTarget):
       break
 
     p3dnode = Utils.loadMmdModel(modelname)
-    if p3dnode:
-      Stage.lightAtNode(p3dnode, Stage.lights)
-      Stage.resetCamera(model=p3dnode)
-      self.hostApp.addExpressionMenu(Utils.getExpressionList(p3dnode))
-      self.hostApp.updateConfig(modelname)
-
   pass
 
 
@@ -984,7 +1020,8 @@ class MmdViewerApp(ShowBase):
     self.do.accept('l', self.toggleLight)
     self.do.accept('t', self.testFunc)
 
-    self.do.accept('control-mouse1', self.OnMouseLeftClick)
+    self.do.accept('wheel_up', self.OnMouseWheelUp)
+    self.do.accept('wheel_down', self.OnMouseWheelDown)
 
   def setupWorld(self, engine='bullet'):
     self.engine = engine
@@ -1018,18 +1055,22 @@ class MmdViewerApp(ShowBase):
       # World
       self.worldNP = render.attachNewNode('World')
 
-      self.debugNP = self.worldNP.attachNewNode(BulletDebugNode('Debug'))
+      self.debugNode = BulletDebugNode('Debug')
+      self.debugNode.showWireframe(True)
+      self.debugNode.showConstraints(True)
+      self.debugNode.showBoundingBoxes(False)
+      self.debugNode.showNormals(False)
+
+      self.debugNP = self.worldNP.attachNewNode(self.debugNode)
+      # self.debugNP = render.attachNewNode(self.debugNode)
+
       # self.debugNP.show()
-      self.debugNP.node().showWireframe(True)
-      self.debugNP.node().showConstraints(False)
-      self.debugNP.node().showBoundingBoxes(False)
-      self.debugNP.node().showNormals(False)
 
       self.world = BulletWorld()
       self.world.setGravity(Vec3(0, 0, -9.81))
-      self.world.setDebugNode(self.debugNP.node())
+      self.world.setDebugNode(self.debugNode)
 
-      # Ground (static)
+      # Ground Plane (static)
       shape = BulletPlaneShape(Vec3(0, 0, 1), 1)
 
       self.groundNP = self.worldNP.attachNewNode(BulletRigidBodyNode('Ground'))
@@ -1072,7 +1113,6 @@ class MmdViewerApp(ShowBase):
         base.disableParticles()
         self.debugNP.hide()
         print('--> Bullet Debug Off')
-        print(self.UpdateCount)
 
   def updateWorld(self, task):
     if self.engine.lower() == 'ode':
@@ -1089,8 +1129,8 @@ class MmdViewerApp(ShowBase):
       dt = globalClock.getDt()
 
       # self.processInput(dt)
-      self.world.doPhysics(dt, 5, 1.0/180.0)
-      # self.world.doPhysics(dt)
+      # self.world.doPhysics(dt, 5, 1.0/180.0)
+      self.world.doPhysics(dt)
 
       # if not self.FirstUpdateWorld or self.UpdateCount<100:
       #   self.world.doPhysics(dt, 10, 1.0/180.0)
@@ -1235,6 +1275,22 @@ class MmdViewerApp(ShowBase):
     self.cTrav.clearRecorder()
     pass
 
+  def OnMouseWheelUp(self):
+    pos, hpr = Stage.getCamera()
+    if pos.y/1.1 < 0.001:
+      Stage.setCamera(x=pos.x, y=pos.y, z=pos.z)
+    else:
+      Stage.setCamera(x=pos.x, y=pos.y/1.1, z=pos.z)
+    pass
+
+  def OnMouseWheelDown(self):
+    pos, hpr = Stage.getCamera()
+    if pos.y*1.1 > 40000:
+      Stage.setCamera(x=pos.x, y=pos.y, z=pos.z)
+    else:
+      Stage.setCamera(x=pos.x, y=pos.y*1.1, z=pos.z)
+    pass
+
   def loadModel(self, modelname=None):
     p3dnode = None
     if modelname == None:
@@ -1242,38 +1298,13 @@ class MmdViewerApp(ShowBase):
 
     p3dnode = Utils.loadMmdModel(modelname)
 
-    if p3dnode:
-      Stage.lightAtNode(p3dnode, lights=Stage.lights)
-      Stage.resetCamera(model=p3dnode)
+    #   #
+    #   # Update config setting
+    #   #
+    #   self.updateConfig(modelname)
 
-      self.addExpressionMenu(Utils.getExpressionList(p3dnode))
-
-      # p3dnode.hide()
-
-      #
-      # Bullet Test
-      #
-      physicsBody = p3dnode.find('**/Physics')
-      if physicsBody:
-        # print(render.getPythonTag('Engine'))
-        if render.getPythonTag('Engine').lower() == 'bullet':
-          for np in physicsBody.getChildren():
-            node = np.node()
-            if isinstance(node, BulletRigidBodyNode):
-              self.worldNP.attachNewNode(node)
-              self.world.attachRigidBody(node)
-          for cs in physicsBody.getPythonTag('Joints'):
-            self.world.attachConstraint(cs)
-
-      # p3dnode.writeBamFile('lastModel.bam')
-
-      #
-      # Update config setting
-      #
-      self.updateConfig(modelname)
-
-      # base.wireframeOn()
-      # base.textureOff()
+    #   # base.wireframeOn()
+    #   # base.textureOff()
     return(p3dnode)
     pass
 
