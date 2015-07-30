@@ -275,7 +275,7 @@ def loadPmxBody(pmx_model, alpha=True):
   log(u'Loading Vertices : %d' % (len(pmx_model.vertices)), force=True)
   for v in pmx_model.vertices:
     vertex.addData3f(V2V(v.position))
-    normal.addData3f(V2V(v.normal))
+    normal.addData3f(N2N(v.normal))
     color.addData4f(.95, .95, .95, 1)
     texcoord.addData2f(v.uv.x, v.uv.y)
     edge.addData1f(v.edge_factor)
@@ -361,7 +361,7 @@ def loadPmxBody(pmx_model, alpha=True):
     material.setDiffuse(VBase4(mat.diffuse_color.r, mat.diffuse_color.g, mat.diffuse_color.b, mat.alpha))
     if mat.specular_factor > 0 or (mat.specular_color.r != 1 and mat.specular_color.g != 1 and mat.specular_color.b != 1):
       material.setSpecular(VBase4(mat.specular_color.r, mat.specular_color.g, mat.specular_color.b, 1))
-      material.setShininess(mat.specular_factor*10)
+      material.setShininess(mat.specular_factor*20)
     else:
       material.setSpecular(VBase4(mat.ambient_color.r, mat.ambient_color.g, mat.ambient_color.b, 0.01))
       material.setShininess(0)
@@ -446,6 +446,7 @@ def loadPmxBody(pmx_model, alpha=True):
         nodePath.setTransparency(TransparencyAttrib.MNone, matIndex)
       else:
         nodePath.setTransparency(TransparencyAttrib.MAlpha, matIndex)
+      pass
 
     # if mat.alpha<1:
     #   nodePath.setTransparency(TransparencyAttrib.MAlpha, matIndex)
@@ -468,16 +469,6 @@ def loadPmxBody(pmx_model, alpha=True):
         ts_main.setColor(VBase4(mat.ambient_color.r, mat.ambient_color.g, mat.ambient_color.b, 1))
         ts_main.setSort(tsid_main)
         ts_main.setPriority(tsid_main)
-
-        if mat.sphere_texture_index < 0:
-          ts_main.setMode(TextureStage.MReplace)
-          # ts_main.setMode(TextureStage.MGloss)
-          if matflag_shadowself0 and matflag_shadowself1 and matflag_twoside:
-             # セルフ影マツ or       # セルフ影              # Twoside
-            ts_main.setMode(TextureStage.MModulate)
-          else:
-            nodePath.setTransparency(TransparencyAttrib.MAlpha, tsid_main)
-            pass
 
         if hasAlpha(texMain):
           # if nodePath.getTransparency() != TransparencyAttrib.MNone:
@@ -599,6 +590,8 @@ def loadPmxBody(pmx_model, alpha=True):
           nodePath.setTransparency(TransparencyAttrib.MMultisample, tsid_main)
         elif mat.name.find('hair') >= 0:
           nodePath.setTransparency(TransparencyAttrib.MAlpha, tsid_main)
+        elif mat.name in ['服'] or mat.name.find('服') >= 0:
+          nodePath.setTransparency(TransparencyAttrib.MDual, tsid_main)
           pass
 
         if matflag_shadowfloor:
@@ -626,6 +619,7 @@ def loadPmxBody(pmx_model, alpha=True):
         nodePath.setTransparency(TransparencyAttrib.MDual, tsid_main)
       pass
 
+
     #
     # Set Sphere Texture
     #
@@ -635,7 +629,8 @@ def loadPmxBody(pmx_model, alpha=True):
         texSphere = textures[mat.sphere_texture_index]
         if texSphere and texSphere.hasRamImage():
           if mat.sphere_mode == 1:
-            texMode = TextureStage.MModulateGloss
+            # texMode = TextureStage.MModulateGloss
+            texMode = TextureStage.MModulate
           elif mat.sphere_mode == 2:
             texMode = TextureStage.MAdd
           elif mat.sphere_mode == 3:

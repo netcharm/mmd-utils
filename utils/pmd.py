@@ -264,7 +264,7 @@ def loadPmdBody(pmd_model, alpha=True):
     # material.setSpecular(VBase4(mat.specular_color.r, mat.specular_color.g, mat.specular_color.b, 1))
     if mat.specular_factor > 0 or (mat.specular_color.r != 1 and mat.specular_color.g != 1 and mat.specular_color.b != 1):
       material.setSpecular(VBase4(mat.specular_color.r, mat.specular_color.g, mat.specular_color.b, 1))
-      material.setShininess(mat.specular_factor*10)
+      material.setShininess(mat.specular_factor*25)
     else:
       material.setSpecular(VBase4(mat.ambient_color.r, mat.ambient_color.g, mat.ambient_color.b, 0.01))
       material.setShininess(0)
@@ -304,7 +304,8 @@ def loadPmdBody(pmd_model, alpha=True):
   idx = 0
   for v in pmd_model.vertices:
     vertex.addData3f(V2V(v.pos))
-    normal.addData3f(V2V(v.normal))
+    # normal.addData3f(V2V(v.normal))
+    normal.addData3f(N2N(v.normal))
     color.addData4f(.95, .95, .95, 1)
     texcoord.addData2f(v.uv.x, v.uv.y)
     edge.addData1f(1.0)
@@ -403,20 +404,21 @@ def loadPmdBody(pmd_model, alpha=True):
           if not texFileSphere:
             ts_main.setMode(TextureStage.MReplace)
           else:
-            ts_main.setMode(TextureStage.MModulateGloss)
-            # ts_main.setMode(TextureStage.MModulateGlow)
+            # ts_main.setMode(TextureStage.MModulate)
+            # ts_main.setMode(TextureStage.MModulateGloss)
+            ts_main.setMode(TextureStage.MModulateGlow)
 
           if hasAlpha(texMain):
             nodePath.setTransparency(TransparencyAttrib.MDual, matIndex)
 
-            texImage = texMain.getRamImageAs('RGB')
-            pixel_LT = texImage.getData()[0:3]
-            if pixel_LT[0] == chr(0xff) and pixel_LT[1] == chr(0xff) and pixel_LT[2] == chr(0xff):
-              print('--> Left-Top Pixel is WHITE')
-              nodePath.setTransparency(TransparencyAttrib.MAlpha, matIndex)
-            elif pixel_LT[0] == chr(0x00) and pixel_LT[1] == chr(0x00) and pixel_LT[2] == chr(0x00):
-              print('--> Left-Top Pixel is BLACK')
-              nodePath.setTransparency(TransparencyAttrib.MAlpha, matIndex)
+             texImage = texMain.getRamImageAs('RGB')
+             pixel_LT = texImage.getData()[0:3]
+             if pixel_LT[0] == chr(0xff) and pixel_LT[1] == chr(0xff) and pixel_LT[2] == chr(0xff):
+               print('--> Left-Top Pixel is WHITE')
+               nodePath.setTransparency(TransparencyAttrib.MAlpha, matIndex)
+             elif pixel_LT[0] == chr(0x00) and pixel_LT[1] == chr(0x00) and pixel_LT[2] == chr(0x00):
+               print('--> Left-Top Pixel is BLACK')
+               nodePath.setTransparency(TransparencyAttrib.MAlpha, matIndex)
 
           else:
             nodePath.setTransparency(TransparencyAttrib.MMultisample, matIndex)
@@ -431,7 +433,8 @@ def loadPmdBody(pmd_model, alpha=True):
           texMode = TextureStage.MAdd
         elif ext.lower() in ['.sph']:
           # texMode = TextureStage.MGlow
-          texMode = TextureStage.MModulateGlow
+          # texMode = TextureStage.MModulateGlow
+          texMode = TextureStage.MModulate
           # texMode = TextureStage.MBlend
 
         # texMode = TextureStage.MBlend
@@ -459,9 +462,9 @@ def loadPmdBody(pmd_model, alpha=True):
 
 
     if mat.toon_index>=0 and textures[mat.toon_index] and textures[mat.toon_index].hasRamImage():
-      texMode = TextureStage.MModulateGlow
+      # texMode = TextureStage.MModulateGlow
       # texMode = TextureStage.MModulateGloss
-      # texMode = TextureStage.MBlend
+      texMode = TextureStage.MModulate
       texToon = textures[mat.toon_index]
       # texToon.setMagfilter(Texture.FTNearestMipmapNearest)
       # texToon.setMinfilter(Texture.FTNearestMipmapNearest)

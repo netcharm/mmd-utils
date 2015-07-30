@@ -67,6 +67,7 @@ loadPrcFileData('', 'text-encoding utf8')
 loadPrcFileData('', 'textures-power-2 none')
 loadPrcFileData('', 'geom-cache-size 10')
 loadPrcFileData('', 'coordinate-system zup-right')
+# loadPrcFileData('', 'coordinate-system yup-right')
 loadPrcFileData('', 'clock-mode limited')
 loadPrcFileData('', 'clock-frame-rate 60')
 loadPrcFileData('', 'show-frame-rate-meter 1')
@@ -240,10 +241,10 @@ class Stage(object):
       dlight_top = PointLight('top dlight')
       # dlight_top = DirectionalLight('top dlight')
       dlnp_top = render.attachNewNode(dlight_top)
-      dlnp_top.setX(0)
+      dlnp_top.setX(-10)
       dlnp_top.setY(-50)
-      dlnp_top.setZ(75)
-      dlnp_top.node().setAttenuation( Vec3( 0., 0., 0.005 ) )
+      dlnp_top.setZ(300)
+      dlnp_top.node().setAttenuation( Vec3( 0., 0., 0.010 ) )
       if SHOW_LIGHT_POS:
         dlnp_top.node().showFrustum()
       dlnp_top.reparentTo(lights)
@@ -260,7 +261,7 @@ class Stage(object):
 
       dlight_front = PointLight('front dlight')
       dlnp_front = render.attachNewNode(dlight_front)
-      dlnp_front.setX(0)
+      dlnp_front.setX(10)
       dlnp_front.setY(-55)
       dlnp_front.setZ(15)
       dlnp_front.node().setAttenuation( Vec3( 0., 0., 0.0005 ) )
@@ -268,33 +269,12 @@ class Stage(object):
         dlnp_front.node().showFrustum()
       dlnp_front.reparentTo(lights)
 
-
-      # dlight_face = PointLight('face dlight')
-      # dlnp_face = render.attachNewNode(dlight_face)
-      # dlnp_face.setX(0)
-      # dlnp_face.setY(-5)
-      # dlnp_face.setZ(18)
-      # dlnp_face.node().setAttenuation( Vec3( 0., 0., 0.0015 ) )
-      # if SHOW_LIGHT_POS:
-      #   dlnp_face.node().showFrustum()
-      # dlnp_face.reparentTo(lights)
-
-      # dlight_ffront = DirectionalLight('front flat dlight')
-      # dlnp_ffront = render.attachNewNode(dlight_ffront)
-      # dlnp_ffront.setX(0)
-      # dlnp_ffront.setY(-1000)
-      # dlnp_ffront.setZ(30)
-      # dlnp_ffront.setHpr(0, -15, 0)
-      # if SHOW_LIGHT_POS:
-      #   dlnp_ffront.node().showFrustum()
-      # dlnp_ffront.reparentTo(lights)
-
       dlight_left = PointLight('left dlight')
       dlnp_left = render.attachNewNode(dlight_left)
       dlnp_left.setX(-50)
       dlnp_left.setY(+40)
       dlnp_left.setZ(15)
-      dlnp_left.node().setAttenuation( Vec3( 0, 0, 0.0002 ) )
+      dlnp_left.node().setAttenuation( Vec3( 0, 0, 0.0012 ) )
       if SHOW_LIGHT_POS:
         dlnp_left.node().showFrustum()
       dlnp_left.reparentTo(lights)
@@ -304,7 +284,7 @@ class Stage(object):
       dlnp_right.setX(+50)
       dlnp_right.setY(+40)
       dlnp_right.setZ(15)
-      dlnp_right.node().setAttenuation( Vec3( 0, 0, 0.0002 ) )
+      dlnp_right.node().setAttenuation( Vec3( 0, 0, 0.0012 ) )
       if SHOW_LIGHT_POS:
         dlnp_right.node().showFrustum()
       dlnp_right.reparentTo(lights)
@@ -435,7 +415,11 @@ class Stage(object):
       model.calcTightBounds(model_min_point, model_max_point)
       model_size = LPoint3f(model_max_point.x-model_min_point.x, model_max_point.y-model_min_point.y, model_max_point.z-model_min_point.z)
 
-      if model_size.z - body_size.z > 10:
+      # print(model_size.z, body_size.z)
+      # if model_size.z - body_size.z > 10:
+      if model_size.z == 0: model_size.z = 0.00001
+      if body_size.z == 0: body_size.z = 0.00001
+      if abs(model_size.z / body_size.z) < 1.5:
         node_size = model_size
         min_point = model_min_point
         max_point = model_max_point

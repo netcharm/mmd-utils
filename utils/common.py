@@ -365,7 +365,10 @@ def loadTexture(tex_file, model_path=None):
   pass
 
 def hasAlpha(texture):
-  return(texture.getFormat() in [Texture.FRgba, Texture.FRgbm, Texture.FRgba4, Texture.FRgba5, Texture.FRgba8, Texture.FRgba12, Texture.FRgba16, Texture.FRgba32])
+  if texture:
+    return(texture.getFormat() in [Texture.FRgba, Texture.FRgbm, Texture.FRgba4, Texture.FRgba5, Texture.FRgba8, Texture.FRgba12, Texture.FRgba16, Texture.FRgba32])
+  else:
+    return(False)
 
 def loadJ2ETable(j2e_file):
   with codecs.open(j2e_file, 'r', encoding='utf8') as f:
@@ -385,8 +388,13 @@ def loadJ2ETable(j2e_file):
 
 cD2R = 180/cmath.pi
 def V2V(vertex, euler=Vec3(1,1,1)):
-  # if ZUp:
   return(Vec3(euler.x*vertex.x, euler.y*vertex.z, euler.z*vertex.y))
+
+def N2N(vertex, euler=Vec3(1,1,1)):
+  return(Vec3(euler.x*vertex.x, euler.y*vertex.z, euler.z*vertex.y))
+
+def T2T(x, y, z, euler=Vec3(-1,-1,-1)):
+  return(euler.x*x, euler.y*z, euler.z*y)
 
 def R2D(rad, euler=Vec3(1,1,1)):
   return(Vec3(euler.x*rad.x*cD2R if not cmath.isnan(rad.x) else 0,
