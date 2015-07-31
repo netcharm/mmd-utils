@@ -411,14 +411,14 @@ def loadPmdBody(pmd_model, alpha=True):
           if hasAlpha(texMain):
             nodePath.setTransparency(TransparencyAttrib.MDual, matIndex)
 
-             texImage = texMain.getRamImageAs('RGB')
-             pixel_LT = texImage.getData()[0:3]
-             if pixel_LT[0] == chr(0xff) and pixel_LT[1] == chr(0xff) and pixel_LT[2] == chr(0xff):
-               print('--> Left-Top Pixel is WHITE')
-               nodePath.setTransparency(TransparencyAttrib.MAlpha, matIndex)
-             elif pixel_LT[0] == chr(0x00) and pixel_LT[1] == chr(0x00) and pixel_LT[2] == chr(0x00):
-               print('--> Left-Top Pixel is BLACK')
-               nodePath.setTransparency(TransparencyAttrib.MAlpha, matIndex)
+            texImage = texMain.getRamImageAs('RGB')
+            pixel_LT = texImage.getData()[0:3]
+            if pixel_LT[0] == chr(0xff) and pixel_LT[1] == chr(0xff) and pixel_LT[2] == chr(0xff):
+              print('--> Left-Top Pixel is WHITE')
+              nodePath.setTransparency(TransparencyAttrib.MAlpha, matIndex)
+            elif pixel_LT[0] == chr(0x00) and pixel_LT[1] == chr(0x00) and pixel_LT[2] == chr(0x00):
+              print('--> Left-Top Pixel is BLACK')
+              nodePath.setTransparency(TransparencyAttrib.MAlpha, matIndex)
 
           else:
             nodePath.setTransparency(TransparencyAttrib.MMultisample, matIndex)
