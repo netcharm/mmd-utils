@@ -529,15 +529,25 @@ def loadPmxBody(pmx_model, alpha=True):
         #
         texImage = texMain.getRamImageAs('RGB')
         pixel_LT = texImage.getData()[0:3]
-        print(repr(pixel_LT))
-        if pixel_LT[0] == chr(0xff) and pixel_LT[1] == chr(0xff) and pixel_LT[2] == chr(0xff):
+        pr,pg,pb = ord(pixel_LT[0]), ord(pixel_LT[1]), ord(pixel_LT[2])
+        print('rgb(%d, %d, %d)' % (pr, pg, pb))
+        if pr == mat.diffuse_color.r*255 and pg == mat.diffuse_color.g*255 and pb == mat.diffuse_color.b*255:
+          print('--> Left-Top Pixel is Diffuse')
+          nodePath.setTransparency(TransparencyAttrib.MBinary, tsid_main)
+        elif pr == 0xff and pg == 0xff and pb == 0xff:
           print('--> Left-Top Pixel is WHITE')
-          nodePath.setTransparency(TransparencyAttrib.MAlpha, tsid_main)
-        elif pixel_LT[0] == chr(0x00) and pixel_LT[1] == chr(0x00) and pixel_LT[2] == chr(0x00):
+          if(hasAlpha(texMain)):
+            nodePath.setTransparency(TransparencyAttrib.MMultisample, tsid_main)
+          else:
+            nodePath.setTransparency(TransparencyAttrib.MBinary, tsid_main)
+            # nodePath.setTransparency(TransparencyAttrib.MAlpha, tsid_main)
+        elif pr == 0x00 and pg == 0x00 and pb == 0x00:
           print('--> Left-Top Pixel is BLACK')
-          nodePath.setTransparency(TransparencyAttrib.MAlpha, tsid_main)
+          nodePath.setTransparency(TransparencyAttrib.MMultisample, tsid_main)
         else:
-          if mat.edge_color.r == 1 and mat.edge_color.g == 1 and mat.edge_color.b == 1:
+          if mat.alpha == 1 and not hasAlpha(texMain):
+            nodePath.setTransparency(TransparencyAttrib.MNone, tsid_main)
+          elif mat.edge_color.r == 1 and mat.edge_color.g == 1 and mat.edge_color.b == 1:
             nodePath.setTransparency(TransparencyAttrib.MMultisample, tsid_main)
           elif mat.edge_color.r == 0 and mat.edge_color.g == 0 and mat.edge_color.b == 0:
             nodePath.setTransparency(TransparencyAttrib.MMultisample, tsid_main)
@@ -557,9 +567,9 @@ def loadPmxBody(pmx_model, alpha=True):
         elif mat.name in ['肌', '顔', '髪影', 'レース']:
           nodePath.setTransparency(TransparencyAttrib.MDual, tsid_main)
         elif mat.name.find('髪') >= 0:
-          # ts_main.setMode(TextureStage.MModulateGloss)
-          # nodePath.setTransparency(TransparencyAttrib.MAlpha, tsid_main)
-          if hasAlpha(texMain) and not matflag_outline:
+          if mat.toon_texture_index >= 0:
+            nodePath.setTransparency(TransparencyAttrib.MNone, tsid_main)
+          elif hasAlpha(texMain) and not matflag_outline:
             nodePath.setTransparency(TransparencyAttrib.MAlpha, tsid_main)
           elif matflag_outline:
             nodePath.setTransparency(TransparencyAttrib.MNone, tsid_main)
@@ -592,18 +602,25 @@ def loadPmxBody(pmx_model, alpha=True):
           nodePath.setTransparency(TransparencyAttrib.MAlpha, tsid_main)
         elif mat.name in ['服'] or mat.name.find('服') >= 0:
           nodePath.setTransparency(TransparencyAttrib.MDual, tsid_main)
-          pass
+        elif mat.name.find('影') >= 0:
+          nodePath.setTransparency(TransparencyAttrib.MDual, tsid_main)
+        pass
+
+        if mat.name in ['顔鼻', '鼻', '顔']:
+          ts_main.setMode(TextureStage.MReplace)
+        pass
 
         if matflag_shadowfloor:
           # 地面影
           pass
 
-        if mat.alpha > 0:
+        if mat.alpha >= 0:
           nodePath.setTexture(ts_main, texMain, tsid_main)
           nodePath.setTexScale(ts_main, 1, -1, -1)
       else:
         if 0 < mat.alpha < 1:
           nodePath.setTransparency(TransparencyAttrib.MAlpha, tsid_main)
+        pass
     else:
       if mat.name.lower() in ['hairshadow', 'other']:
         nodePath.setTransparency(TransparencyAttrib.MDual, tsid_main)
@@ -617,6 +634,8 @@ def loadPmxBody(pmx_model, alpha=True):
         nodePath.setTransparency(TransparencyAttrib.MDual, tsid_main)
       elif mat.name in ['白目']:
         nodePath.setTransparency(TransparencyAttrib.MDual, tsid_main)
+      elif mat.name.find('髪') >= 0:
+        nodePath.setTransparency(TransparencyAttrib.MNone, tsid_main)
       pass
 
 
@@ -693,7 +712,8 @@ def loadPmxBody(pmx_model, alpha=True):
     #  MNone = 0, MAlpha = 1, MNotused = 2, MMultisample = 3,
     #  MMultisampleMask = 4, MBinary = 5, MDual = 6
     #
-    print(nodePath.getTransparency())
+    # print(nodePath.getTransparency())
+    print(str(TransparencyAttrib.make(nodePath.getTransparency())).strip())
     vIndex += mat.vertex_count
 
     # modelBody.addChild(node)

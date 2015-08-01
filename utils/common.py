@@ -212,16 +212,16 @@ def toGBK(text):
     else:
       gbk += c
 
-  return(gbk)
+  return(unicode(gbk).strip().replace('\r', '').replace('\n', ''))
 
 
 def log(info, force=False):
   if DEBUG or force:
     info = toGBK(info)
     try:
-      print(info.strip())
+      print(info)
     except:
-      print(repr(info.strip()))
+      print(repr(info))
 
 
 #
