@@ -262,66 +262,15 @@ class Stage(object):
 
       dlight_back = PointLight('back dlight')
       # dlight_outline = DirectionalLight('back dlight')
-      dlight_back.setAttenuation( Vec3( 0., 0., 0.0005 ) )
+      dlight_back.setAttenuation( Vec3( 0., 0., 0.0006 ) )
       dlnp_back = render.attachNewNode(dlight_back)
-      dlnp_back.setX(-5)
+      dlnp_back.setX(40)
       dlnp_back.setY(50)
       dlnp_back.setZ(50)
       if SHOW_LIGHT_POS:
         dlnp_back.node().showFrustum()
       dlnp_back.reparentTo(lights)
 
-
-      # dlight_top = PointLight('top dlight')
-      # # dlight_top = DirectionalLight('top dlight')
-      # dlnp_top = render.attachNewNode(dlight_top)
-      # dlnp_top.setX(-10)
-      # dlnp_top.setY(-50)
-      # dlnp_top.setZ(300)
-      # dlnp_top.node().setAttenuation( Vec3( 0., 0., 0.010 ) )
-      # if SHOW_LIGHT_POS:
-      #   dlnp_top.node().showFrustum()
-      # dlnp_top.reparentTo(lights)
-
-      # dlight_back = PointLight('back dlight')
-      # dlnp_back = render.attachNewNode(dlight_back)
-      # dlnp_back.setX(0)
-      # dlnp_back.setY(+55)
-      # dlnp_back.setZ(25)
-      # dlnp_back.node().setAttenuation( Vec3( 0., 0., 0.0008 ) )
-      # if SHOW_LIGHT_POS:
-      #   dlnp_back.node().showFrustum()
-      # dlnp_back.reparentTo(lights)
-
-      # dlight_front = PointLight('front dlight')
-      # dlnp_front = render.attachNewNode(dlight_front)
-      # dlnp_front.setX(10)
-      # dlnp_front.setY(-55)
-      # dlnp_front.setZ(15)
-      # dlnp_front.node().setAttenuation( Vec3( 0., 0., 0.0005 ) )
-      # if SHOW_LIGHT_POS:
-      #   dlnp_front.node().showFrustum()
-      # dlnp_front.reparentTo(lights)
-
-      # dlight_left = PointLight('left dlight')
-      # dlnp_left = render.attachNewNode(dlight_left)
-      # dlnp_left.setX(-50)
-      # dlnp_left.setY(+40)
-      # dlnp_left.setZ(15)
-      # dlnp_left.node().setAttenuation( Vec3( 0, 0, 0.0012 ) )
-      # if SHOW_LIGHT_POS:
-      #   dlnp_left.node().showFrustum()
-      # dlnp_left.reparentTo(lights)
-
-      # dlight_right = PointLight('right dlight')
-      # dlnp_right = render.attachNewNode(dlight_right)
-      # dlnp_right.setX(+50)
-      # dlnp_right.setY(+40)
-      # dlnp_right.setZ(15)
-      # dlnp_right.node().setAttenuation( Vec3( 0, 0, 0.0012 ) )
-      # if SHOW_LIGHT_POS:
-      #   dlnp_right.node().showFrustum()
-      # dlnp_right.reparentTo(lights)
 
       if SHOW_SHADOW:
         # lights.setShaderAuto()
@@ -511,6 +460,7 @@ class Utils(object):
     if os.path.altsep:
       modelname = modelname.replace(os.path.sep, os.path.altsep)
       # modelname = modelname.replace('\\', os.path.altsep)
+    log('Loading Model:"%s" data...' % os.path.basename(modelname), force=True)
     if ext in ['.pmx']:
       p3dnode = loadPmxModel(modelname, world, engine)
     elif ext in ['.pmd']:

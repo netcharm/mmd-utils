@@ -534,6 +534,8 @@ def loadPmxBody(pmx_model, alpha=True):
         if pr == mat.diffuse_color.r*255 and pg == mat.diffuse_color.g*255 and pb == mat.diffuse_color.b*255:
           print('--> Left-Top Pixel is Diffuse')
           nodePath.setTransparency(TransparencyAttrib.MBinary, tsid_main)
+          nodePath.setTransparency(TransparencyAttrib.MAlpha, tsid_main)
+          pass
         elif pr == 0xff and pg == 0xff and pb == 0xff:
           print('--> Left-Top Pixel is WHITE')
           if(hasAlpha(texMain)):
@@ -606,7 +608,7 @@ def loadPmxBody(pmx_model, alpha=True):
           nodePath.setTransparency(TransparencyAttrib.MDual, tsid_main)
         pass
 
-        if mat.name in ['顔鼻', '鼻', '顔']:
+        if mat.name in ['顔鼻', '鼻', '顔', '鼻影']:
           ts_main.setMode(TextureStage.MReplace)
         pass
 

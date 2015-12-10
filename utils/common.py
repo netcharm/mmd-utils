@@ -30,7 +30,6 @@ import os
 import sys
 
 import math
-import cmath
 
 import unicodedata as unidata
 import romkan
@@ -386,7 +385,7 @@ def loadJ2ETable(j2e_file):
   return(J2E)
   pass
 
-cD2R = 180/cmath.pi
+cD2R = 180/math.pi
 def V2V(vertex, euler=Vec3(1,1,1)):
   return(Vec3(euler.x*vertex.x, euler.y*vertex.z, euler.z*vertex.y))
 
@@ -397,22 +396,22 @@ def T2T(x, y, z, euler=Vec3(-1,-1,-1)):
   return(euler.x*x, euler.y*z, euler.z*y)
 
 def R2D(rad, euler=Vec3(1,1,1)):
-  return(Vec3(euler.x*rad.x*cD2R if not cmath.isnan(rad.x) else 0,
-              euler.y*rad.y*cD2R if not cmath.isnan(rad.y) else 0,
-              euler.z*rad.z*cD2R if not cmath.isnan(rad.z) else 0))
+  return(Vec3(euler.x*rad.x*cD2R if not math.isnan(rad.x) else 0,
+              euler.y*rad.y*cD2R if not math.isnan(rad.y) else 0,
+              euler.z*rad.z*cD2R if not math.isnan(rad.z) else 0))
 
 def R2DV(rad, euler=Vec3(1,-1,-1)):
-  return(Vec3(euler.x*rad.y*cD2R if not cmath.isnan(rad.y) else 0,
-              euler.z*rad.x*cD2R if not cmath.isnan(rad.x) else 0,
-              euler.y*rad.z*cD2R if not cmath.isnan(rad.z) else 0))
+  return(Vec3(euler.x*rad.y*cD2R if not math.isnan(rad.y) else 0,
+              euler.z*rad.x*cD2R if not math.isnan(rad.x) else 0,
+              euler.y*rad.z*cD2R if not math.isnan(rad.z) else 0))
 
 def D2D(rad, euler=Vec3(1,1,1)):
-  return(Vec3(euler.x*rad.x if not cmath.isnan(rad.x) else 0,
-              euler.y*rad.y if not cmath.isnan(rad.y) else 0,
-              euler.z*rad.z if not cmath.isnan(rad.z) else 0))
+  return(Vec3(euler.x*rad.x if not math.isnan(rad.x) else 0,
+              euler.y*rad.y if not math.isnan(rad.y) else 0,
+              euler.z*rad.z if not math.isnan(rad.z) else 0))
 
 def vdist(v1, v2):
-  return(abs(cmath.sqrt((v2.x-v1.x)**2 + (v2.y-v1.y)**2 + (v2.z-v1.z)**2 ).real))
+  return(abs(math.sqrt((v2.x-v1.x)**2 + (v2.y-v1.y)**2 + (v2.z-v1.z)**2 ).real))
 
 def getHprFromTo(fromPt, toPt):
   """
